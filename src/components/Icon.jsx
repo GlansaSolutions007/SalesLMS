@@ -148,6 +148,14 @@ const icons = {
   menu: <path d="M4 6h16M4 12h16M4 18h16" />,
   close: <path d="M6 6l12 12M18 6 6 18" />,
   chevron: <path d="M15 6l-6 6 6 6" />,
+  waveHand: (
+    <>
+      <path d="M9 11V5a1 1 0 0 1 2 0v6" />
+      <path d="M12 11V4a1 1 0 0 1 2 0v7" />
+      <path d="M15 11V6a1 1 0 0 1 2 0v6" />
+      <path d="M18 11V8a1 1 0 0 1 2 0v6a6 6 0 0 1-12 0v-3a1 1 0 0 1 2 0v3" />
+    </>
+  ),
 };
 
 export default function Icon({ name, size = 20, filled = false }) {

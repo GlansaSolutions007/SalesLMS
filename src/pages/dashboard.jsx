@@ -69,7 +69,15 @@ export default function Dashboard({ page = "dashboard", onNavigate, onLogout }) 
         <div className="dash-body">
           <div className="dash-welcome">
             <div>
-              <h1>{page === "dashboard" ? "Welcome back, John 👋" : pageTitle}</h1>
+              <h1>
+                {page === "dashboard" ? (
+                  <>
+                    Welcome back, John <Icon name="waveHand" size={26} />
+                  </>
+                ) : (
+                  pageTitle
+                )}
+              </h1>
               <p>Here is a summary of your team's sales performance and training progress.</p>
             </div>
             <div className="dash-welcome-actions">
