@@ -1,88 +1,20 @@
 import { useState } from "react";
+import Icon from "../components/Icon.jsx";
 import "../App.css";
 
 const featureList = [
-  ["▣", "Booking Management"],
-  ["◉", "Customer Management"],
-  ["⚙", "Technician Management"],
-  ["⌁", "Service Tracking"],
-  ["✓", "Pickup & Delivery"],
-  ["₹", "Payment Management"],
-  ["▥", "Reports & Analytics"],
-  ["★", "Business Growth"],
+  ["▣", "Training Programs"],
+  ["◉", "Sales Coaching"],
+  ["⚙", "Performance Tracking"],
+  ["⌁", "Learning Plans"],
+  ["▥", "Skill Analytics"],
+  ["★", "Growth Focus"],
 ];
-
-function Icon({ name, size = 20 }) {
-  const icons = {
-    mail: (
-      <>
-        <rect x="3" y="5" width="18" height="14" rx="2" />
-        <path d="m3 7 9 6 9-6" />
-      </>
-    ),
-
-    lock: (
-      <>
-        <rect x="5" y="10" width="14" height="10" rx="2" />
-        <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2" />
-      </>
-    ),
-
-    eye: (
-      <>
-        <path d="M2.5 12s3.4-5.5 9.5-5.5 9.5 5.5 9.5 5.5-3.4 5.5-9.5 5.5S2.5 12 2.5 12Z" />
-        <circle cx="12" cy="12" r="2.2" />
-      </>
-    ),
-
-    arrow: (
-      <>
-        <path d="M5 12h14M13 6l6 6-6 6" />
-      </>
-    ),
-
-    back: (
-      <>
-        <path d="M19 12H5M11 18l-6-6 6-6" />
-      </>
-    ),
-
-    check: <path d="m5 12 4 4L19 6" />,
-
-    car: (
-      <>
-        <path d="M5 17h14" />
-        <path d="M6 17v-3l2-5h8l2 5v3" />
-        <path d="M8 9h8" />
-        <circle cx="8" cy="17" r="1.5" />
-        <circle cx="16" cy="17" r="1.5" />
-      </>
-    ),
-  };
-
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {icons[name]}
-    </svg>
-  );
-}
 
 function BrandMark() {
   return (
     <div className="brand-mark">
-      <div className="car-icon">
-        <Icon name="car" size={30} />
-      </div>
+      <Icon name="car" size={28} />
     </div>
   );
 }
@@ -98,24 +30,22 @@ function SidePanel() {
         <BrandMark />
 
         <div>
-          <b>MYCarBuddy</b>
-          <span>Smart. Reliable. <i>Connected.</i></span>
+          <b>Sales LMS</b>
+          <span>Training. Tracking. Growth.</span>
         </div>
       </header>
 
       <div className="welcome">
-        <h2>Welcome to</h2>
-
+        <p className="eyebrow">Sales Enablement Platform</p>
         <h1>
-          MY<span>Car</span>
-          <br />
-          Buddy
+          Welcome to
+         
+           <span> Sales LMS</span>
         </h1>
 
         <p>
-          Manage your complete automotive
-          <br />
-          service operations in one place.
+          Give your sales team a clear path to excellence with structured learning,
+          intelligent coaching, and real-time performance visibility.
         </p>
       </div>
 
@@ -135,7 +65,7 @@ function SidePanel() {
           </div>
 
           <div>
-            <small>Active Bookings</small>
+            <small>Active Courses</small>
             <strong>24</strong>
           </div>
         </div>
@@ -146,7 +76,7 @@ function SidePanel() {
           </div>
 
           <div>
-            <small>Service Completed</small>
+            <small>Completion Rate</small>
             <strong>86%</strong>
           </div>
         </div>
@@ -176,12 +106,12 @@ function SidePanel() {
 
             <div className="stats">
               <div>
-                <small>Total Bookings</small>
+                <small>Enrolled</small>
                 <strong>1,248</strong>
               </div>
 
               <div>
-                <small>Active Services</small>
+                <small>Active Goals</small>
                 <strong>86</strong>
               </div>
 
@@ -193,7 +123,7 @@ function SidePanel() {
 
             <div className="chart-box">
               <div className="chart-title">
-                <span>Service Overview</span>
+                <span>Performance Overview</span>
                 <b>+18.4%</b>
               </div>
 
@@ -215,21 +145,6 @@ function SidePanel() {
             </div>
           </div>
         </div>
-
-        <div className="road-line line-one" />
-        <div className="road-line line-two" />
-
-        <div className="car-illustration">
-          <div className="car-body">
-            <div className="car-window front-window" />
-            <div className="car-window back-window" />
-
-            <div className="car-light" />
-
-            <div className="car-wheel wheel-one" />
-            <div className="car-wheel wheel-two" />
-          </div>
-        </div>
       </div>
 
       <div className="dots bottom" />
@@ -237,29 +152,16 @@ function SidePanel() {
   );
 }
 
-function Field({
-  type,
-  placeholder,
-  showPassword,
-  setShowPassword,
-  label,
-}) {
+function Field({ type, placeholder, showPassword, setShowPassword, label }) {
   return (
     <label className="field">
-      <span>
-        {label ||
-          (type === "password" ? "Password" : "Email Address")}
-      </span>
+      <span>{label || (type === "password" ? "Password" : "Email Address")}</span>
 
       <div className="input-wrapper">
         <Icon name={type === "password" ? "lock" : "mail"} />
 
         <input
-          type={
-            type === "password" && !showPassword
-              ? "password"
-              : "text"
-          }
+          type={type === "password" && !showPassword ? "password" : "text"}
           placeholder={placeholder}
         />
 
@@ -293,9 +195,9 @@ function AuthCard({ view, setView, onLogin }) {
         : "Password updated!";
 
   const subheading = isLogin
-    ? "Login to manage your automotive service operations"
+    ? "Sign in to continue your sales learning journey."
     : isForgot
-      ? "Enter your registered email and we'll send you a reset link."
+      ? "Enter your registered email and we’ll send you a reset link."
       : isReset
         ? "Create a secure new password for your account."
         : "Your password has been reset successfully.";
@@ -304,10 +206,7 @@ function AuthCard({ view, setView, onLogin }) {
     <main className="auth-wrap">
       <section className={`auth-card ${view}`}>
         {!isLogin && (
-          <button
-            className="back"
-            onClick={() => setView("login")}
-          >
+          <button className="back" onClick={() => setView("login")}>
             <Icon name="back" size={18} />
             Back to login
           </button>
@@ -319,8 +218,8 @@ function AuthCard({ view, setView, onLogin }) {
           </div>
 
           <div className="card-brand-text">
-            <b>MYCarBuddy</b>
-            <span>Automotive Service Management</span>
+            <b>Sales LMS</b>
+            <span>Learning for Better Sales Performance</span>
           </div>
         </div>
 
@@ -335,10 +234,7 @@ function AuthCard({ view, setView, onLogin }) {
               <p>{subheading}</p>
             </div>
 
-            <button
-              className="primary"
-              onClick={() => setView("login")}
-            >
+            <button className="primary" onClick={() => setView("login")}>
               BACK TO LOGIN
               <Icon name="arrow" />
             </button>
@@ -352,11 +248,7 @@ function AuthCard({ view, setView, onLogin }) {
 
             {isLogin && (
               <>
-                <Field
-                  type="email"
-                  placeholder="Enter your email"
-                  label="Email Address"
-                />
+                <Field type="email" placeholder="Enter your email" label="Email Address" />
 
                 <Field
                   type="password"
@@ -368,25 +260,16 @@ function AuthCard({ view, setView, onLogin }) {
 
                 <div className="options">
                   <label className="remember">
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                    />
-
+                    <input type="checkbox" defaultChecked />
                     <span>Remember Me</span>
                   </label>
 
-                  <button
-                    onClick={() => setView("forgot")}
-                  >
+                  <button type="button" onClick={() => setView("forgot")}>
                     Forgot Password?
                   </button>
                 </div>
 
-                <button
-                  className="primary"
-                  onClick={onLogin}
-                >
+                <button className="primary" onClick={onLogin}>
                   LOGIN TO DASHBOARD
                   <Icon name="arrow" />
                 </button>
@@ -397,7 +280,7 @@ function AuthCard({ view, setView, onLogin }) {
                   <span />
                 </div>
 
-                <button className="google">
+                <button className="google" type="button">
                   <b>G</b>
                   Continue with Google
                 </button>
@@ -406,16 +289,9 @@ function AuthCard({ view, setView, onLogin }) {
 
             {isForgot && (
               <>
-                <Field
-                  type="email"
-                  placeholder="Enter your registered email"
-                  label="Registered Email"
-                />
+                <Field type="email" placeholder="Enter your registered email" label="Registered Email" />
 
-                <button
-                  className="primary"
-                  onClick={() => setView("reset")}
-                >
+                <button className="primary" onClick={() => setView("reset")}>
                   SEND RESET LINK
                   <Icon name="arrow" />
                 </button>
@@ -440,10 +316,7 @@ function AuthCard({ view, setView, onLogin }) {
                   setShowPassword={setShowPassword}
                 />
 
-                <button
-                  className="primary"
-                  onClick={() => setView("success")}
-                >
+                <button className="primary" onClick={() => setView("success")}>
                   RESET PASSWORD
                   <Icon name="arrow" />
                 </button>
@@ -469,18 +342,14 @@ export default function Login({ onLogin }) {
     <div className="app">
       <SidePanel />
 
-      <AuthCard
-        view={view}
-        setView={setView}
-        onLogin={onLogin}
-      />
+      <AuthCard view={view} setView={setView} onLogin={onLogin} />
 
       <footer>
-        © 2026 MYCarBuddy. All rights reserved.
+        © 2026 Sales LMS. All rights reserved.
         <span />
         Version 1.0
         <span />
-        <b>Driving Better Service. Together.</b>
+        <b>Learning that scales your sales team.</b>
       </footer>
     </div>
   );

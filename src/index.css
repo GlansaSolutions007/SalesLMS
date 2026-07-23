@@ -1,1 +1,61 @@
-html,body,#root{margin:0;min-width:320px;min-height:100%;}body{margin:0;}
+:root {
+  color-scheme: light;
+  --color-primary-950: #07243b;
+  --color-primary-800: #16406d;
+  --color-primary-700: #1d5b95;
+  --color-primary-600: #2f78c8;
+  --color-primary-500: #4b95de;
+  --color-accent: #37d3c3;
+  --color-accent-soft: #8fe4db;
+  --color-surface: #f7fbff;
+  --color-surface-2: #ffffff;
+  --color-border: #dfe8f3;
+  --color-text: #10233c;
+  --color-muted: #64748b;
+  --color-heading: #0f172a;
+  --shadow-lg: 0 24px 64px rgba(7, 36, 59, 0.14);
+  --shadow-md: 0 16px 36px rgba(7, 36, 59, 0.1);
+  --shadow-sm: 0 6px 16px rgba(7, 36, 59, 0.06);
+
+  --color-success: #12b76a;
+  --color-success-soft: #e5f9ef;
+  --color-danger: #f04438;
+  --color-danger-soft: #fdedeb;
+  --color-warning: #f79009;
+  --color-warning-soft: #fef3e2;
+
+  --gradient-sidebar: linear-gradient(190deg, var(--color-primary-950) 0%, var(--color-primary-700) 100%);
+  --gradient-primary: linear-gradient(135deg, #2f78c8, #1d5b95 55%, #2f78c8);
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
