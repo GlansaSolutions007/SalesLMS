@@ -8,13 +8,25 @@ import DataTable from "../../components/DataTable.jsx";
 import Pagination from "../../components/Pagination.jsx";
 import Modal from "../../components/Modal.jsx";
 import FormField from "../../components/FormField.jsx";
+import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 import MastersTabs from "./MastersTabs.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { getRoles, createRole, getPermissions } from "../../services/rolesService.js";
+import {
+  getRoles,
+  getRole,
+  createRole,
+  updateRole,
+  deleteRole,
+  toggleRoleStatus,
+  getPermissions,
+} from "../../services/rolesService.js";
 import "./RoleList.css";
 
 const STATUS_TONE = { Active: "green", Inactive: "gray" };
+const PER_PAGE = 25;
+const EMPTY_FORM = { role_name: "", description: "" };
 
+// Static columns — actions column is built inside the component
 const COLUMNS = [
   {
     key: "role_name",
@@ -57,14 +69,11 @@ const COLUMNS = [
   },
 ];
 
-const PER_PAGE = 25;
-const EMPTY_FORM = { role_name: "", description: "" };
-
 export default function RoleList() {
   const { toggleCollapsed } = useOutletContext();
   const { token } = useAuth();
 
-  // ── List state ──────────────────────────────────────────────────────────────
+  // ── Roles list ───────────────────────────────────────────────────────────────
   const [roles, setRoles] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,20 +85,25 @@ export default function RoleList() {
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
 
-  // ── Modal / form state ───────────────────────────────────────────────────────
-  const [modalOpen, setModalOpen] = useState(false);
+  // ── Modal state ──────────────────────────────────────────────────────────────
+  const [modalMode, setModalMode] = useState(null); // "add" | "edit" | null
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [selectedPermIds, setSelectedPermIds] = useState(new Set());
 
-  // ── Permissions (for the create form) ───────────────────────────────────────
+  // ── Permissions (for form) ───────────────────────────────────────────────────
   const [permissions, setPermissions] = useState([]);
   const [permsLoading, setPermsLoading] = useState(false);
   const [permsError, setPermsError] = useState(null);
   const [permSearch, setPermSearch] = useState("");
 
-  // ── Debounce role search ─────────────────────────────────────────────────────
+  // ── Row actions ──────────────────────────────────────────────────────────────
+  const [deletingId, setDeletingId] = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
+
+  // ── Debounce search ──────────────────────────────────────────────────────────
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 400);
     return () => clearTimeout(t);
@@ -97,7 +111,7 @@ export default function RoleList() {
 
   useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter]);
 
-  // ── Fetch roles list ─────────────────────────────────────────────────────────
+  // ── Fetch roles ──────────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -107,10 +121,8 @@ export default function RoleList() {
         const params = { per_page: PER_PAGE, page };
         if (debouncedSearch) params.search = debouncedSearch;
         if (statusFilter) params.status = statusFilter;
-
         const res = await getRoles(params, token);
         if (cancelled) return;
-
         const body = res.data?.data;
         setRoles(Array.isArray(body?.data) ? body.data : []);
         setPagination(body?.pagination ?? null);
@@ -124,12 +136,13 @@ export default function RoleList() {
     return () => { cancelled = true; };
   }, [token, debouncedSearch, statusFilter, page, refreshKey]);
 
-  // ── Fetch permissions list (once, when modal first opens) ────────────────────
+  // ── Permissions helpers ──────────────────────────────────────────────────────
   async function loadPermissions() {
     setPermsLoading(true);
     setPermsError(null);
     try {
       const res = await getPermissions(token);
+      console.log(token, 'Tokennnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn');
       const raw = res.data?.data?.data ?? res.data?.data ?? res.data;
       setPermissions(Array.isArray(raw) ? raw : []);
     } catch {
@@ -139,20 +152,6 @@ export default function RoleList() {
     }
   }
 
-  function openAdd() {
-    setForm(EMPTY_FORM);
-    setFormErrors({});
-    setSelectedPermIds(new Set());
-    setPermSearch("");
-    setModalOpen(true);
-    if (permissions.length === 0) loadPermissions();
-  }
-
-  function closeModal() {
-    setModalOpen(false);
-  }
-
-  // ── Permission helpers ───────────────────────────────────────────────────────
   function togglePerm(id) {
     setSelectedPermIds((prev) => {
       const next = new Set(prev);
@@ -170,7 +169,6 @@ export default function RoleList() {
     });
   }
 
-  // Group + filter permissions by module
   const groupedPerms = useMemo(() => {
     const q = permSearch.toLowerCase();
     const filtered = permissions.filter(
@@ -187,7 +185,60 @@ export default function RoleList() {
     return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
   }, [permissions, permSearch]);
 
-  // ── Form submit ──────────────────────────────────────────────────────────────
+  // ── Open add modal ───────────────────────────────────────────────────────────
+  function openAdd() {
+    setForm(EMPTY_FORM);
+    setFormErrors({});
+    setSelectedPermIds(new Set());
+    setPermSearch("");
+    setEditingId(null);
+    setModalMode("add");
+    if (permissions.length === 0) loadPermissions();
+  }
+
+  // ── Open edit modal ──────────────────────────────────────────────────────────
+  async function openEdit(row) {
+    setForm({ role_name: row.role_name ?? "", description: row.description ?? "" });
+    setFormErrors({});
+    setSelectedPermIds(new Set());
+    setPermSearch("");
+    setEditingId(row.id);
+    setModalMode("edit");
+
+    // Fetch permissions list + current role permissions in parallel
+    const needsPermList = permissions.length === 0;
+    setPermsLoading(true);
+    setPermsError(null);
+    try {
+      const requests = [
+        getRole(row.id, token),
+        ...(needsPermList ? [getPermissions(token)] : []),
+      ];
+      const results = await Promise.all(requests);
+
+      // Extract current role's permission IDs from role detail
+      const roleData = results[0].data?.data;
+      const currentPerms = roleData?.permissions ?? [];
+      setSelectedPermIds(new Set(currentPerms.map((p) => p.id)));
+
+      // Store permissions list if we fetched it
+      if (needsPermList && results[1]) {
+        const raw = results[1].data?.data?.data ?? results[1].data?.data ?? results[1].data;
+        setPermissions(Array.isArray(raw) ? raw : []);
+      }
+    } catch {
+      setPermsError("Could not load role details.");
+    } finally {
+      setPermsLoading(false);
+    }
+  }
+
+  function closeModal() {
+    setModalMode(null);
+    setEditingId(null);
+  }
+
+  // ── Submit create / update ───────────────────────────────────────────────────
   async function handleSubmit(e) {
     e.preventDefault();
     const errors = {};
@@ -202,17 +253,93 @@ export default function RoleList() {
 
     setSaving(true);
     try {
-      await createRole(payload, token);
+      if (modalMode === "add") {
+        await createRole(payload, token);
+      } else {
+        await updateRole(editingId, payload, token);
+      }
       closeModal();
       setRefreshKey((k) => k + 1);
     } catch {
-      setFormErrors({ _api: "Failed to create role. Please try again." });
+      setFormErrors({ _api: `Failed to ${modalMode === "add" ? "create" : "update"} role. Please try again.` });
     } finally {
       setSaving(false);
     }
   }
 
-  // ── Derived list values ──────────────────────────────────────────────────────
+  // ── Toggle status ────────────────────────────────────────────────────────────
+  async function handleToggleStatus(row) {
+    setTogglingId(row.id);
+    try {
+      await toggleRoleStatus(row.id, token);
+      setRoles((prev) =>
+        prev.map((r) =>
+          r.id === row.id
+            ? { ...r, status: r.status === "Active" ? "Inactive" : "Active" }
+            : r
+        )
+      );
+    } catch {
+      // silent — row keeps its current status
+    } finally {
+      setTogglingId(null);
+    }
+  }
+
+  // ── Delete ───────────────────────────────────────────────────────────────────
+  async function handleDelete() {
+    try {
+      await deleteRole(deletingId, token);
+      setRoles((prev) => prev.filter((r) => r.id !== deletingId));
+      setPagination((p) => p ? { ...p, total: Math.max(0, p.total - 1) } : p);
+    } catch {
+      // silent
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  // ── Table columns (with actions) ─────────────────────────────────────────────
+  const tableColumns = [
+    ...COLUMNS,
+    {
+      key: "actions",
+      header: "",
+      render: (row) => (
+        <div className="cl-row-actions">
+          <button
+            type="button"
+            className="dash-icon-btn"
+            aria-label={`Edit ${row.role_name}`}
+            title="Edit"
+            onClick={() => openEdit(row)}
+          >
+            <Icon name="edit" size={15} />
+          </button>
+          <button
+            type="button"
+            className={`dash-icon-btn rl-toggle-btn${row.status === "Active" ? " rl-toggle-active" : " rl-toggle-inactive"}`}
+            aria-label={`${row.status === "Active" ? "Deactivate" : "Activate"} ${row.role_name}`}
+            title={row.status === "Active" ? "Deactivate" : "Activate"}
+            onClick={() => handleToggleStatus(row)}
+            disabled={togglingId === row.id}
+          >
+            <Icon name={row.status === "Active" ? "check" : "close"} size={15} />
+          </button>
+          <button
+            type="button"
+            className="dash-icon-btn"
+            aria-label={`Delete ${row.role_name}`}
+            title="Delete"
+            onClick={() => setDeletingId(row.id)}
+          >
+            <Icon name="trash" size={15} />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   const totalPages = pagination?.last_page ?? 1;
   const from = pagination?.from ?? 0;
   const to = pagination?.to ?? 0;
@@ -239,6 +366,7 @@ export default function RoleList() {
         <MastersTabs />
 
         <div className="panel cl-panel">
+          {/* Toolbar */}
           <div className="dt-toolbar">
             <div className="cl-search dt-search">
               <Icon name="search" size={16} />
@@ -277,7 +405,7 @@ export default function RoleList() {
           {apiError && <p className="rl-api-error">{apiError}</p>}
 
           <DataTable
-            columns={COLUMNS}
+            columns={tableColumns}
             rows={roles}
             isLoading={isLoading}
             emptyMessage="No roles found."
@@ -292,10 +420,10 @@ export default function RoleList() {
         </div>
       </div>
 
-      {/* ── Create Role Modal ─────────────────────────────────────────────────── */}
-      {modalOpen && (
+      {/* ── Add / Edit Modal ──────────────────────────────────────────────────── */}
+      {modalMode && (
         <Modal
-          title="Add New Role"
+          title={modalMode === "add" ? "Add New Role" : "Edit Role"}
           onClose={closeModal}
           size="lg"
           footer={
@@ -309,7 +437,9 @@ export default function RoleList() {
                 className="dash-primary-btn cl-add-btn"
                 disabled={saving}
               >
-                {saving ? "Creating…" : "Create Role"}
+                {saving
+                  ? modalMode === "add" ? "Creating…" : "Saving…"
+                  : modalMode === "add" ? "Create Role" : "Save Changes"}
               </button>
             </>
           }
@@ -337,7 +467,7 @@ export default function RoleList() {
               />
             </FormField>
 
-            {/* ── Permissions section ─────────────────────────────────────────── */}
+            {/* ── Permissions ─────────────────────────────────────────────────── */}
             <div className="rl-section-label" style={{ marginTop: 20 }}>
               Permissions
               {selectedPermIds.size > 0 && (
@@ -348,14 +478,21 @@ export default function RoleList() {
             {permsLoading && (
               <div className="rl-perm-state">
                 <div className="rl-perm-spinner" />
-                <span>Loading permissions…</span>
+                <span>
+                  {modalMode === "edit" ? "Loading role permissions…" : "Loading permissions…"}
+                </span>
               </div>
             )}
 
             {permsError && !permsLoading && (
               <div className="rl-perm-state rl-perm-error">
                 <span>{permsError}</span>
-                <button type="button" className="cl-btn" onClick={loadPermissions} style={{ marginLeft: 10 }}>
+                <button
+                  type="button"
+                  className="cl-btn"
+                  style={{ marginLeft: 10 }}
+                  onClick={modalMode === "edit" ? () => openEdit({ id: editingId }) : loadPermissions}
+                >
                   Retry
                 </button>
               </div>
@@ -387,7 +524,9 @@ export default function RoleList() {
                             <input
                               type="checkbox"
                               checked={allSelected}
-                              ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                              ref={(el) => {
+                                if (el) el.indeterminate = someSelected && !allSelected;
+                              }}
                               onChange={() => toggleGroup(perms)}
                             />
                             <span>{module}</span>
@@ -418,6 +557,16 @@ export default function RoleList() {
             )}
           </form>
         </Modal>
+      )}
+
+      {/* ── Delete Confirm ────────────────────────────────────────────────────── */}
+      {deletingId !== null && (
+        <ConfirmDialog
+          title="Delete Role"
+          message="This will permanently remove this role and unassign it from all users. This action cannot be undone."
+          onCancel={() => setDeletingId(null)}
+          onConfirm={handleDelete}
+        />
       )}
     </>
   );

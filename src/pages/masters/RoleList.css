@@ -24,6 +24,18 @@
   font-weight: 700;
 }
 
+/* ── Status toggle action buttons ────────────────────────────────────────────── */
+
+.rl-toggle-btn { transition: color 120ms, background 120ms; }
+
+.rl-toggle-active  { color: var(--color-success); }
+.rl-toggle-active:hover  { background: var(--color-success-soft); }
+
+.rl-toggle-inactive { color: var(--color-muted); }
+.rl-toggle-inactive:hover { background: #f1f5f9; }
+
+.rl-toggle-btn:disabled { opacity: 0.45; pointer-events: none; }
+
 /* ── Modal form ──────────────────────────────────────────────────────────────── */
 
 .rl-section-label {
