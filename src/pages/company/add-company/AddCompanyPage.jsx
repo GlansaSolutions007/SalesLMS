@@ -10,7 +10,6 @@ import WizardStepper from "../../../components/WizardStepper.jsx";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import { companySchema, defaultCompanyFormValues, WIZARD_STEPS } from "./schema.js";
 import CompanyDetailsStep from "./steps/CompanyDetailsStep.jsx";
-import AddressDetailsStep from "./steps/AddressDetailsStep.jsx";
 import SubscriptionDetailsStep from "./steps/SubscriptionDetailsStep.jsx";
 import AdminDetailsStep from "./steps/AdminDetailsStep.jsx";
 import { getSubscriptionPlans, createCompany, ApiValidationError, ApiError } from "../../../services/api/companyApi.js";
@@ -186,9 +185,8 @@ export default function AddCompanyPage() {
 
             <div className="panel wizard-panel">
               <div key={currentStep} className="wizard-panel-inner">
-                {currentStep === 0 && <CompanyDetailsStep control={control} errors={errors} />}
-                {currentStep === 1 && <AddressDetailsStep control={control} errors={errors} watch={watch} setValue={setValue} />}
-                {currentStep === 2 && (
+                {currentStep === 0 && <CompanyDetailsStep control={control} errors={errors} watch={watch} setValue={setValue} />}
+                {currentStep === 1 && (
                   <SubscriptionDetailsStep
                     control={control}
                     errors={errors}
@@ -198,7 +196,7 @@ export default function AddCompanyPage() {
                     plansError={plansError}
                   />
                 )}
-                {currentStep === 3 && <AdminDetailsStep control={control} errors={errors} watch={watch} />}
+                {currentStep === 2 && <AdminDetailsStep control={control} errors={errors} watch={watch} />}
 
                 <div className="wizard-step-footer">
                   <div className="wizard-step-footer-left">
@@ -253,7 +251,7 @@ function AddCompanySkeleton() {
   return (
     <div className="wizard-skeleton">
       <div className="wizard-skeleton-steps">
-        {Array.from({ length: 4 }).map((_, i) => (
+        {Array.from({ length: 3 }).map((_, i) => (
           <span key={i} className="wizard-skeleton-circle" />
         ))}
       </div>
