@@ -375,13 +375,13 @@ export default function Login() {
 
       <AuthCard view={view} setView={setView} />
 
-      <footer>
+      {/* <footer>
         © 2026 Sales LMS. All rights reserved.
         <span />
         Version 1.0
         <span />
         <b>Learning that scales your sales team.</b>
-      </footer>
+      </footer> */}
     </div>
   );
 }
