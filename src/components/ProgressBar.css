@@ -21,6 +21,18 @@
   background: var(--color-primary-600);
 }
 
+.progress-danger {
+  background: var(--color-danger);
+}
+
+.progress-warning {
+  background: var(--color-warning);
+}
+
+.progress-success {
+  background: var(--color-success);
+}
+
 .progress-label {
   font-size: 12px;
   font-weight: 700;

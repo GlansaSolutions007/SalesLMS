@@ -63,6 +63,7 @@ export default function EmployeeList() {
       ]}
       fields={FIELDS}
       subNav={<EmployeeTabs />}
+      onAddClick={() => navigate(ROUTES.EMPLOYEES_ADD)}
       extraRowAction={(row) => (
         <button
           type="button"

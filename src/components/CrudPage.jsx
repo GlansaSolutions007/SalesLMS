@@ -29,6 +29,7 @@ export default function CrudPage({
   fields,
   subNav,
   extraRowAction,
+  onAddClick,
 }) {
   const { toggleCollapsed } = useOutletContext();
   const table = useCrudTable({ seed, searchFields });
@@ -149,7 +150,7 @@ export default function CrudPage({
             onSortChange={table.setSort}
             sortOptions={sortOptions}
             addLabel={`Add New ${entityLabel}`}
-            onAdd={openAdd}
+            onAdd={onAddClick ?? openAdd}
             selectedCount={table.selectedIds.size}
             onBulkDelete={() => setConfirmBulk(true)}
             onExportCsv={() => exportToCsv(`${entityLabel.toLowerCase()}s.csv`, table.pageItems, columns)}
