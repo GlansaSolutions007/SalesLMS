@@ -42,6 +42,8 @@ export const ROUTES = {
   REWARDS: "/rewards",
   NOTIFICATIONS: "/notifications",
   MASTERS: "/masters",
+  MASTERS_SUBSCRIPTIONS: "/masters/subscriptions",
+  MASTERS_ROLES: "/masters/roles",
   SETTINGS: "/settings",
   AUDIT: "/audit",
 };

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "../components/Icon.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
-import { DEMO_ACCOUNTS } from "../services/authService.js";
 import { ROUTES } from "../router/routePaths.js";
 import "../App.css";
 
@@ -18,7 +17,7 @@ const featureList = [
 function BrandMark() {
   return (
     <div className="brand-mark">
-      <Icon name="car" size={28} />
+      <Icon name="car" size={28} /> 
     </div>
   );
 }
@@ -194,21 +193,13 @@ function AuthCard({ view, setView }) {
 
   async function handleLogin(e) {
     e?.preventDefault();
+    if (!username.trim() || !password) return;
+
     try {
       await login({ username, password });
       navigate(ROUTES.DASHBOARD, { replace: true });
     } catch {
       /* error message is already surfaced via auth context state */
-    }
-  }
-
-  async function handleDemoLogin(demoUsername) {
-    setUsername(demoUsername);
-    try {
-      await login({ username: demoUsername, password: "demo" });
-      navigate(ROUTES.DASHBOARD, { replace: true });
-    } catch {
-      /* ignore — demo accounts always exist */
     }
   }
 
@@ -309,27 +300,10 @@ function AuthCard({ view, setView }) {
                   </button>
                 </div>
 
-                <button className="primary" type="submit" disabled={isLoading}>
+                <button className="primary" type="submit" disabled={isLoading || !username.trim() || !password}>
                   {isLoading ? "SIGNING IN…" : "LOGIN TO DASHBOARD"}
                   <Icon name="arrow" />
                 </button>
-
-                <div className="demo-accounts">
-                  <span>Demo accounts</span>
-                  <div className="demo-accounts-list">
-                    {DEMO_ACCOUNTS.map((acc) => (
-                      <button
-                        type="button"
-                        key={acc.username}
-                        className="demo-account-pill"
-                        onClick={() => handleDemoLogin(acc.username)}
-                        disabled={isLoading}
-                      >
-                        {acc.roleName}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
                 <div className="divider">
                   <span />
@@ -401,13 +375,13 @@ export default function Login() {
 
       <AuthCard view={view} setView={setView} />
 
-      <footer>
+      {/* <footer>
         © 2026 Sales LMS. All rights reserved.
         <span />
         Version 1.0
         <span />
         <b>Learning that scales your sales team.</b>
-      </footer>
+      </footer> */}
     </div>
   );
 }

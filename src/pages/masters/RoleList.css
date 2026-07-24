@@ -1,0 +1,226 @@
+@import "../../components/DataToolbar.css";
+
+/* ── Shared ─────────────────────────────────────────────────────────────────── */
+
+.rl-api-error {
+  margin: 0 22px 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+.rl-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: #eef4ff;
+  color: var(--color-primary-700);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ── Status toggle action buttons ────────────────────────────────────────────── */
+
+.rl-toggle-btn { transition: color 120ms, background 120ms; }
+
+.rl-toggle-active  { color: var(--color-success); }
+.rl-toggle-active:hover  { background: var(--color-success-soft); }
+
+.rl-toggle-inactive { color: var(--color-muted); }
+.rl-toggle-inactive:hover { background: #f1f5f9; }
+
+.rl-toggle-btn:disabled { opacity: 0.45; pointer-events: none; }
+
+/* ── Modal form ──────────────────────────────────────────────────────────────── */
+
+.rl-section-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.rl-perm-selected-count {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: var(--color-primary-600);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ── Permissions search ──────────────────────────────────────────────────────── */
+
+.rl-perm-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 38px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  margin-bottom: 14px;
+  color: var(--color-muted);
+}
+
+.rl-perm-search {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.rl-perm-search::placeholder {
+  color: #94a3b8;
+}
+
+/* ── Permission groups container ─────────────────────────────────────────────── */
+
+.rl-perm-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* ── Individual group ────────────────────────────────────────────────────────── */
+
+.rl-perm-group {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.rl-perm-group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-heading);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.rl-perm-group-header input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--color-primary-600);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.rl-perm-group-count {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 20px;
+  background: var(--color-border);
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ── Permission items grid ───────────────────────────────────────────────────── */
+
+.rl-perm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.rl-perm-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  color: var(--color-text);
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 100ms;
+}
+
+.rl-perm-item:last-child,
+.rl-perm-item:nth-last-child(2):nth-child(odd) {
+  border-bottom: none;
+}
+
+.rl-perm-item:hover {
+  background: #f8fafc;
+}
+
+.rl-perm-item input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--color-primary-600);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── Permissions loading / error / empty states ──────────────────────────────── */
+
+.rl-perm-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  font-size: 13px;
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+.rl-perm-error {
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+  border-color: transparent;
+}
+
+.rl-perm-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary-600);
+  border-radius: 50%;
+  animation: rl-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes rl-spin {
+  to { transform: rotate(360deg); }
+}
+
+.rl-perm-empty {
+  padding: 14px 0 4px;
+  font-size: 13px;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .rl-perm-grid {
+    grid-template-columns: 1fr;
+  }
+}
