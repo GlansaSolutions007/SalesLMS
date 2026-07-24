@@ -147,6 +147,467 @@
   }
 }
 
+/* Segmented control / status chip group — used by any form that toggles
+   between a small fixed set of options (status, difficulty, type, etc.) */
+
+.seg-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.seg-chip {
+  padding: 10px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  color: var(--color-muted);
+  background: white;
+  font-size: 12.5px;
+  font-weight: 700;
+  transition: 0.15s ease;
+}
+
+.seg-chip:hover {
+  border-color: var(--color-primary-500);
+}
+
+.seg-chip.is-active {
+  color: white;
+  background: var(--color-primary-600);
+  border-color: transparent;
+}
+
+.seg-chip.is-active.tone-success {
+  background: var(--color-success);
+}
+
+.seg-chip.is-active.tone-warning {
+  background: var(--color-warning);
+}
+
+.seg-chip.is-active.tone-danger {
+  background: var(--color-danger);
+}
+
+/* Wizard page shell: fade-in body, sticky header, transitioning panel,
+   loading skeleton — the scaffolding every multi-step wizard page shares. */
+.wizard-page-body {
+  animation: wizard-fade-in 0.24s ease;
+}
+
+@keyframes wizard-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wizard-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin: -24px -24px 0;
+  padding: 20px 24px;
+  background: rgba(247, 251, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.wizard-header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.wizard-back-btn {
+  align-self: flex-start;
+  height: 32px;
+  padding: 0 12px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.wizard-header-text h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  color: var(--color-heading);
+}
+
+.wizard-panel {
+  padding: 26px;
+  overflow: hidden;
+}
+
+.wizard-panel-inner {
+  animation: wizard-panel-in 0.2s ease;
+}
+
+@keyframes wizard-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.wizard-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.wizard-skeleton-steps {
+  display: flex;
+  gap: 20px;
+  padding: 20px 24px;
+  border-radius: 18px;
+  background: white;
+  border: 1px solid var(--color-border);
+}
+
+.wizard-skeleton-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #eef2f7 25%, #f7fafd 37%, #eef2f7 63%);
+  background-size: 400% 100%;
+  animation: wizard-shimmer 1.4s ease infinite;
+}
+
+.wizard-skeleton-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 26px;
+}
+
+.wizard-skeleton-block {
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #eef2f7 25%, #f7fafd 37%, #eef2f7 63%);
+  background-size: 400% 100%;
+  animation: wizard-shimmer 1.4s ease infinite;
+}
+
+.wizard-skeleton-block.w-30 {
+  width: 30%;
+  height: 18px;
+}
+
+.wizard-skeleton-block.w-60 {
+  width: 60%;
+}
+
+.wizard-skeleton-block.w-100 {
+  width: 100%;
+}
+
+@keyframes wizard-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .wizard-sticky-header {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .wizard-panel {
+    padding: 18px;
+  }
+}
+
+/* Section dividers used to merge multiple sections into one wizard step */
+.form-section-divider {
+  margin: 28px 0 18px;
+  padding-top: 22px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.form-section-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-heading);
+}
+
+/* Wizard step footer (Previous / Next / Save / Cancel) */
+.wizard-step-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+}
+
+.wizard-step-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .wizard-step-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wizard-step-footer-left,
+  .wizard-step-footer > button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .wizard-step-footer-left button {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* Password input with visibility toggle + strength meter */
+.form-password-input {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 6px 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: white;
+}
+
+.form-field .form-password-input input {
+  flex: 1;
+  height: 100%;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.form-password-input button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  color: #94a3b8;
+  background: transparent;
+}
+
+.form-password-input button:hover {
+  color: var(--color-primary-600);
+  background: #f1f5f9;
+}
+
+.form-password-strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.form-password-strength .progress {
+  flex: 1;
+}
+
+.form-password-strength .progress-track {
+  flex: 1;
+  width: auto;
+}
+
+.form-strength-label {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.form-strength-label.tone-danger {
+  color: var(--color-danger);
+}
+
+.form-strength-label.tone-warning {
+  color: var(--color-warning);
+}
+
+.form-strength-label.tone-success {
+  color: var(--color-success);
+}
+
+/* Editable documents table (multi-row: type / number-or-name / expiry /
+   verification / upload) — used by any wizard step that collects documents */
+.form-doc-table-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.form-doc-table-head p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.form-doc-add-btn {
+  height: 40px;
+  padding: 0 14px;
+  font-size: 12.5px;
+}
+
+.form-doc-empty {
+  gap: 10px;
+}
+
+.form-doc-table {
+  min-width: 920px;
+}
+
+.form-doc-select,
+.form-doc-input {
+  height: 38px;
+  min-width: 140px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: white;
+  color: var(--color-text);
+  font-size: 12.5px;
+}
+
+.form-doc-input.has-error {
+  border-color: var(--color-danger);
+}
+
+.form-doc-error {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-danger);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.form-verify-verified {
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+.form-verify-rejected {
+  color: var(--color-danger);
+  font-weight: 700;
+}
+
+.form-verify-pending {
+  color: var(--color-warning);
+  font-weight: 700;
+}
+
+/* Simple vertical field stack — the default wrapper for a form section's
+   body (used inside wizard steps, tab panels, etc.) */
+.form-fields-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.form-logo-row {
+  margin-bottom: 14px;
+}
+
+/* Repeatable bordered card list — used by any "+ Add X" section that needs
+   more room per row than a table cell allows (e.g. a card per contact) */
+.form-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.form-card {
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: white;
+  transition: 0.15s ease;
+}
+
+.form-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.form-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.form-card-index {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-primary-600);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.form-card-delete-btn {
+  height: 32px;
+  padding: 0 10px;
+  font-size: 11.5px;
+  color: var(--color-danger);
+}
+
+/* Inline notice boxes — a muted hint, or a warning/error alert */
+.form-hint-box {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.form-alert-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--color-danger-soft);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
 /* Person avatar-chip cell (people lists: Employees, Trainers, profile pages) */
 
 .emp-cell {

@@ -1,7 +1,9 @@
+import { useNavigate } from "react-router-dom";
 import Badge from "../../components/Badge.jsx";
 import CrudPage from "../../components/CrudPage.jsx";
 import CompanyTabs from "./CompanyTabs.jsx";
 import { COMPANIES, INDUSTRIES, SUBSCRIPTION_PLANS } from "./companyData.js";
+import { ROUTES } from "../../router/routePaths.js";
 
 const STATUS_TONE = { Active: "green", Suspended: "orange", Inactive: "gray" };
 
@@ -60,6 +62,8 @@ const FIELDS = [
 ];
 
 export default function CompanyList() {
+  const navigate = useNavigate();
+
   return (
     <CrudPage
       title="Companies"
@@ -76,6 +80,7 @@ export default function CompanyList() {
       ]}
       fields={FIELDS}
       subNav={<CompanyTabs />}
+      onAddClick={() => navigate(ROUTES.COMPANY_ADD)}
     />
   );
 }
