@@ -6,18 +6,6 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { ROUTES } from "../router/routePaths.js";
 import "./Sidebar.css";
 
-<<<<<<< HEAD
-export const NAV_ITEMS = [
-  { key: "dashboard", label: "Dashboard", icon: "grid" },
-  { key: "course-list", label: "Course List", icon: "book" },
-  { key: "courses", label: "Courses", icon: "cap" },
-  { key: "pipeline", label: "Sales Pipeline", icon: "pipeline" },
-  { key: "leads", label: "Leads", icon: "users" },
-  { key: "leaderboard", label: "Team Leaderboard", icon: "trophy" },
-];
-
-=======
->>>>>>> b0e95a82e89dfd0b9056bb74f34c5fbb644c09e4
 const STORAGE_KEY = "saleslms.sidebarCollapsed";
 
 function readStoredCollapsed() {
