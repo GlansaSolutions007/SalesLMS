@@ -5,11 +5,13 @@ export const ROUTES = {
 
   COMPANY: "/company",
   COMPANY_COMPANIES: "/company/companies",
+  COMPANY_ADD: "/company/companies/add",
   COMPANY_BRANCHES: "/company/branches",
   COMPANY_DEPARTMENTS: "/company/departments",
   COMPANY_DESIGNATIONS: "/company/designations",
 
   EMPLOYEES: "/employees",
+  EMPLOYEES_ADD: "/employees/add",
   EMPLOYEES_LEAVE: "/employees/leave",
   EMPLOYEE_PROFILE: "/employees/profile",
 
@@ -18,6 +20,7 @@ export const ROUTES = {
   TRAINER_PROFILE: "/trainers/profile",
 
   COURSES: "/courses",
+  COURSES_CREATE: "/courses/create",
   COURSES_CATEGORIES: "/courses/categories",
   COURSES_MODULES: "/courses/modules",
   COURSES_LESSONS: "/courses/lessons",

@@ -10,12 +10,14 @@ const Dashboard = lazy(() => import("../pages/dashboard.jsx"));
 const Placeholder = lazy(() => import("../pages/Placeholder.jsx"));
 
 const CourseList = lazy(() => import("../pages/CourseList.jsx"));
+const CourseWizard = lazy(() => import("../pages/courses/wizard/CourseWizard.jsx"));
 const CourseCategories = lazy(() => import("../pages/training/CourseCategories.jsx"));
 const CourseModules = lazy(() => import("../pages/training/CourseModules.jsx"));
 const Lessons = lazy(() => import("../pages/training/Lessons.jsx"));
 const LessonResources = lazy(() => import("../pages/training/LessonResources.jsx"));
 
 const EmployeeList = lazy(() => import("../pages/employees/EmployeeList.jsx"));
+const EmployeeForm = lazy(() => import("../pages/employees/EmployeeForm.jsx"));
 const EmployeeLeave = lazy(() => import("../pages/employees/EmployeeLeave.jsx"));
 const EmployeeProfile = lazy(() => import("../pages/employees/EmployeeProfile.jsx"));
 
@@ -24,6 +26,7 @@ const TrainerBatchAllocations = lazy(() => import("../pages/trainers/TrainerBatc
 const TrainerProfile = lazy(() => import("../pages/trainers/TrainerProfile.jsx"));
 
 const CompanyList = lazy(() => import("../pages/company/CompanyList.jsx"));
+const AddCompanyPage = lazy(() => import("../pages/company/add-company/AddCompanyPage.jsx"));
 
 // Menu entries with a real, already-built page. Everything else in
 // menuConfig still gets a route (at its correct URL) rendering the shared
@@ -65,6 +68,9 @@ export default function AppRouter() {
 
             {/* Hidden routes reachable via in-page navigation (row actions,
                 sub-nav tabs), not shown as their own Sidebar entries. */}
+            <Route path={ROUTES.COMPANY_ADD} element={<AddCompanyPage />} />
+            <Route path={ROUTES.COURSES_CREATE} element={<CourseWizard />} />
+            <Route path={ROUTES.EMPLOYEES_ADD} element={<EmployeeForm />} />
             <Route path={ROUTES.EMPLOYEES_LEAVE} element={<EmployeeLeave />} />
             <Route path={ROUTES.EMPLOYEE_PROFILE} element={<EmployeeProfile />} />
             <Route path={ROUTES.TRAINERS_BATCHES} element={<TrainerBatchAllocations />} />

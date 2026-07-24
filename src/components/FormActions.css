@@ -1,0 +1,69 @@
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.form-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.fa-outline-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--color-primary-500);
+  border-radius: 12px;
+  color: var(--color-primary-600);
+  background: white;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: 0.16s ease;
+}
+
+.fa-outline-btn:hover:not(:disabled) {
+  background: #eef5fd;
+}
+
+.fa-save-btn {
+  height: 46px;
+  padding: 0 22px;
+  font-size: 13px;
+}
+
+.fa-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(47, 120, 200, 0.25);
+  border-top-color: var(--color-primary-600);
+  animation: fa-spin 0.7s linear infinite;
+}
+
+.fa-spinner.light {
+  border-color: rgba(255, 255, 255, 0.4);
+  border-top-color: white;
+}
+
+@keyframes fa-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .form-actions-label {
+    display: none;
+  }
+
+  .fa-outline-btn,
+  .form-actions .cl-btn {
+    padding: 0 12px;
+  }
+}

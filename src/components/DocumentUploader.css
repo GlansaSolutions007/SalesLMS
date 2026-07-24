@@ -1,0 +1,101 @@
+.duploader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.duploader-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  color: var(--color-primary-600);
+  background: #eef5fd;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.duploader-btn:hover {
+  border-color: var(--color-primary-500);
+}
+
+.duploader-btn.has-error {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.duploader-error {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+.duploader-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 7px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: white;
+  color: var(--color-text);
+  font-size: 12px;
+}
+
+.duploader-chip span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.duploader-chip button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  padding: 2px;
+}
+
+.duploader-chip button:hover {
+  color: var(--color-primary-600);
+}
+
+.duploader-chip button.danger:hover {
+  color: var(--color-danger);
+}
+
+.duploader-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 140px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+
+.duploader-progress-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: #edf1f7;
+  overflow: hidden;
+}
+
+.duploader-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--color-primary-600);
+  transition: width 0.15s ease;
+}
