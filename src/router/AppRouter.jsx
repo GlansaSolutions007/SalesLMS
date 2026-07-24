@@ -25,6 +25,8 @@ const TrainerProfile = lazy(() => import("../pages/trainers/TrainerProfile.jsx")
 
 const CompanyList = lazy(() => import("../pages/company/CompanyList.jsx"));
 
+const SubscriptionPlanList = lazy(() => import("../pages/masters/SubscriptionPlanList.jsx"));
+
 // Menu entries with a real, already-built page. Everything else in
 // menuConfig still gets a route (at its correct URL) rendering the shared
 // Placeholder, so every menu item is navigable even before its module ships.
@@ -38,6 +40,7 @@ const PAGE_COMPONENTS = {
   employees: EmployeeList,
   trainers: TrainerList,
   "company-companies": CompanyList,
+  "masters-subscriptions": SubscriptionPlanList,
 };
 
 const flatMenu = flattenMenu();

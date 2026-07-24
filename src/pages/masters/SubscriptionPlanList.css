@@ -1,0 +1,71 @@
+@import "../../styles/controls.css";
+
+.sp-section-label {
+  margin: 16px 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.sp-section-label:first-of-type {
+  margin-top: 0;
+}
+
+.sp-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.sp-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.sp-features-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 24px;
+  padding: 4px 0 8px;
+}
+
+.sp-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.sp-feature-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary-600);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sp-api-error {
+  margin: 0 22px 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .sp-grid-2,
+  .sp-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .sp-features-grid {
+    grid-template-columns: 1fr;
+  }
+}

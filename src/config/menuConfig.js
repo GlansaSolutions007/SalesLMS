@@ -78,7 +78,17 @@ export const menuConfig = [
   },
   { id: "analytics", title: "Analytics", icon: "pieChart", path: ROUTES.ANALYTICS, roles: [SA, CA, SM] },
   { id: "notifications", title: "Notifications", icon: "bell", path: ROUTES.NOTIFICATIONS, roles: ALL, permissions: ["notifications.view"] },
-  { id: "masters", title: "Masters", icon: "gridView", path: ROUTES.MASTERS, roles: [SA], permissions: ["master_data.view"] },
+  {
+    id: "masters",
+    title: "Masters",
+    icon: "gridView",
+    path: ROUTES.MASTERS,
+    roles: [SA],
+    permissions: ["master_data.view"],
+    children: [
+      { id: "masters-subscriptions", title: "Subscription Plans", path: ROUTES.MASTERS_SUBSCRIPTIONS, roles: [SA], permissions: ["master_data.view"] },
+    ],
+  },
   { id: "settings", title: "Settings", icon: "settings", path: ROUTES.SETTINGS, roles: ALL, permissions: ["settings.view"] },
   { id: "audit", title: "Audit Logs", icon: "clock", path: ROUTES.AUDIT, roles: [SA], permissions: ["audit_logs.view"] },
 ];
