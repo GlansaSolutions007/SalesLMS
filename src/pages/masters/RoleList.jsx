@@ -142,7 +142,6 @@ export default function RoleList() {
     setPermsError(null);
     try {
       const res = await getPermissions(token);
-      console.log(token, 'Tokennnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn');
       const raw = res.data?.data?.data ?? res.data?.data ?? res.data;
       setPermissions(Array.isArray(raw) ? raw : []);
     } catch {
