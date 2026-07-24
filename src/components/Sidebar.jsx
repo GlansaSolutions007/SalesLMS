@@ -4,7 +4,8 @@ import "./Sidebar.css";
 
 export const NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard", icon: "grid" },
-  { key: "courses", label: "Courses", icon: "book" },
+  { key: "course-list", label: "Course List", icon: "book" },
+  { key: "courses", label: "Courses", icon: "cap" },
   { key: "pipeline", label: "Sales Pipeline", icon: "pipeline" },
   { key: "leads", label: "Leads", icon: "users" },
   { key: "leaderboard", label: "Team Leaderboard", icon: "trophy" },

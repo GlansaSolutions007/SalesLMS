@@ -1,0 +1,609 @@
+.course-list-page {
+  min-height: 100%;
+  padding: 28px 30px 35px;
+  background: #f7faff;
+}
+
+/* =================================
+   HEADER
+================================= */
+
+.course-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 25px;
+}
+
+.course-page-header h1 {
+  margin: 0;
+  color: #172554;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.course-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 8px;
+  color: #8793a8;
+  font-size: 10px;
+}
+
+.course-breadcrumb b {
+  color: #b8c1ce;
+}
+
+.course-breadcrumb strong {
+  color: #172554;
+}
+
+/* =================================
+   HEADER ACTIONS
+================================= */
+
+.course-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.course-search {
+  width: 190px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px;
+  border: 1px solid #e3eaf3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #8c99ad;
+}
+
+.course-search input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #172554;
+  font-size: 9px;
+}
+
+.course-search input::placeholder {
+  color: #a2adbd;
+}
+
+.course-filter-button {
+  height: 36px;
+  padding: 0 13px;
+  border: 1px solid #e3eaf3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #66748c;
+  font-size: 9px;
+}
+
+.course-filter-button:hover {
+  border-color: #1769e8;
+  color: #1769e8;
+}
+
+.course-add-button {
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: #1769e8;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 600;
+  box-shadow: 0 5px 12px rgba(23, 105, 232, 0.2);
+}
+
+.course-add-button:hover {
+  background: #0957ca;
+}
+
+/* =================================
+   STATS
+================================= */
+
+.course-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.course-stat-card {
+  min-height: 96px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #e7edf5;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 15px rgba(24, 67, 115, 0.035);
+}
+
+.course-stat-icon {
+  width: 39px;
+  height: 39px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 10px;
+  font-size: 19px;
+}
+
+.course-stat-icon.blue {
+  background: #e7f0ff;
+  color: #1769e8;
+}
+
+.course-stat-icon.green {
+  background: #e2f7ed;
+  color: #20a875;
+}
+
+.course-stat-icon.purple {
+  background: #eeeaff;
+  color: #8061e8;
+}
+
+.course-stat-icon.orange {
+  background: #fff0dc;
+  color: #ef9c31;
+}
+
+.course-stat-info span {
+  display: block;
+  color: #7f8ba0;
+  font-size: 8px;
+}
+
+.course-stat-info strong {
+  display: block;
+  margin-top: 5px;
+  color: #172554;
+  font-size: 19px;
+}
+
+.course-stat-info small {
+  display: block;
+  margin-top: 4px;
+  color: #9aa5b5;
+  font-size: 7px;
+}
+
+.course-stat-info small b {
+  color: #20a875;
+}
+
+.course-stars {
+  color: #f2a51a !important;
+  font-size: 10px !important;
+}
+
+/* =================================
+   TABS
+================================= */
+
+.course-tabs {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin-top: 27px;
+  border-bottom: 1px solid #e4eaf2;
+}
+
+.course-tabs > button {
+  position: relative;
+  padding: 0 0 13px;
+  border: none;
+  background: transparent;
+  color: #8793a8;
+  font-size: 9px;
+}
+
+.course-tabs > button.active {
+  color: #1769e8;
+  font-weight: 600;
+}
+
+.course-tabs > button.active::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 3px;
+  background: #1769e8;
+}
+
+/* =================================
+   VIEW TOGGLE
+================================= */
+
+.course-view-toggle {
+  display: flex;
+  gap: 5px;
+  margin-left: auto;
+  margin-bottom: 8px;
+}
+
+.course-view-toggle button {
+  width: 30px;
+  height: 28px;
+  border: 1px solid #e4eaf2;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #8996aa;
+  font-size: 11px;
+}
+
+.course-view-toggle button.active {
+  border-color: #1769e8;
+  background: #1769e8;
+  color: #ffffff;
+}
+
+/* =================================
+   TABLE
+================================= */
+
+.course-table-card {
+  margin-top: 0;
+  overflow: hidden;
+  border: 1px solid #e5ebf3;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.course-table-wrapper {
+  overflow-x: auto;
+}
+
+.course-table {
+  width: 100%;
+  min-width: 1150px;
+  border-collapse: collapse;
+}
+
+.course-table th {
+  padding: 12px 15px;
+  border-bottom: 1px solid #e9eef5;
+  background: #fbfcfe;
+  color: #8793a8;
+  font-size: 7px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.course-table td {
+  padding: 10px 15px;
+  border-bottom: 1px solid #f0f3f7;
+  color: #5e6d84;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.course-table tbody tr:hover {
+  background: #fbfdff;
+}
+
+/* =================================
+   COURSE INFO
+================================= */
+
+.course-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 245px;
+}
+
+.course-info img {
+  width: 62px;
+  height: 40px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.course-info strong {
+  display: block;
+  color: #172554;
+  font-size: 9px;
+}
+
+.course-info p {
+  max-width: 175px;
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: #8995a8;
+  font-size: 7px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: normal;
+}
+
+/* =================================
+   CATEGORY
+================================= */
+
+.course-category {
+  display: inline-flex;
+  padding: 5px 8px;
+  border-radius: 15px;
+  background: #edf4ff;
+  color: #216be0;
+  font-size: 7px;
+}
+
+/* =================================
+   LEVEL
+================================= */
+
+.course-level {
+  display: inline-flex;
+  padding: 5px 8px;
+  border-radius: 15px;
+  font-size: 7px;
+  font-weight: 500;
+}
+
+.course-level.beginner {
+  background: #e4f8ed;
+  color: #1c9c69;
+}
+
+.course-level.intermediate {
+  background: #e9f1ff;
+  color: #216be0;
+}
+
+.course-level.advanced {
+  background: #fff0df;
+  color: #e88b22;
+}
+
+/* =================================
+   PROGRESS
+================================= */
+
+.course-progress {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.course-progress-bar {
+  width: 48px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #e9eef5;
+}
+
+.course-progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #1769e8;
+}
+
+.course-progress small {
+  color: #8490a3;
+  font-size: 7px;
+}
+
+/* =================================
+   RATING
+================================= */
+
+.course-rating {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.course-rating span {
+  color: #f4a619;
+  font-size: 9px;
+  letter-spacing: -2px;
+}
+
+.course-rating b {
+  color: #66748b;
+  font-size: 8px;
+  font-weight: 500;
+}
+
+/* =================================
+   STATUS
+================================= */
+
+.course-status {
+  display: inline-flex;
+  padding: 5px 8px;
+  border-radius: 15px;
+  font-size: 7px;
+  font-weight: 600;
+}
+
+.course-status.published {
+  background: #e3f8ed;
+  color: #1d9a68;
+}
+
+.course-status.progress {
+  background: #e9f1ff;
+  color: #216be0;
+}
+
+.course-status.draft {
+  background: #f0f2f6;
+  color: #7b8799;
+}
+
+/* =================================
+   ACTIONS
+================================= */
+
+.course-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.course-actions button {
+  width: 27px;
+  height: 27px;
+  border: 1px solid #e4eaf2;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #8491a4;
+  font-size: 9px;
+}
+
+.course-actions button:hover {
+  border-color: #1769e8;
+  color: #1769e8;
+}
+
+/* =================================
+   FOOTER
+================================= */
+
+.course-table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 17px;
+  color: #8c98aa;
+  font-size: 8px;
+}
+
+.course-pagination {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.course-pagination button {
+  width: 27px;
+  height: 27px;
+  border: 1px solid #e3eaf3;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #77849a;
+  font-size: 9px;
+}
+
+.course-pagination button.active {
+  border-color: #1769e8;
+  background: #1769e8;
+  color: #ffffff;
+}
+
+.course-pagination span {
+  padding: 0 3px;
+}
+
+/* =================================
+   RESPONSIVE
+================================= */
+
+@media (max-width: 1300px) {
+  .course-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .course-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .course-header-actions {
+    width: 100%;
+  }
+}
+
+@media (max-width: 800px) {
+  .course-list-page {
+    padding: 20px 15px;
+  }
+
+  .course-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .course-header-actions {
+    flex-wrap: wrap;
+  }
+
+  .course-search {
+    width: 100%;
+  }
+
+  .course-tabs {
+    overflow-x: auto;
+  }
+
+  .course-tabs > button {
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 550px) {
+  .course-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .course-header-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .course-search {
+    grid-column: span 2;
+  }
+
+  .course-add-button {
+    width: 100%;
+  }
+
+  .course-table-footer {
+    min-width: 600px;
+  }
+}
+
+/* Enlarged dashboard-inspired typography */
+.course-page-header h1 { font-size: 30px; }
+.course-breadcrumb { font-size: 13px; }
+.course-search input,
+.course-filter-button,
+.course-add-button,
+.course-tabs > button,
+.course-table-footer,
+.course-pagination button { font-size: 14px; }
+.course-stat-info span { font-size: 13px; }
+.course-stat-info strong { font-size: 24px; }
+.course-stat-info small,
+.course-table th,
+.course-info p,
+.course-category,
+.course-level,
+.course-progress small,
+.course-status { font-size: 12px; }
+.course-table td,
+.course-info strong,
+.course-rating b,
+.course-actions button { font-size: 15px; }
