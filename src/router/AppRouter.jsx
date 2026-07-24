@@ -26,6 +26,7 @@ const TrainerProfile = lazy(() => import("../pages/trainers/TrainerProfile.jsx")
 const CompanyList = lazy(() => import("../pages/company/CompanyList.jsx"));
 
 const SubscriptionPlanList = lazy(() => import("../pages/masters/SubscriptionPlanList.jsx"));
+const RoleList = lazy(() => import("../pages/masters/RoleList.jsx"));
 
 // Menu entries with a real, already-built page. Everything else in
 // menuConfig still gets a route (at its correct URL) rendering the shared
@@ -41,6 +42,7 @@ const PAGE_COMPONENTS = {
   trainers: TrainerList,
   "company-companies": CompanyList,
   "masters-subscriptions": SubscriptionPlanList,
+  "masters-roles": RoleList,
 };
 
 const flatMenu = flattenMenu();

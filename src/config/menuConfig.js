@@ -87,6 +87,7 @@ export const menuConfig = [
     permissions: ["master_data.view"],
     children: [
       { id: "masters-subscriptions", title: "Subscription Plans", path: ROUTES.MASTERS_SUBSCRIPTIONS, roles: [SA], permissions: ["master_data.view"] },
+      { id: "masters-roles", title: "Roles", path: ROUTES.MASTERS_ROLES, roles: [SA], permissions: ["master_data.view"] },
     ],
   },
   { id: "settings", title: "Settings", icon: "settings", path: ROUTES.SETTINGS, roles: ALL, permissions: ["settings.view"] },

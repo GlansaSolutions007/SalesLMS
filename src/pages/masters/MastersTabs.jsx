@@ -4,6 +4,7 @@ import { ROUTES } from "../../router/routePaths.js";
 
 const TABS = [
   { key: "subscriptions", label: "Subscription Plans", path: ROUTES.MASTERS_SUBSCRIPTIONS },
+  { key: "roles", label: "Roles", path: ROUTES.MASTERS_ROLES },
 ];
 
 export default function MastersTabs() {

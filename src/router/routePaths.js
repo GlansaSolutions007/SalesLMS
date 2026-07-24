@@ -40,6 +40,7 @@ export const ROUTES = {
   NOTIFICATIONS: "/notifications",
   MASTERS: "/masters",
   MASTERS_SUBSCRIPTIONS: "/masters/subscriptions",
+  MASTERS_ROLES: "/masters/roles",
   SETTINGS: "/settings",
   AUDIT: "/audit",
 };
