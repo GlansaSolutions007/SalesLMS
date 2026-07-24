@@ -1,0 +1,66 @@
+.dtable-wrap {
+  overflow-x: auto;
+}
+
+.dtable {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.dtable th {
+  padding: 14px 22px;
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.dtable td {
+  padding: 14px 22px;
+  border-top: 1px solid #f1f5f9;
+  vertical-align: middle;
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.dtable tbody tr:hover {
+  background: var(--color-surface);
+}
+
+.dtable-check-col {
+  width: 40px;
+}
+
+.dtable-check-col input {
+  accent-color: var(--color-primary-600);
+}
+
+.dtable-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 64px 20px;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.dtable-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid #e2e8f0;
+  border-top-color: var(--color-primary-600);
+  animation: dtable-spin 0.7s linear infinite;
+}
+
+@keyframes dtable-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

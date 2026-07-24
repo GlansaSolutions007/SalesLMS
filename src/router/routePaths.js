@@ -1,0 +1,44 @@
+export const ROUTES = {
+  LOGIN: "/login",
+  DASHBOARD: "/dashboard",
+  ANALYTICS: "/analytics",
+
+  COMPANY: "/company",
+  COMPANY_COMPANIES: "/company/companies",
+  COMPANY_BRANCHES: "/company/branches",
+  COMPANY_DEPARTMENTS: "/company/departments",
+  COMPANY_DESIGNATIONS: "/company/designations",
+
+  EMPLOYEES: "/employees",
+  EMPLOYEES_LEAVE: "/employees/leave",
+  EMPLOYEE_PROFILE: "/employees/profile",
+
+  TRAINERS: "/trainers",
+  TRAINERS_BATCHES: "/trainers/batches",
+  TRAINER_PROFILE: "/trainers/profile",
+
+  COURSES: "/courses",
+  COURSES_CATEGORIES: "/courses/categories",
+  COURSES_MODULES: "/courses/modules",
+  COURSES_LESSONS: "/courses/lessons",
+  COURSES_RESOURCES: "/courses/resources",
+
+  TRAINING: "/training",
+  TRAINING_SESSIONS: "/training/sessions",
+
+  BATCHES: "/batches",
+  ASSESSMENTS: "/assessments",
+  ASSIGNMENTS: "/assignments",
+  CERTIFICATES: "/certificates",
+  LEADS: "/leads",
+  PIPELINE: "/pipeline",
+  SALES: "/sales",
+  ACTIVITIES: "/activities",
+  REPORTS: "/reports",
+  TARGETS: "/targets",
+  REWARDS: "/rewards",
+  NOTIFICATIONS: "/notifications",
+  MASTERS: "/masters",
+  SETTINGS: "/settings",
+  AUDIT: "/audit",
+};

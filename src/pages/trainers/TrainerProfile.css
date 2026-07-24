@@ -1,0 +1,29 @@
+.tp-feedback-card {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.tp-feedback-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tp-feedback-head b {
+  font-size: 13px;
+  color: var(--color-heading);
+}
+
+.tp-feedback-comment {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tp-feedback-date {
+  color: var(--color-muted);
+  font-size: 11px;
+}

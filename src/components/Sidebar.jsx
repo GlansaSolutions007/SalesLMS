@@ -1,14 +1,10 @@
 import { useEffect, useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import Icon from "./Icon.jsx";
+import { menuConfig, isMenuItemVisible } from "../config/menuConfig.js";
+import { useAuth } from "../context/AuthContext.jsx";
+import { ROUTES } from "../router/routePaths.js";
 import "./Sidebar.css";
-
-export const NAV_ITEMS = [
-  { key: "dashboard", label: "Dashboard", icon: "grid" },
-  { key: "courses", label: "Courses", icon: "book" },
-  { key: "pipeline", label: "Sales Pipeline", icon: "pipeline" },
-  { key: "leads", label: "Leads", icon: "users" },
-  { key: "leaderboard", label: "Team Leaderboard", icon: "trophy" },
-];
 
 const STORAGE_KEY = "saleslms.sidebarCollapsed";
 
@@ -20,10 +16,27 @@ function readStoredCollapsed() {
   }
 }
 
-export default function Sidebar({ active, onNavigate, onLogout }) {
-  const [collapsed, setCollapsed] = useState(readStoredCollapsed);
+function initials(name) {
+  return (name ?? "")
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+export default function Sidebar({ collapsed: collapsedProp, onToggleCollapsed }) {
+  const isControlled = collapsedProp !== undefined;
+  const [internalCollapsed, setInternalCollapsed] = useState(readStoredCollapsed);
+  const collapsed = isControlled ? collapsedProp : internalCollapsed;
   const [isMobile, setIsMobile] = useState(false);
   const [open, setOpen] = useState(false);
+
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { user, roleName, permissions, logout } = useAuth();
+  const access = { roleName, permissions };
+  const visibleItems = menuConfig.filter((item) => isMenuItemVisible(item, access));
 
   // Track viewport so mobile always renders the full (uncollapsed) drawer.
   useEffect(() => {
@@ -38,7 +51,11 @@ export default function Sidebar({ active, onNavigate, onLogout }) {
   }, []);
 
   function toggleCollapsed() {
-    setCollapsed((prev) => {
+    if (isControlled) {
+      onToggleCollapsed?.(!collapsed);
+      return;
+    }
+    setInternalCollapsed((prev) => {
       const next = !prev;
       try {
         localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
@@ -49,8 +66,11 @@ export default function Sidebar({ active, onNavigate, onLogout }) {
     });
   }
 
-  function handleNavigate(key) {
-    onNavigate?.(key);
+  function isSectionActive(item) {
+    return pathname === item.path || pathname.startsWith(`${item.path}/`);
+  }
+
+  function handleLinkClick() {
     setOpen(false);
   }
 
@@ -114,44 +134,80 @@ export default function Sidebar({ active, onNavigate, onLogout }) {
           </div>
         </div>
 
-        <nav className="sidebar-nav">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={`sidebar-link${active === item.key ? " is-active" : ""}`}
-              title={showAsCollapsed ? item.label : undefined}
-              onClick={() => handleNavigate(item.key)}
-            >
-              <Icon name={item.icon} size={19} />
-              <span>{item.label}</span>
+        {/* Only this region scrolls — header (brand) and footer (profile/logout)
+            stay fixed regardless of how many menu items there are. */}
+        <div className="sidebar-scroll">
+          <nav className="sidebar-nav">
+            {visibleItems.map((item) => {
+              const active = isSectionActive(item);
+              const visibleChildren = item.children?.filter((child) => isMenuItemVisible(child, access)) ?? [];
+              const hasChildren = visibleChildren.length > 0;
+
+              return (
+                <div key={item.id}>
+                  <NavLink
+                    to={item.path}
+                    className={`sidebar-link${active ? " is-active" : ""}`}
+                    title={showAsCollapsed ? item.title : undefined}
+                    onClick={handleLinkClick}
+                  >
+                    <Icon name={item.icon} size={19} />
+                    <span>{item.title}</span>
+                    {hasChildren && !showAsCollapsed && (
+                      <Icon name="chevronRight" size={13} className={`sidebar-link-chevron${active ? " is-open" : ""}`} />
+                    )}
+                  </NavLink>
+
+                  {hasChildren && !showAsCollapsed && (
+                    <div className={`sidebar-submenu-wrap${active ? " is-expanded" : ""}`}>
+                      <div className="sidebar-submenu-inner">
+                        <div className="sidebar-submenu">
+                          {visibleChildren.map((child) => (
+                            <NavLink
+                              key={child.id}
+                              to={child.path}
+                              className={({ isActive }) => `sidebar-sublink${isActive ? " is-active" : ""}`}
+                              onClick={handleLinkClick}
+                            >
+                              {child.title}
+                            </NavLink>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+
+          <div className="sidebar-promo">
+            <div className="promo-cap">
+              <Icon name="cap" size={20} />
+            </div>
+            <h4>Keep learning.<br />Keep growing.</h4>
+            <p className="promo-body">Access training modules and boost your skills.</p>
+            <button type="button" className="promo-cta" onClick={() => navigate(ROUTES.COURSES)}>
+              Explore Training
+              <Icon name="arrow" size={14} />
             </button>
-          ))}
-        </nav>
+          </div>
+        </div>
 
         <div className="sidebar-footer">
-          <div className="sidebar-promo">
-            <p className="promo-eyebrow">New Feature</p>
-            <h4>AI Sales Coach</h4>
-            <button type="button" className="promo-cta">
-              Try Beta Now
-            </button>
-            <Icon name="rocket" size={54} />
-          </div>
-
           <div className="sidebar-user">
-            <div className="sidebar-avatar" title={showAsCollapsed ? "John Anderson" : undefined}>
-              JA
+            <div className="sidebar-avatar" title={showAsCollapsed ? user?.name : undefined}>
+              {initials(user?.name)}
               <span className="sidebar-avatar-dot" />
             </div>
             <div className="sidebar-user-text">
-              <p>John Anderson</p>
-              <span>Sales Director</span>
+              <p>{user?.name}</p>
+              <span>{roleName}</span>
             </div>
             <button
               type="button"
               className="sidebar-icon-btn"
-              onClick={onLogout}
+              onClick={logout}
               title="Log out"
             >
               <Icon name="logout" size={17} />
