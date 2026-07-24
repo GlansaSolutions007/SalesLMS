@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import Icon from "../components/Icon.jsx";
 import Topbar from "../components/Topbar.jsx";
 import Badge from "../components/Badge.jsx";
@@ -7,6 +7,7 @@ import ProgressBar from "../components/ProgressBar.jsx";
 import StarRating from "../components/StarRating.jsx";
 import Pagination from "../components/Pagination.jsx";
 import Breadcrumb from "../components/Breadcrumb.jsx";
+import { ROUTES } from "../router/routePaths.js";
 import "./CourseList.css";
 
 const STATS = [
@@ -129,6 +130,7 @@ const TOTAL_PAGES = Math.ceil(TOTAL_COURSES / COURSES.length);
 
 export default function CourseList() {
   const { toggleCollapsed } = useOutletContext();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(TABS[0]);
   const [view, setView] = useState("list");
   const [page, setPage] = useState(1);
@@ -172,7 +174,7 @@ export default function CourseList() {
                 <Icon name="chevronDown" size={14} />
               </button>
 
-              <button type="button" className="dash-primary-btn cl-add-btn">
+              <button type="button" className="dash-primary-btn cl-add-btn" onClick={() => navigate(ROUTES.COURSES_CREATE)}>
                 <Icon name="plus" size={16} />
                 Add New Course
               </button>
