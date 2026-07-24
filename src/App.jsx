@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import Login from "./pages/login.jsx";
@@ -74,5 +75,15 @@ export default function App() {
         element={<Placeholder page={page} onNavigate={handleNavigate} onLogout={handleLogout} />}
       />
     </Routes>
+=======
+import { AuthProvider } from "./context/AuthContext.jsx";
+import AppRouter from "./router/AppRouter.jsx";
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppRouter />
+    </AuthProvider>
+>>>>>>> b0e95a82e89dfd0b9056bb74f34c5fbb644c09e4
   );
 }

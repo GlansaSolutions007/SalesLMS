@@ -1,0 +1,164 @@
+@import "../../styles/controls.css";
+
+.ep-back-btn {
+  height: 34px;
+  padding: 0 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+
+.ep-header-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+}
+
+.ep-avatar {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  font-size: 18px;
+}
+
+.ep-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ep-header-info h2 {
+  margin: 0;
+  font-size: 17px;
+  color: var(--color-heading);
+}
+
+.ep-header-info > p {
+  margin: 4px 0 0;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.ep-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.ep-header-meta span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.ep-tab-panel {
+  padding: 22px;
+}
+
+.ep-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.ep-overview-grid span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ep-overview-grid p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.ep-skills {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ep-skill-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 4px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.ep-skill-row:first-child {
+  border-top: none;
+}
+
+.ep-contacts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ep-contact-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.ep-targets {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ep-target-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.ep-target-value {
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.ep-target-row .progress {
+  width: 100%;
+}
+
+.ep-target-row .progress-track {
+  flex: 1;
+  width: auto;
+}
+
+@media (max-width: 900px) {
+  .ep-overview-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .ep-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ep-header-card {
+    flex-wrap: wrap;
+  }
+}

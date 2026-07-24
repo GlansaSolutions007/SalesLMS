@@ -1,0 +1,67 @@
+@import "../styles/controls.css";
+
+.dt-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 18px 22px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.dt-search {
+  width: 260px;
+  height: 42px;
+}
+
+.dt-select {
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  color: var(--color-muted);
+  background: white;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.dt-spacer {
+  flex: 1;
+}
+
+.dt-toolbar .cl-btn {
+  height: 42px;
+}
+
+.dt-toolbar .cl-add-btn {
+  height: 42px;
+}
+
+.dt-bulk-bar {
+  align-items: center;
+  justify-content: space-between;
+  background: #eef4ff;
+}
+
+.dt-bulk-bar span {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-primary-700);
+}
+
+.dt-danger {
+  color: var(--color-danger);
+  border-color: rgba(240, 68, 56, 0.35);
+}
+
+.dt-danger:hover {
+  background: var(--color-danger-soft);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+@media (max-width: 900px) {
+  .dt-search {
+    width: 100%;
+  }
+}

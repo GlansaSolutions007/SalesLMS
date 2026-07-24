@@ -1,5 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Icon from "../components/Icon.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
+import { DEMO_ACCOUNTS } from "../services/authService.js";
+import { ROUTES } from "../router/routePaths.js";
 import "../App.css";
 
 const featureList = [
@@ -152,7 +156,7 @@ function SidePanel() {
   );
 }
 
-function Field({ type, placeholder, showPassword, setShowPassword, label }) {
+function Field({ type, placeholder, showPassword, setShowPassword, label, value, onChange }) {
   return (
     <label className="field">
       <span>{label || (type === "password" ? "Password" : "Email Address")}</span>
@@ -163,6 +167,8 @@ function Field({ type, placeholder, showPassword, setShowPassword, label }) {
         <input
           type={type === "password" && !showPassword ? "password" : "text"}
           placeholder={placeholder}
+          value={value}
+          onChange={onChange}
         />
 
         {type === "password" && (
@@ -179,8 +185,32 @@ function Field({ type, placeholder, showPassword, setShowPassword, label }) {
   );
 }
 
-function AuthCard({ view, setView, onLogin }) {
+function AuthCard({ view, setView }) {
   const [showPassword, setShowPassword] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const { login, isLoading, error } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleLogin(e) {
+    e?.preventDefault();
+    try {
+      await login({ username, password });
+      navigate(ROUTES.DASHBOARD, { replace: true });
+    } catch {
+      /* error message is already surfaced via auth context state */
+    }
+  }
+
+  async function handleDemoLogin(demoUsername) {
+    setUsername(demoUsername);
+    try {
+      await login({ username: demoUsername, password: "demo" });
+      navigate(ROUTES.DASHBOARD, { replace: true });
+    } catch {
+      /* ignore — demo accounts always exist */
+    }
+  }
 
   const isLogin = view === "login";
   const isForgot = view === "forgot";
@@ -247,8 +277,14 @@ function AuthCard({ view, setView, onLogin }) {
             </div>
 
             {isLogin && (
-              <>
-                <Field type="email" placeholder="Enter your email" label="Email Address" />
+              <form onSubmit={handleLogin}>
+                <Field
+                  type="email"
+                  placeholder="Username or email"
+                  label="Username or Email"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
 
                 <Field
                   type="password"
@@ -256,7 +292,11 @@ function AuthCard({ view, setView, onLogin }) {
                   label="Password"
                   showPassword={showPassword}
                   setShowPassword={setShowPassword}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
+
+                {error && <p className="form-error">{error}</p>}
 
                 <div className="options">
                   <label className="remember">
@@ -269,10 +309,27 @@ function AuthCard({ view, setView, onLogin }) {
                   </button>
                 </div>
 
-                <button className="primary" onClick={onLogin}>
-                  LOGIN TO DASHBOARD
+                <button className="primary" type="submit" disabled={isLoading}>
+                  {isLoading ? "SIGNING IN…" : "LOGIN TO DASHBOARD"}
                   <Icon name="arrow" />
                 </button>
+
+                <div className="demo-accounts">
+                  <span>Demo accounts</span>
+                  <div className="demo-accounts-list">
+                    {DEMO_ACCOUNTS.map((acc) => (
+                      <button
+                        type="button"
+                        key={acc.username}
+                        className="demo-account-pill"
+                        onClick={() => handleDemoLogin(acc.username)}
+                        disabled={isLoading}
+                      >
+                        {acc.roleName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 <div className="divider">
                   <span />
@@ -284,7 +341,7 @@ function AuthCard({ view, setView, onLogin }) {
                   <b>G</b>
                   Continue with Google
                 </button>
-              </>
+              </form>
             )}
 
             {isForgot && (
@@ -335,14 +392,14 @@ function AuthCard({ view, setView, onLogin }) {
   );
 }
 
-export default function Login({ onLogin }) {
+export default function Login() {
   const [view, setView] = useState("login");
 
   return (
     <div className="app">
       <SidePanel />
 
-      <AuthCard view={view} setView={setView} onLogin={onLogin} />
+      <AuthCard view={view} setView={setView} />
 
       <footer>
         © 2026 Sales LMS. All rights reserved.

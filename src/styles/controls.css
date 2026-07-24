@@ -1,0 +1,183 @@
+/* Shared search box + bordered action button styles, used by any toolbar
+   (page action bars, DataToolbar, etc.) so they aren't redefined per page. */
+
+.cl-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 320px;
+  height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  color: #94a3b8;
+  background: white;
+}
+
+.cl-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.cl-search input::placeholder {
+  color: #94a3b8;
+}
+
+.cl-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  color: var(--color-muted);
+  background: white;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cl-btn:hover {
+  border-color: var(--color-primary-500);
+  color: var(--color-primary-600);
+}
+
+.cl-add-btn {
+  height: 48px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+/* Shared page shell: header, breadcrumb, panel, table row actions, footer.
+   Used by any page built on the .dash-shell/.dash-main layout. */
+
+.cl-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cl-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.cl-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  color: var(--color-heading);
+}
+
+.cl-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.cl-breadcrumb svg {
+  color: #b6c0cc;
+}
+
+.cl-breadcrumb .is-current {
+  color: var(--color-muted);
+}
+
+.cl-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cl-panel {
+  overflow: hidden;
+}
+
+.cl-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cl-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  border-top: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+}
+
+.cl-footer p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+@media (max-width: 1100px) {
+  .cl-header {
+    padding-top: 8px;
+  }
+}
+
+@media (max-width: 900px) {
+  .cl-actions {
+    width: 100%;
+  }
+
+  .cl-search {
+    width: 100%;
+  }
+}
+
+/* Person avatar-chip cell (people lists: Employees, Trainers, profile pages) */
+
+.emp-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.emp-avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-primary-600);
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.emp-name {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.emp-code {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--color-muted);
+}
