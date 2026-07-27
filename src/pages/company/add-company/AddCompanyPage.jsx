@@ -156,7 +156,6 @@ export default function AddCompanyPage() {
         searchPlaceholder="Search..."
         notifications={3}
         messages={5}
-        user={{ name: "John Smith", role: "Super Admin", initials: "SA" }}
       />
 
       <div className="cl-body wizard-page-body">

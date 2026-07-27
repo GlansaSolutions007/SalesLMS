@@ -1,5 +1,5 @@
 import { Controller } from "react-hook-form";
-import FormField from "../../../../components/FormField.jsx";
+import FormField from "./FormField.jsx";
 
 export default function FormTextField({ control, name, label, required, type = "text", placeholder, error, disabled, maxLength }) {
   return (

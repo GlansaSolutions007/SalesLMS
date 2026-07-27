@@ -1,4 +1,4 @@
-import api from "./api.js";
+import api from "./axios.js";
 
 function authHeader(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};

@@ -2,6 +2,9 @@ export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const MOBILE_REGEX = /^\+?[0-9]{7,15}$/;
 export const USERNAME_REGEX = /^[a-zA-Z0-9._-]{3,32}$/;
 export const PINCODE_REGEX = /^\d{4,10}$/;
+export const GST_REGEX = /^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i;
+export const PAN_REGEX = /^[A-Z]{5}\d{4}[A-Z]{1}$/i;
+export const WEBSITE_REGEX = /^(https?:\/\/)?([\w-]+\.)+[a-z]{2,}([/?#]\S*)?$/i;
 
 export function req(value, message) {
   return String(value ?? "").trim() ? null : message;

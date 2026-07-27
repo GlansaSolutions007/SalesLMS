@@ -1,14 +1,8 @@
-.dash-shell {
-  display: flex;
-  height: 100vh;
-  background: var(--color-surface);
-}
+@import "../styles/controls.css";
 
-.dash-main {
-  flex: 1;
-  min-width: 0;
-  overflow-y: auto;
-}
+/* .dash-shell / .dash-main / .panel / .panel-head / .link-btn /
+   .dash-primary-btn / .dash-icon-btn now live in styles/controls.css —
+   they're shared across every page, not just this one. */
 
 /* Topbar */
 .dash-topbar {
@@ -74,22 +68,6 @@
   background: var(--color-success);
 }
 
-.dash-icon-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  border: none;
-  border-radius: 8px;
-  color: #94a3b8;
-  background: transparent;
-}
-
-.dash-icon-btn:hover {
-  color: var(--color-primary-600);
-  background: #f1f5f9;
-}
-
 .dash-bell {
   position: relative;
 }
@@ -110,24 +88,6 @@
   width: 1px;
   height: 26px;
   background: var(--color-border);
-}
-
-.dash-primary-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 9px 16px;
-  border: none;
-  border-radius: 12px;
-  color: white;
-  background: var(--gradient-primary);
-  font-size: 12px;
-  font-weight: 700;
-  box-shadow: 0 10px 20px rgba(47, 120, 200, 0.22);
-}
-
-.dash-primary-btn:hover {
-  transform: translateY(-1px);
 }
 
 /* Body */
@@ -261,60 +221,7 @@
   color: #f1f5f9;
 }
 
-/* Panels (shared card shell) */
-.panel {
-  border-radius: 18px;
-  border: 1px solid var(--color-border);
-  background: white;
-  box-shadow: var(--shadow-sm);
-}
-
-.panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 22px 22px 0;
-}
-
-.panel-head.with-border {
-  padding: 18px 22px;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.panel-head h3 {
-  margin: 0;
-  font-size: 15px;
-  color: var(--color-heading);
-}
-
-.panel-head p {
-  margin: 3px 0 0;
-  font-size: 12px;
-  color: var(--color-muted);
-}
-
-.panel-head select {
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-muted);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.link-btn {
-  border: none;
-  background: transparent;
-  color: var(--color-primary-600);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.link-btn:hover {
-  text-decoration: underline;
-}
+/* .panel / .panel-head / .link-btn now live in styles/controls.css */
 
 /* Charts row */
 .dash-charts {

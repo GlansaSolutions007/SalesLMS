@@ -1,6 +1,6 @@
-import FormTextField from "../components/FormTextField.jsx";
-import FormSelectField from "../components/FormSelectField.jsx";
-import LogoUploader from "../components/LogoUploader.jsx";
+import FormTextField from "../../../../components/FormTextField.jsx";
+import FormSelectField from "../../../../components/FormSelectField.jsx";
+import LogoUploader from "../../../../components/LogoUploader.jsx";
 import { INDUSTRIES } from "../../companyData.js";
 import { COUNTRIES, STATES_BY_COUNTRY, CITIES_BY_STATE } from "../../../../data/locations.js";
 

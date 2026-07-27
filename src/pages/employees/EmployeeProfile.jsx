@@ -99,7 +99,6 @@ export default function EmployeeProfile() {
         searchPlaceholder="Search..."
         notifications={3}
         messages={5}
-        user={{ name: "John Smith", role: "Sales Manager", initials: "JS" }}
       />
 
       <div className="cl-body">
@@ -139,7 +138,7 @@ export default function EmployeeProfile() {
 
           <div className="panel ep-tab-panel">
             {tab === "overview" && (
-              <div className="ep-overview-grid">
+              <div className="detail-grid">
                 <div>
                   <span>Employee Code</span>
                   <p>{employee.employeeCode}</p>

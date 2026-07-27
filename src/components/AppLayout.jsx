@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
 import useDocumentTitle from "../hooks/useDocumentTitle.js";
+import "../styles/controls.css";
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);

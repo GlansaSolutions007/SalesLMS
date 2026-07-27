@@ -2,7 +2,8 @@ import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import AppLayout from "../components/AppLayout.jsx";
-import { flattenMenu } from "../config/menuConfig.js";
+import { flattenMenu, isMenuItemVisible } from "../config/menuConfig.js";
+import { useAuth } from "../context/AuthContext.jsx";
 import { ROUTES } from "./routePaths.js";
 
 const Login = lazy(() => import("../pages/login.jsx"));
@@ -27,6 +28,8 @@ const TrainerProfile = lazy(() => import("../pages/trainers/TrainerProfile.jsx")
 
 const CompanyList = lazy(() => import("../pages/company/CompanyList.jsx"));
 const AddCompanyPage = lazy(() => import("../pages/company/add-company/AddCompanyPage.jsx"));
+const CompanyView = lazy(() => import("../pages/company/CompanyView.jsx"));
+const EditCompanyPage = lazy(() => import("../pages/company/edit-company/EditCompanyPage.jsx"));
 
 const SubscriptionPlanList = lazy(() => import("../pages/masters/SubscriptionPlanList.jsx"));
 const RoleList = lazy(() => import("../pages/masters/RoleList.jsx"));
@@ -50,6 +53,18 @@ const PAGE_COMPONENTS = {
 
 const flatMenu = flattenMenu();
 
+// Sidebar visibility and route access must agree, so this reuses the exact
+// same isMenuItemVisible() check the Sidebar already uses — a role/permission
+// combination that hides a menu item also blocks navigating straight to its
+// URL, instead of only hiding the link.
+function GuardedMenuRoute({ item, children }) {
+  const { roleName, permissions } = useAuth();
+  if (!isMenuItemVisible(item, { roleName, permissions })) {
+    return <Navigate to={ROUTES.DASHBOARD} replace />;
+  }
+  return children;
+}
+
 export default function AppRouter() {
   return (
     <Suspense fallback={<div className="route-loading">Loading…</div>}>
@@ -66,7 +81,9 @@ export default function AppRouter() {
                 <Route
                   key={item.path}
                   path={item.path}
-                  element={PageComponent ? <PageComponent /> : <Placeholder pageId={item.id} />}
+                  element={
+                    <GuardedMenuRoute item={item}>{PageComponent ? <PageComponent /> : <Placeholder pageId={item.id} />}</GuardedMenuRoute>
+                  }
                 />
               );
             })}
@@ -74,6 +91,8 @@ export default function AppRouter() {
             {/* Hidden routes reachable via in-page navigation (row actions,
                 sub-nav tabs), not shown as their own Sidebar entries. */}
             <Route path={ROUTES.COMPANY_ADD} element={<AddCompanyPage />} />
+            <Route path={ROUTES.COMPANY_VIEW} element={<CompanyView />} />
+            <Route path={ROUTES.COMPANY_EDIT} element={<EditCompanyPage />} />
             <Route path={ROUTES.COURSES_CREATE} element={<CourseWizard />} />
             <Route path={ROUTES.EMPLOYEES_ADD} element={<EmployeeForm />} />
             <Route path={ROUTES.EMPLOYEES_LEAVE} element={<EmployeeLeave />} />

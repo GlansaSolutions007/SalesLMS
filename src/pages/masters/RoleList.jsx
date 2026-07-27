@@ -352,7 +352,6 @@ export default function RoleList() {
         searchPlaceholder="Search..."
         notifications={3}
         messages={5}
-        user={{ name: "Admin", role: "Super Admin", initials: "SA" }}
       />
 
       <div className="cl-body">

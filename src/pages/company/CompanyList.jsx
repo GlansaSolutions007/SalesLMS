@@ -1,86 +1,159 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useOutletContext, useNavigate } from "react-router-dom";
+import Topbar from "../../components/Topbar.jsx";
+import Breadcrumb from "../../components/Breadcrumb.jsx";
+import DataToolbar from "../../components/DataToolbar.jsx";
+import DataTable from "../../components/DataTable.jsx";
+import Pagination from "../../components/Pagination.jsx";
 import Badge from "../../components/Badge.jsx";
-import CrudPage from "../../components/CrudPage.jsx";
+import Toast from "../../components/Toast.jsx";
+import Icon from "../../components/Icon.jsx";
 import CompanyTabs from "./CompanyTabs.jsx";
-import { COMPANIES, INDUSTRIES, SUBSCRIPTION_PLANS } from "./companyData.js";
-import { ROUTES } from "../../router/routePaths.js";
+import useCompaniesList from "./useCompaniesList.js";
+import { ROUTES, companyViewPath, companyEditPath } from "../../router/routePaths.js";
+import { exportToCsv } from "../../utils/csv.js";
+import "./CompanyList.css";
 
-const STATUS_TONE = { Active: "green", Suspended: "orange", Inactive: "gray" };
+const STATUS_TONE = { active: "green", inactive: "gray" };
 
-const PLAN_TONE = { Enterprise: "purple", Professional: "blue", Standard: "green", Basic: "gray" };
+const STATUS_OPTIONS = ["All", "Active", "Inactive"];
+
+const SORT_OPTIONS = [
+  { key: "company_name", label: "Name" },
+  { key: "employees_count", label: "Employees" },
+  { key: "created_at", label: "Created Date" },
+];
+
+function initials(name) {
+  return String(name ?? "")
+    .split(" ")
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function formatDate(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
 
 const COLUMNS = [
   {
-    key: "name",
+    key: "company_name",
     header: "Company",
     render: (r) => (
       <div className="emp-cell">
-        <span className="emp-avatar">{r.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}</span>
+        <span className="emp-avatar">{initials(r.company_name)}</span>
         <div>
-          <p className="emp-name">{r.name}</p>
-          <p className="emp-code">{r.code}</p>
+          <p className="emp-name">{r.company_name}</p>
+          <p className="emp-code">{r.company_code}</p>
         </div>
       </div>
     ),
   },
   { key: "email", header: "Email" },
-  { key: "industry", header: "Industry" },
+  { key: "industry_type", header: "Industry" },
   {
-    key: "employees",
+    key: "employees_count",
     header: "Employees",
-    render: (r) => <span className="cl-numeric">{r.employees.toLocaleString()}</span>,
+    render: (r) => <span className="cl-numeric">{(r.employees_count ?? 0).toLocaleString()}</span>,
   },
+  { key: "branches_count", header: "Branches", render: (r) => <span className="cl-numeric">{r.branches_count ?? 0}</span> },
+  { key: "departments_count", header: "Departments", render: (r) => <span className="cl-numeric">{r.departments_count ?? 0}</span> },
   {
     key: "plan",
     header: "Plan",
-    render: (r) => <Badge tone={PLAN_TONE[r.plan]}>{r.plan}</Badge>,
+    render: (r) =>
+      r.active_subscription?.plan?.plan_name ? (
+        <Badge tone="blue">{r.active_subscription.plan.plan_name}</Badge>
+      ) : (
+        <span style={{ fontSize: 13, color: "var(--color-muted)" }}>No active plan</span>
+      ),
   },
-  {
-    key: "subscription",
-    header: "Subscription",
-    render: (r) => <span style={{ fontSize: 13, color: "var(--color-muted)" }}>{r.subscription}</span>,
-  },
-  { key: "joinDate", header: "Join Date" },
+  { key: "created_at", header: "Created", render: (r) => formatDate(r.created_at) },
   {
     key: "status",
     header: "Status",
-    render: (r) => <Badge tone={STATUS_TONE[r.status]}>{r.status}</Badge>,
+    render: (r) => <Badge tone={STATUS_TONE[r.status] ?? "gray"}>{r.status === "active" ? "Active" : "Inactive"}</Badge>,
+  },
+  {
+    key: "actions",
+    header: "",
+    render: (r) => (
+      <div className="cl-row-actions">
+        <Link to={companyViewPath(r.id)} className="dash-icon-btn" aria-label={`View ${r.company_name}`}>
+          <Icon name="eye" size={15} />
+        </Link>
+        <Link to={companyEditPath(r.id)} className="dash-icon-btn" aria-label={`Edit ${r.company_name}`}>
+          <Icon name="edit" size={15} />
+        </Link>
+      </div>
+    ),
   },
 ];
 
-const FIELDS = [
-  { key: "name", label: "Company Name", type: "text", required: true },
-  { key: "code", label: "Company Code", type: "text", required: true },
-  { key: "email", label: "Email", type: "text", required: true },
-  { key: "phone", label: "Phone", type: "text" },
-  { key: "industry", label: "Industry", type: "select", options: INDUSTRIES },
-  { key: "employees", label: "Employees", type: "number" },
-  { key: "plan", label: "Plan", type: "select", options: SUBSCRIPTION_PLANS },
-  { key: "subscription", label: "Subscription", type: "select", options: ["Monthly", "Annual"] },
-  { key: "joinDate", label: "Join Date", type: "text" },
-  { key: "status", label: "Status", type: "select", options: ["Active", "Suspended", "Inactive"] },
-];
-
 export default function CompanyList() {
+  const { toggleCollapsed } = useOutletContext();
   const navigate = useNavigate();
+  const table = useCompaniesList();
+  const [toastDismissed, setToastDismissed] = useState(false);
+
+  useEffect(() => {
+    if (table.error) setToastDismissed(false);
+  }, [table.error]);
 
   return (
-    <CrudPage
-      title="Companies"
-      breadcrumbLabel="All Companies"
-      entityLabel="Company"
-      seed={COMPANIES}
-      columns={COLUMNS}
-      searchFields={["name", "code", "email", "industry"]}
-      statusOptions={["All", "Active", "Suspended", "Inactive"]}
-      sortOptions={[
-        { key: "name", label: "Name" },
-        { key: "employees", label: "Employees" },
-        { key: "joinDate", label: "Join Date" },
-      ]}
-      fields={FIELDS}
-      subNav={<CompanyTabs />}
-      onAddClick={() => navigate(ROUTES.COMPANY_ADD)}
-    />
+    <>
+      <Topbar
+        onMenuClick={toggleCollapsed}
+        searchPlaceholder="Search..."
+        notifications={3}
+        messages={5}
+      />
+
+      <div className="cl-body">
+        <div className="cl-header">
+          <div>
+            <h1>Companies</h1>
+            <Breadcrumb current="All Companies" />
+          </div>
+        </div>
+
+        <CompanyTabs />
+
+        <div className="panel cl-panel">
+          <DataToolbar
+            search={table.search}
+            onSearchChange={table.setSearch}
+            searchPlaceholder="Search companies..."
+            statusFilter={table.statusFilter}
+            onStatusFilterChange={table.setStatusFilter}
+            statusOptions={STATUS_OPTIONS}
+            sort={table.sort}
+            onSortChange={table.setSort}
+            sortOptions={SORT_OPTIONS}
+            addLabel="Add New Company"
+            onAdd={() => navigate(ROUTES.COMPANY_ADD)}
+            onExportCsv={() => exportToCsv("companies.csv", table.items, COLUMNS.filter((c) => c.key !== "actions"))}
+            onExportPdf={() => window.print()}
+          />
+
+          <DataTable columns={COLUMNS} rows={table.items} isLoading={table.isLoading} emptyMessage="No companies match your search." />
+
+          {!table.isLoading && table.total > 0 && (
+            <div className="cl-footer">
+              <p>
+                Showing {table.from}–{table.to} of {table.total} companies
+              </p>
+              <Pagination page={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Toast tone="error" message={!toastDismissed ? table.error : ""} onDismiss={() => setToastDismissed(true)} />
+    </>
   );
 }

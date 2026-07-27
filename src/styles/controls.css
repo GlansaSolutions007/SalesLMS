@@ -1,3 +1,109 @@
+/* App shell layout + shared card/button primitives used by every page
+   (AppLayout, panels, primary/icon buttons) — kept here rather than in
+   dashboard.css so they load regardless of which page's chunk is fetched
+   on a hard refresh / direct URL visit, instead of only when the
+   Dashboard page happens to load first. */
+
+.dash-shell {
+  display: flex;
+  height: 100vh;
+  background: var(--color-surface);
+}
+
+.dash-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.panel {
+  border-radius: 18px;
+  border: 1px solid var(--color-border);
+  background: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px 22px 0;
+}
+
+.panel-head.with-border {
+  padding: 18px 22px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.panel-head h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--color-heading);
+}
+
+.panel-head p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.panel-head select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.link-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-primary-600);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+.dash-primary-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  background: var(--gradient-primary);
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 10px 20px rgba(47, 120, 200, 0.22);
+}
+
+.dash-primary-btn:hover {
+  transform: translateY(-1px);
+}
+
+.dash-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: none;
+  border-radius: 8px;
+  color: #94a3b8;
+  background: transparent;
+}
+
+.dash-icon-btn:hover {
+  color: var(--color-primary-600);
+  background: #f1f5f9;
+}
+
 /* Shared search box + bordered action button styles, used by any toolbar
    (page action bars, DataToolbar, etc.) so they aren't redefined per page. */
 
@@ -606,6 +712,43 @@
   color: var(--color-danger);
   font-size: 12.5px;
   font-weight: 700;
+}
+
+/* Read-only label/value grid — used by any detail/profile page (employee
+   overview, company view, etc.) to lay out a set of fields inside a card */
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.detail-grid span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.detail-grid p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+@media (max-width: 900px) {
+  .detail-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Person avatar-chip cell (people lists: Employees, Trainers, profile pages) */
