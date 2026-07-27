@@ -76,11 +76,31 @@ const COLUMNS = [
   {
     key: "price",
     header: "Price",
-    render: (r) => (
-      <span className="cl-numeric">
-        {Number(r.price).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}
-      </span>
-    ),
+    render: (r) => {
+      const value = Number(r.price ?? 0);
+      return (
+        <span className="cl-numeric">
+          {Number.isFinite(value)
+            ? value.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })
+            : "—"}
+        </span>
+      );
+    },
+  },
+  {
+    key: "status",
+    header: "Status",
+    render: (r) => <Badge tone={getStatusTone(r.status)}>{r.status || "Unknown"}</Badge>,
+  },
+  {
+    key: "subscriptions",
+    header: "Subscriptions",
+    render: (r) => {
+      const active = Number(r.active_subscriptions_count ?? 0) || 0;
+      const total = Number(r.subscriptions_count ?? 0) || 0;
+      const label = total ? `${active}/${total}` : active ? `${active} active` : "0";
+      return <span className="cl-numeric">{label}</span>;
+    },
   },
   {
     key: "employee_limit",
@@ -96,7 +116,8 @@ const COLUMNS = [
     key: "storage_limit",
     header: "Storage",
     render: (r) => {
-      const gb = (r.storage_limit / 1024).toFixed(0);
+      const value = Number(r.storage_limit ?? 0);
+      const gb = Number.isFinite(value) ? Math.round(value / 1024) : 0;
       return `${gb} GB`;
     },
   },
@@ -111,6 +132,23 @@ const COLUMNS = [
 ];
 
 const PAGE_SIZE = 10;
+
+function normalizePlanList(response) {
+  const payload = response?.data ?? response;
+
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (payload?.data && Array.isArray(payload.data.data)) return payload.data.data;
+
+  return [];
+}
+
+function getStatusTone(status) {
+  const value = String(status || "").toLowerCase();
+  if (value === "active") return "green";
+  if (value === "inactive" || value === "paused") return "gray";
+  return "blue";
+}
 
 function validateForm(form) {
   const errors = {};
@@ -151,8 +189,9 @@ export default function SubscriptionPlanList() {
     setApiError(null);
     try {
       const res = await getSubscriptionPlans(token);
-      const raw = res.data?.data ?? res.data;
-      setPlans(Array.isArray(raw) ? raw : []);
+      const normalized = normalizePlanList(res);
+      console.log("Fetched subscription plans:", normalized);
+      setPlans(normalized);
     } catch {
       setApiError("Could not load subscription plans. Please try again.");
     } finally {
@@ -164,9 +203,13 @@ export default function SubscriptionPlanList() {
     fetchPlans();
   }, [fetchPlans]);
 
-  const filtered = (Array.isArray(plans) ? plans : []).filter((p) =>
-    p.plan_name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = (Array.isArray(plans) ? plans : []).filter((p) => {
+    const term = search.toLowerCase();
+    return (
+      p.plan_name?.toLowerCase().includes(term) ||
+      String(p.status || "").toLowerCase().includes(term)
+    );
+  });
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 

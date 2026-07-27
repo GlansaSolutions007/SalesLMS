@@ -1,11 +1,39 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { login as loginRequest } from "../services/authService.js";
 
 const AuthContext = createContext(null);
+const AUTH_STORAGE_KEY = "saleslms_auth";
+
+function readStoredAuth() {
+  if (typeof window === "undefined") return { user: null, token: null };
+
+  try {
+    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return { user: null, token: null };
+
+    const parsed = JSON.parse(raw);
+    return {
+      user: parsed?.user ?? null,
+      token: parsed?.token ?? null,
+    };
+  } catch {
+    return { user: null, token: null };
+  }
+}
+
+function persistAuth(user, token) {
+  if (typeof window === "undefined") return;
+
+  if (user && token) {
+    window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user, token }));
+  } else {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  }
+}
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
+  const [user, setUser] = useState(() => readStoredAuth().user);
+  const [token, setToken] = useState(() => readStoredAuth().token);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -28,7 +56,12 @@ export function AuthProvider({ children }) {
   function logout() {
     setUser(null);
     setToken(null);
+    persistAuth(null, null);
   }
+
+  useEffect(() => {
+    persistAuth(user, token);
+  }, [user, token]);
 
   const permissions = user?.permissions ?? [];
 
