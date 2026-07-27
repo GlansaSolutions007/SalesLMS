@@ -1,8 +1,36 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import * as authService from "../services/authService.js";
 import { getToken, getStoredUser, setToken, setStoredUser, clearAuthStorage, getRememberPreference } from "../utils/storage.js";
 
 const AuthContext = createContext(null);
+const AUTH_STORAGE_KEY = "saleslms_auth";
+
+function readStoredAuth() {
+  if (typeof window === "undefined") return { user: null, token: null };
+
+  try {
+    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return { user: null, token: null };
+
+    const parsed = JSON.parse(raw);
+    return {
+      user: parsed?.user ?? null,
+      token: parsed?.token ?? null,
+    };
+  } catch {
+    return { user: null, token: null };
+  }
+}
+
+function persistAuth(user, token) {
+  if (typeof window === "undefined") return;
+
+  if (user && token) {
+    window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user, token }));
+  } else {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  }
+}
 
 export function AuthProvider({ children }) {
   // Hydrated synchronously from storage so a page refresh never bounces an
@@ -85,6 +113,10 @@ export function AuthProvider({ children }) {
     setUser(freshUser);
     return freshUser;
   }
+
+  useEffect(() => {
+    persistAuth(user, token);
+  }, [user, token]);
 
   const permissions = user?.permissions ?? [];
   const roleName = user?.role?.name ?? null;
