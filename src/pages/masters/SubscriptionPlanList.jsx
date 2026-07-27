@@ -129,9 +129,17 @@ const COLUMNS = [
       return <Badge tone="blue">{count} / {FEATURE_KEYS.length}</Badge>;
     },
   },
+  {
+    key: "status",
+    header: "Status",
+    render: (r) => <Badge tone={r.status === "Active" ? "green" : "gray"}>{r.status}</Badge>,
+  },
 ];
 
 const PAGE_SIZE = 10;
+const STATUS_OPTIONS = ["All", "Active", "Inactive"];
+const SEARCH_DEBOUNCE_MS = 400;
+const DEFAULT_PAGINATION = { total: 0, per_page: PAGE_SIZE, current_page: 1, last_page: 1 };
 
 function normalizePlanList(response) {
   const payload = response?.data ?? response;
@@ -170,10 +178,13 @@ export default function SubscriptionPlanList() {
   const { token } = useAuth();
 
   const [plans, setPlans] = useState([]);
+  const [pagination, setPagination] = useState(DEFAULT_PAGINATION);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState(null);
 
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [page, setPage] = useState(1);
 
   const [modalMode, setModalMode] = useState(null); // "add" | "edit" | null
@@ -183,6 +194,17 @@ export default function SubscriptionPlanList() {
   const [saving, setSaving] = useState(false);
 
   const [deletingId, setDeletingId] = useState(null);
+
+  // Debounce the raw keystrokes before they drive a request.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Any filter/search change invalidates the current page.
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statusFilter]);
 
   const fetchPlans = useCallback(async () => {
     setIsLoading(true);
@@ -194,10 +216,11 @@ export default function SubscriptionPlanList() {
       setPlans(normalized);
     } catch {
       setApiError("Could not load subscription plans. Please try again.");
+      setPlans([]);
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [token, page, debouncedSearch, statusFilter]);
 
   useEffect(() => {
     fetchPlans();
@@ -283,10 +306,10 @@ export default function SubscriptionPlanList() {
   async function handleDelete() {
     try {
       await deleteSubscriptionPlan(deletingId, token);
-      setPlans((prev) => prev.filter((p) => p.id !== deletingId));
+      setDeletingId(null);
+      fetchPlans();
     } catch {
       // silent – the row stays in the table; a toast system can be wired later
-    } finally {
       setDeletingId(null);
     }
   }
@@ -326,7 +349,6 @@ export default function SubscriptionPlanList() {
         searchPlaceholder="Search..."
         notifications={3}
         messages={5}
-        user={{ name: "Admin", role: "Super Admin", initials: "SA" }}
       />
 
       <div className="cl-body">
@@ -342,8 +364,11 @@ export default function SubscriptionPlanList() {
         <div className="panel cl-panel">
           <DataToolbar
             search={search}
-            onSearchChange={(v) => { setSearch(v); setPage(1); }}
+            onSearchChange={setSearch}
             searchPlaceholder="Search plans..."
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            statusOptions={STATUS_OPTIONS}
             sort={{ key: "plan_name", dir: "asc" }}
             onSortChange={() => {}}
             addLabel="Add New Plan"
@@ -361,10 +386,10 @@ export default function SubscriptionPlanList() {
             emptyMessage="No subscription plans found."
           />
 
-          {!isLoading && filtered.length > 0 && (
+          {!isLoading && pagination.total > 0 && (
             <div className="cl-footer">
-              <p>Showing {pageItems.length} of {filtered.length} plans</p>
-              <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+              <p>Showing {pageItems.length} of {pagination.total} plans</p>
+              <Pagination page={pagination.current_page} totalPages={totalPages} onPageChange={setPage} />
             </div>
           )}
         </div>

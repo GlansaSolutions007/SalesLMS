@@ -1,4 +1,3 @@
-import { COMPANIES } from "../company/companyData.js";
 import { EMPLOYEES } from "./employeeData.js";
 
 const BRANCH_NAMES = ["Head Office", "North Zone Branch", "South Zone Branch"];
@@ -6,23 +5,25 @@ const DEPARTMENT_NAMES = ["Sales", "Marketing", "Support", "HR", "Finance", "Ope
 const DESIGNATION_NAMES = ["Executive", "Senior Executive", "Team Lead", "Manager", "Senior Manager", "Director", "Intern"];
 
 // Branch loads from Company; Department loads from Branch; Designation loads
-// from Company. This mock data mirrors those three cascades for every seed
-// company so the dropdowns behave correctly regardless of which company a
-// Super Admin picks.
-export const BRANCHES_BY_COMPANY = Object.fromEntries(
-  COMPANIES.map((company) => [
-    company.id,
-    BRANCH_NAMES.map((name, i) => ({ id: `${company.id}-branch-${i + 1}`, name })),
-  ])
-);
+// from Company. There's no real Branches/Departments/Designations API yet,
+// so these generate the same mock set for whichever company is actually
+// selected (now real companies from the API, not a fixed mock id range) —
+// keeps the cascade functionally alive instead of going empty for every
+// company id the mock data didn't happen to predefine.
+export function getBranchesForCompany(companyId) {
+  if (!companyId) return [];
+  return BRANCH_NAMES.map((name, i) => ({ id: `${companyId}-branch-${i + 1}`, name }));
+}
 
-export const DEPARTMENTS_BY_BRANCH = Object.fromEntries(
-  Object.values(BRANCHES_BY_COMPANY)
-    .flat()
-    .map((branch) => [branch.id, DEPARTMENT_NAMES])
-);
+export function getDepartmentsForBranch(branchId) {
+  if (!branchId) return [];
+  return DEPARTMENT_NAMES;
+}
 
-export const DESIGNATIONS_BY_COMPANY = Object.fromEntries(COMPANIES.map((company) => [company.id, DESIGNATION_NAMES]));
+export function getDesignationsForCompany(companyId) {
+  if (!companyId) return [];
+  return DESIGNATION_NAMES;
+}
 
 export const GENDERS = ["Male", "Female", "Other"];
 export const EMPLOYMENT_TYPES = ["Permanent", "Contract", "Intern"];
@@ -39,10 +40,10 @@ export const RELATIONSHIPS = ["Spouse", "Parent", "Sibling", "Child", "Friend", 
 export const TAKEN_EMAILS = EMPLOYEES.map((e) => e.email.toLowerCase());
 export const TAKEN_USERNAMES = EMPLOYEES.map((e) => e.name.toLowerCase().replace(/\s+/g, "."));
 
-// Only company id 1 has seed employees in this mock dataset, so that's the
-// only company with reporting-manager options to offer.
+// No "employees by company" API exists yet, so this offers the same mock
+// roster as candidate reporting managers once any company is selected.
 export function getReportingManagers(companyId) {
-  return companyId === 1 ? EMPLOYEES : [];
+  return companyId ? EMPLOYEES : [];
 }
 
 function uid(prefix) {

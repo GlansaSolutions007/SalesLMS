@@ -125,7 +125,6 @@ export default function CrudPage({
         searchPlaceholder="Search..."
         notifications={3}
         messages={5}
-        user={{ name: "John Smith", role: "Sales Manager", initials: "JS" }}
       />
 
       <div className="cl-body">

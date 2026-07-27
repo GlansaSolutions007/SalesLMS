@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "../components/Icon.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { ROUTES } from "../router/routePaths.js";
+import { consumeSessionExpiredFlag } from "../utils/storage.js";
 import "../App.css";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const featureList = [
   ["▣", "Training Programs"],
@@ -155,7 +158,7 @@ function SidePanel() {
   );
 }
 
-function Field({ type, placeholder, showPassword, setShowPassword, label, value, onChange }) {
+function Field({ type, placeholder, showPassword, setShowPassword, label, value, onChange, onBlur, error }) {
   return (
     <label className="field">
       <span>{label || (type === "password" ? "Password" : "Email Address")}</span>
@@ -168,6 +171,7 @@ function Field({ type, placeholder, showPassword, setShowPassword, label, value,
           placeholder={placeholder}
           value={value}
           onChange={onChange}
+          onBlur={onBlur}
         />
 
         {type === "password" && (
@@ -180,6 +184,8 @@ function Field({ type, placeholder, showPassword, setShowPassword, label, value,
           </button>
         )}
       </div>
+
+      {error && <p className="field-error">{error}</p>}
     </label>
   );
 }
@@ -188,15 +194,31 @@ function AuthCard({ view, setView }) {
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
+  const [usernameError, setUsernameError] = useState("");
+  const [sessionExpired, setSessionExpired] = useState(false);
   const { login, isLoading, error } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (consumeSessionExpiredFlag()) setSessionExpired(true);
+  }, []);
+
+  function validateUsername(value) {
+    if (!value.trim()) return "Email is required.";
+    if (!EMAIL_RE.test(value.trim())) return "Enter a valid email address.";
+    return "";
+  }
+
   async function handleLogin(e) {
     e?.preventDefault();
-    if (!username.trim() || !password) return;
+    const validationError = validateUsername(username);
+    setUsernameError(validationError);
+    if (validationError || !password) return;
 
     try {
-      await login({ username, password });
+      setSessionExpired(false);
+      await login({ username, password }, remember);
       navigate(ROUTES.DASHBOARD, { replace: true });
     } catch {
       /* error message is already surfaced via auth context state */
@@ -269,12 +291,21 @@ function AuthCard({ view, setView }) {
 
             {isLogin && (
               <form onSubmit={handleLogin}>
+                {sessionExpired && (
+                  <p className="form-error">Your session has expired. Please sign in again.</p>
+                )}
+
                 <Field
                   type="email"
-                  placeholder="Username or email"
-                  label="Username or Email"
+                  placeholder="Enter your email"
+                  label="Email Address"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    if (usernameError) setUsernameError("");
+                  }}
+                  onBlur={(e) => setUsernameError(validateUsername(e.target.value))}
+                  error={usernameError}
                 />
 
                 <Field
@@ -291,7 +322,7 @@ function AuthCard({ view, setView }) {
 
                 <div className="options">
                   <label className="remember">
-                    <input type="checkbox" defaultChecked />
+                    <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
                     <span>Remember Me</span>
                   </label>
 

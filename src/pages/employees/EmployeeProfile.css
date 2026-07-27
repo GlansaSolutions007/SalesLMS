@@ -58,29 +58,6 @@
   padding: 22px;
 }
 
-.ep-overview-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-}
-
-.ep-overview-grid span {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--color-muted);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.ep-overview-grid p {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-heading);
-}
-
 .ep-skills {
   display: flex;
   flex-direction: column;
@@ -147,17 +124,7 @@
   width: auto;
 }
 
-@media (max-width: 900px) {
-  .ep-overview-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 @media (max-width: 560px) {
-  .ep-overview-grid {
-    grid-template-columns: 1fr;
-  }
-
   .ep-header-card {
     flex-wrap: wrap;
   }

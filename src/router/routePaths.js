@@ -6,6 +6,8 @@ export const ROUTES = {
   COMPANY: "/company",
   COMPANY_COMPANIES: "/company/companies",
   COMPANY_ADD: "/company/companies/add",
+  COMPANY_VIEW: "/company/view/:id",
+  COMPANY_EDIT: "/company/edit/:id",
   COMPANY_BRANCHES: "/company/branches",
   COMPANY_DEPARTMENTS: "/company/departments",
   COMPANY_DESIGNATIONS: "/company/designations",
@@ -47,3 +49,11 @@ export const ROUTES = {
   SETTINGS: "/settings",
   AUDIT: "/audit",
 };
+
+export function companyViewPath(id) {
+  return ROUTES.COMPANY_VIEW.replace(":id", id);
+}
+
+export function companyEditPath(id) {
+  return ROUTES.COMPANY_EDIT.replace(":id", id);
+}

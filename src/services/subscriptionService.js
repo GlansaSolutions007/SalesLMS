@@ -1,11 +1,13 @@
-import api from "./api.js";
+import api from "./axios.js";
 
 function authHeader(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export function getSubscriptionPlans(token) {
-  return api.get("admin/subscription-plans", { headers: authHeader(token) });
+// GET /admin/subscription-plans?search=&status=&per_page=&page=
+// Response shape: { success, message, data: { data: [...plans], pagination: {...} } }
+export function getSubscriptionPlans(params, token) {
+  return api.get("admin/subscription-plans", { headers: authHeader(token), params });
 }
 
 export function createSubscriptionPlan(data, token) {

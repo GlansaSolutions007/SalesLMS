@@ -1,5 +1,5 @@
-import FormTextField from "../components/FormTextField.jsx";
-import FormSelectField from "../components/FormSelectField.jsx";
+import FormTextField from "../../../../components/FormTextField.jsx";
+import FormSelectField from "../../../../components/FormSelectField.jsx";
 import Icon from "../../../../components/Icon.jsx";
 
 const PAYMENT_STATUSES = ["Pending", "Paid", "Failed"];

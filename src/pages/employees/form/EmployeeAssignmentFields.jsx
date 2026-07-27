@@ -1,12 +1,19 @@
 import FormField from "../../../components/FormField.jsx";
 import ImageUploader from "../../../components/ImageUploader.jsx";
-import { COMPANIES } from "../../company/companyData.js";
-import { BRANCHES_BY_COMPANY, DEPARTMENTS_BY_BRANCH, DESIGNATIONS_BY_COMPANY, getReportingManagers } from "../employeeFormData.js";
+import { getBranchesForCompany, getDepartmentsForBranch, getDesignationsForCompany, getReportingManagers } from "../employeeFormData.js";
 
-export default function EmployeeAssignmentFields({ data, errors, onChange, showCompanyDropdown }) {
-  const branchOptions = BRANCHES_BY_COMPANY[data.companyId] ?? [];
-  const departmentOptions = DEPARTMENTS_BY_BRANCH[data.branchId] ?? [];
-  const designationOptions = DESIGNATIONS_BY_COMPANY[data.companyId] ?? [];
+export default function EmployeeAssignmentFields({
+  data,
+  errors,
+  onChange,
+  showCompanyDropdown,
+  companies,
+  companiesLoading,
+  companiesError,
+}) {
+  const branchOptions = getBranchesForCompany(data.companyId);
+  const departmentOptions = getDepartmentsForBranch(data.branchId);
+  const designationOptions = getDesignationsForCompany(data.companyId);
   const reportingManagers = getReportingManagers(data.companyId);
 
   return (
@@ -27,19 +34,22 @@ export default function EmployeeAssignmentFields({ data, errors, onChange, showC
           <input type="text" value={data.employeeCode} readOnly disabled />
         </FormField>
         {showCompanyDropdown && (
-          <FormField label="Company *" error={errors.companyId}>
+          <FormField label="Company *" error={errors.companyId || companiesError}>
             <select
               value={data.companyId}
+              disabled={companiesLoading || Boolean(companiesError)}
               onChange={(e) => {
                 onChange("companyId", e.target.value ? Number(e.target.value) : "");
                 onChange("branchId", "");
                 onChange("departmentId", "");
               }}
             >
-              <option value="">Select company</option>
-              {COMPANIES.map((c) => (
+              <option value="">
+                {companiesLoading ? "Loading companies..." : companiesError ? "Could not load companies" : "Select company"}
+              </option>
+              {companies.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {c.company_name}
                 </option>
               ))}
             </select>

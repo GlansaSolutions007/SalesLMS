@@ -1,4 +1,4 @@
-import FormTextField from "../components/FormTextField.jsx";
+import FormTextField from "../../../../components/FormTextField.jsx";
 import PasswordField from "../components/PasswordField.jsx";
 
 export default function AdminDetailsStep({ control, errors, watch }) {

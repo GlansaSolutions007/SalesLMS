@@ -16,6 +16,7 @@ import EmergencyContactSection from "./form/EmergencyContactSection.jsx";
 import { generateEmployeeCode, emptyDocumentRow, emptySkillRow, emptyEmergencyContact, emptyAddress } from "./employeeFormData.js";
 import { validateEmployeeDetails, validateAddressStep, validateDocuments, hasErrors } from "./employeeFormValidation.js";
 import { saveEmployeeDraft, createEmployee } from "../../services/employeeService.js";
+import { getCompanies } from "../../services/api/companyApi.js";
 import { ROUTES } from "../../router/routePaths.js";
 import "./EmployeeForm.css";
 
@@ -63,7 +64,7 @@ export default function EmployeeForm() {
   const { toggleCollapsed } = useOutletContext();
   const navigate = useNavigate();
   const location = useLocation();
-  const { roleName, user } = useAuth();
+  const { roleName, user, token } = useAuth();
 
   // Three ways a Company can end up fixed for this employee: opened from a
   // specific Company's Employees page (router state), or the logged-in user
@@ -84,10 +85,38 @@ export default function EmployeeForm() {
   const [toast, setToast] = useState(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
 
+  const [companies, setCompanies] = useState([]);
+  const [companiesLoading, setCompaniesLoading] = useState(showCompanyDropdown);
+  const [companiesError, setCompaniesError] = useState("");
+
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 550);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!showCompanyDropdown) return undefined;
+
+    let cancelled = false;
+    setCompaniesLoading(true);
+    setCompaniesError("");
+
+    getCompanies({ per_page: 100, sort: "company_name", dir: "asc" }, token)
+      .then((result) => {
+        if (!cancelled) setCompanies(result.items);
+      })
+      .catch((error) => {
+        if (!cancelled) setCompaniesError(error.message ?? "Could not load companies.");
+      })
+      .finally(() => {
+        if (!cancelled) setCompaniesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCompanyDropdown, token]);
 
   function updateDetails(field, value) {
     setDirty(true);
@@ -303,7 +332,6 @@ export default function EmployeeForm() {
         searchPlaceholder="Search..."
         notifications={3}
         messages={5}
-        user={{ name: "John Smith", role: roleName ?? "Sales Manager", initials: "JS" }}
       />
 
       <div className="cl-body wizard-page-body">
@@ -339,6 +367,9 @@ export default function EmployeeForm() {
                       errors={errors.details ?? {}}
                       onChange={updateDetails}
                       showCompanyDropdown={showCompanyDropdown}
+                      companies={companies}
+                      companiesLoading={companiesLoading}
+                      companiesError={companiesError}
                     />
 
                     <div className="form-section-divider">

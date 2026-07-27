@@ -1,0 +1,118 @@
+@import "../../../styles/controls.css";
+@import "../../../components/FormActions.css";
+
+.ec-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Not-found / error states */
+.ec-state-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 64px 24px;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+.ec-state-panel svg {
+  color: var(--color-primary-500);
+}
+
+.ec-state-panel h3 {
+  margin: 4px 0 0;
+  color: var(--color-heading);
+  font-size: 16px;
+}
+
+.ec-state-panel p {
+  margin: 0 0 6px;
+  max-width: 360px;
+  font-size: 13px;
+}
+
+/* 2-column layout, 24px gap */
+.ec-columns {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.ec-main-col,
+.ec-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ec-section {
+  padding: 22px;
+}
+
+.ec-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-heading);
+}
+
+.ec-readonly-tag {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ec-readonly-grid {
+  grid-template-columns: 1fr;
+}
+
+.ec-empty-inline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.ec-empty-inline svg {
+  color: var(--color-primary-500);
+}
+
+.ec-empty-inline p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ec-skeleton-gap {
+  display: block;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 1100px) {
+  .ec-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .ec-section {
+    padding: 18px;
+  }
+}

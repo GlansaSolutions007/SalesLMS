@@ -147,7 +147,6 @@ export default function CourseList() {
         searchPlaceholder="Search courses, topics or skills..."
         notifications={3}
         messages={5}
-        user={{ name: "John Smith", role: "Sales Manager", initials: "JS" }}
       />
 
       <div className="cl-body">

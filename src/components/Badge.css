@@ -32,3 +32,8 @@
   color: var(--color-muted);
   background: #f1f5f9;
 }
+
+.badge-red {
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
