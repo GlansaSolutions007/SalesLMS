@@ -1,29 +1,429 @@
-.tp-feedback-card {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-}
+/* ── Hero card ──────────────────────────────────────────────────────────── */
 
-.tp-feedback-head {
+.tp-hero {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 24px;
+  padding: 24px;
+  flex-wrap: wrap;
 }
 
-.tp-feedback-head b {
-  font-size: 13px;
+.tp-hero-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tp-avatar {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  font-size: 20px;
+  border-radius: 16px;
+}
+
+.tp-hero-info {
+  min-width: 0;
+}
+
+.tp-hero-name {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
   color: var(--color-heading);
 }
 
-.tp-feedback-comment {
-  margin: 0;
-  color: var(--color-text);
+.tp-hero-sub {
+  margin: 4px 0 0;
   font-size: 13px;
-  line-height: 1.5;
+  color: var(--color-muted);
 }
 
-.tp-feedback-date {
+.tp-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.tp-hero-meta span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
   color: var(--color-muted);
+}
+
+/* ── Hero right: badge + stats ──────────────────────────────────────────── */
+
+.tp-hero-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.tp-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tp-stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-muted);
+}
+
+.tp-stat-chip > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.tp-stat-value {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-heading);
+  line-height: 1.2;
+}
+
+.tp-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Header actions ─────────────────────────────────────────────────────── */
+
+.tp-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tp-deactivate-btn {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.tp-deactivate-btn:hover {
+  background: var(--color-danger-soft, #fef2f2);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+/* ── Overview sections ──────────────────────────────────────────────────── */
+
+.tp-section-label {
   font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-primary-600);
+  margin-bottom: 14px;
+}
+
+.tp-section-label--gap {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.tp-bio {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+/* ── Skills tab ─────────────────────────────────────────────────────────── */
+
+.tp-skills-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.tp-skills-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-heading);
+}
+
+.tp-skills-sub {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.tp-skills-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tp-skill-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 4px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.tp-skill-row:first-child {
+  border-top: none;
+}
+
+.tp-skill-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tp-skill-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.tp-skill-cert {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+.tp-skill-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.tp-skill-exp {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.tp-delete-btn:hover {
+  color: var(--color-danger);
+}
+
+/* ── Inline skill editor (add / edit row) ───────────────────────────────── */
+
+.tp-skill-editor {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  border: 1.5px dashed var(--color-primary-400, #60a5fa);
+  border-radius: 14px;
+  background: #f8fbff;
+  flex-wrap: wrap;
+}
+
+.tp-skill-editor-fields {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.tp-skill-input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: white;
+  color: var(--color-text);
+  font-size: 13px;
+  flex: 1;
+  min-width: 130px;
+}
+
+.tp-skill-input--sm {
+  flex: 0 0 90px;
+  min-width: 0;
+}
+
+.tp-skill-input:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+}
+
+.tp-skill-select {
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: white;
+  color: var(--color-text);
+  font-size: 13px;
+  flex: 0 0 140px;
+}
+
+.tp-skill-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.tp-skill-cancel-btn {
+  height: 40px;
+  padding: 0 14px;
+  font-size: 12.5px;
+}
+
+/* ── Empty / placeholder states ─────────────────────────────────────────── */
+
+.tp-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.tp-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: var(--color-surface);
+  color: var(--color-muted);
+}
+
+.tp-empty-state > p,
+.tp-empty-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.tp-empty-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-muted);
+  max-width: 360px;
+}
+
+/* ── Error state ────────────────────────────────────────────────────────── */
+
+.tp-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 56px 24px;
+  text-align: center;
+  color: var(--color-danger);
+}
+
+.tp-error-state p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ── Loading skeleton ───────────────────────────────────────────────────── */
+
+.tp-skeleton {
+  gap: 20px;
+}
+
+.tp-skeleton-header,
+.tp-skeleton-tabs,
+.tp-skeleton-body {
+  border-radius: 18px;
+  background: linear-gradient(90deg, #eef2f7 25%, #f7fafd 37%, #eef2f7 63%);
+  background-size: 400% 100%;
+  animation: tp-shimmer 1.4s ease infinite;
+}
+
+.tp-skeleton-header {
+  height: 120px;
+}
+
+.tp-skeleton-tabs {
+  height: 48px;
+}
+
+.tp-skeleton-body {
+  padding: 24px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  background: white;
+  animation: none;
+}
+
+.tp-skeleton-field {
+  height: 52px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #eef2f7 25%, #f7fafd 37%, #eef2f7 63%);
+  background-size: 400% 100%;
+  animation: tp-shimmer 1.4s ease infinite;
+}
+
+@keyframes tp-shimmer {
+  0%   { background-position:  100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .tp-hero {
+    flex-direction: column;
+  }
+  .tp-hero-right {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .tp-skill-editor {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .tp-skill-editor-actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 560px) {
+  .tp-hero-left {
+    flex-direction: column;
+  }
 }

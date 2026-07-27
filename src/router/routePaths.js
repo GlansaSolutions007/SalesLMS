@@ -19,7 +19,9 @@ export const ROUTES = {
 
   TRAINERS: "/trainers",
   TRAINERS_BATCHES: "/trainers/batches",
+  TRAINER_ADD: "/trainers/add",
   TRAINER_PROFILE: "/trainers/profile",
+  TRAINER_EDIT: "/trainers/:id/edit",
 
   COURSES: "/courses",
   COURSES_CREATE: "/courses/create",
