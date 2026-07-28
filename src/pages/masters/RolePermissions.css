@@ -1,0 +1,134 @@
+/* ── Role summary card ────────────────────────────────────────────────────── */
+
+.rp-role-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* ── Permissions panel ───────────────────────────────────────────────────── */
+
+.rp-perm-panel {
+  padding: 22px;
+  margin-top: 16px;
+}
+
+.rp-perm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.rp-perm-search-wrap {
+  flex: 1;
+  min-width: 220px;
+  margin-bottom: 0;
+}
+
+.rp-select-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rp-select-all input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--color-primary-600);
+  cursor: pointer;
+}
+
+.rp-perm-groups {
+  max-height: none;
+  overflow-y: visible;
+}
+
+/* ── Collapse / expand module ────────────────────────────────────────────── */
+
+.rp-collapse-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--color-heading);
+  cursor: pointer;
+  text-align: left;
+}
+
+.rp-collapse-btn svg {
+  transition: transform 120ms ease;
+  flex-shrink: 0;
+}
+
+.rp-chevron-collapsed {
+  transform: rotate(-90deg);
+}
+
+/* ── Unsaved changes banner ──────────────────────────────────────────────── */
+
+.rp-unsaved-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #b45309;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* ── Sticky save bar ──────────────────────────────────────────────────────── */
+
+.rp-save-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  margin-top: 16px;
+  background: white;
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.rp-save-status {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.rp-save-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .rp-role-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .rp-save-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

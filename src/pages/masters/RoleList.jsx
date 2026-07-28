@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import Icon from "../../components/Icon.jsx";
 import Topbar from "../../components/Topbar.jsx";
 import Breadcrumb from "../../components/Breadcrumb.jsx";
@@ -20,6 +20,7 @@ import {
   toggleRoleStatus,
   getPermissions,
 } from "../../services/rolesService.js";
+import { rolePermissionsPath } from "../../router/routePaths.js";
 import "./RoleList.css";
 
 const STATUS_TONE = { Active: "green", Inactive: "gray" };
@@ -71,6 +72,7 @@ const COLUMNS = [
 
 export default function RoleList() {
   const { toggleCollapsed } = useOutletContext();
+  const navigate = useNavigate();
   const { token } = useAuth();
 
   // ── Roles list ───────────────────────────────────────────────────────────────
@@ -306,6 +308,15 @@ export default function RoleList() {
       header: "",
       render: (row) => (
         <div className="cl-row-actions">
+          <button
+            type="button"
+            className="dash-icon-btn"
+            aria-label={`Manage permissions for ${row.role_name}`}
+            title="Manage Permissions"
+            onClick={() => navigate(rolePermissionsPath(row.id))}
+          >
+            <Icon name="shield" size={15} />
+          </button>
           <button
             type="button"
             className="dash-icon-btn"

@@ -18,7 +18,8 @@ const EMPTY_FORM = {
 // toolbar) and the Department View page (Edit button), so a save from either
 // place behaves identically. Mirrors BranchFormModal's shape.
 export default function DepartmentFormModal({ mode, companyId, departmentId, initialValues, onClose, onSuccess }) {
-  const { token } = useAuth();
+  const { token, roleName } = useAuth();
+  const isSuperAdmin = roleName === "Super Admin";
   const { branches, isLoading: branchesLoading } = useCompanyBranches(companyId);
   const { options: employees, isLoading: employeesLoading } = useCompanyEmployeeOptions(companyId);
   const [form, setForm] = useState({ ...EMPTY_FORM, ...initialValues });
@@ -30,7 +31,7 @@ export default function DepartmentFormModal({ mode, companyId, departmentId, ini
 
   useEffect(() => {
     let cancelled = false;
-    if (!companyId) return undefined;
+    if (!isSuperAdmin || !companyId) return undefined;
 
     getCompanyById(companyId, token)
       .then((company) => {
@@ -43,7 +44,7 @@ export default function DepartmentFormModal({ mode, companyId, departmentId, ini
     return () => {
       cancelled = true;
     };
-  }, [companyId, token]);
+  }, [isSuperAdmin, companyId, token]);
 
   function setField(key, value) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -108,11 +109,13 @@ export default function DepartmentFormModal({ mode, companyId, departmentId, ini
       <form id="department-form" onSubmit={handleSubmit}>
         {formErrors._api && <p className="rl-api-error">{formErrors._api}</p>}
 
-        <FormField label="Company">
-          <select value={companyId} disabled>
-            <option value={companyId}>{companyName || "Loading…"}</option>
-          </select>
-        </FormField>
+        {isSuperAdmin && (
+          <FormField label="Company">
+            <select value={companyId} disabled>
+              <option value={companyId}>{companyName || "Loading…"}</option>
+            </select>
+          </FormField>
+        )}
 
         <div className="form-row">
           <FormField label="Department Name" error={formErrors.department_name}>

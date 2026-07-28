@@ -55,6 +55,7 @@ export const ROUTES = {
   MASTERS: "/masters",
   MASTERS_SUBSCRIPTIONS: "/masters/subscriptions",
   MASTERS_ROLES: "/masters/roles",
+  MASTERS_ROLE_PERMISSIONS: "/masters/roles/:roleId/permissions",
   SETTINGS: "/settings",
   AUDIT: "/audit",
 };
@@ -77,6 +78,10 @@ export function companyDepartmentViewPath(companyId, departmentId) {
 
 export function companyDesignationViewPath(companyId, designationId) {
   return ROUTES.COMPANY_DESIGNATION_VIEW.replace(":companyId", companyId).replace(":designationId", designationId);
+}
+
+export function rolePermissionsPath(roleId) {
+  return ROUTES.MASTERS_ROLE_PERMISSIONS.replace(":roleId", roleId);
 }
 
 export function employeeEditPath(companyId, employeeId) {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import Icon from "./Icon.jsx";
 import { menuConfig, isMenuItemVisible } from "../config/menuConfig.js";
@@ -36,7 +36,40 @@ export default function Sidebar({ collapsed: collapsedProp, onToggleCollapsed })
   const navigate = useNavigate();
   const { user, roleName, permissions, logout } = useAuth();
   const access = { roleName, permissions };
-  const visibleItems = menuConfig.filter((item) => isMenuItemVisible(item, access));
+  const visibleItems = useMemo(
+    () => menuConfig.filter((item) => isMenuItemVisible(item, access)),
+    [roleName, permissions]
+  );
+
+  function isSectionActive(item) {
+    return pathname === item.path || pathname.startsWith(`${item.path}/`);
+  }
+
+  // A parent's submenu opens by clicking the parent (an accordion, not a
+  // navigation link — clicking "Company Management" itself has no page of
+  // its own). Whichever section the current route is in starts expanded;
+  // after that, expanding/collapsing is fully under the user's control and
+  // survives navigating to other sections.
+  const [expandedIds, setExpandedIds] = useState(() => {
+    const active = visibleItems.find((item) => isSectionActive(item));
+    return active?.children?.length ? new Set([active.id]) : new Set();
+  });
+
+  useEffect(() => {
+    const active = visibleItems.find((item) => isSectionActive(item));
+    if (active?.children?.length) {
+      setExpandedIds((prev) => (prev.has(active.id) ? prev : new Set(prev).add(active.id)));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  function toggleExpanded(id) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
 
   // Track viewport so mobile always renders the full (uncollapsed) drawer.
   useEffect(() => {
@@ -64,10 +97,6 @@ export default function Sidebar({ collapsed: collapsedProp, onToggleCollapsed })
       }
       return next;
     });
-  }
-
-  function isSectionActive(item) {
-    return pathname === item.path || pathname.startsWith(`${item.path}/`);
   }
 
   function handleLinkClick() {
@@ -142,24 +171,38 @@ export default function Sidebar({ collapsed: collapsedProp, onToggleCollapsed })
               const active = isSectionActive(item);
               const visibleChildren = item.children?.filter((child) => isMenuItemVisible(child, access)) ?? [];
               const hasChildren = visibleChildren.length > 0;
+              const isExpanded = expandedIds.has(item.id);
 
               return (
                 <div key={item.id}>
-                  <NavLink
-                    to={item.path}
-                    className={`sidebar-link${active ? " is-active" : ""}`}
-                    title={showAsCollapsed ? item.title : undefined}
-                    onClick={handleLinkClick}
-                  >
-                    <Icon name={item.icon} size={19} />
-                    <span>{item.title}</span>
-                    {hasChildren && !showAsCollapsed && (
-                      <Icon name="chevronRight" size={13} className={`sidebar-link-chevron${active ? " is-open" : ""}`} />
-                    )}
-                  </NavLink>
+                  {hasChildren ? (
+                    <button
+                      type="button"
+                      className={`sidebar-link${active ? " is-active" : ""}`}
+                      title={showAsCollapsed ? item.title : undefined}
+                      aria-expanded={isExpanded}
+                      onClick={() => (showAsCollapsed ? navigate(item.path) : toggleExpanded(item.id))}
+                    >
+                      <Icon name={item.icon} size={19} />
+                      <span>{item.title}</span>
+                      {!showAsCollapsed && (
+                        <Icon name="chevronRight" size={13} className={`sidebar-link-chevron${isExpanded ? " is-open" : ""}`} />
+                      )}
+                    </button>
+                  ) : (
+                    <NavLink
+                      to={item.path}
+                      className={`sidebar-link${active ? " is-active" : ""}`}
+                      title={showAsCollapsed ? item.title : undefined}
+                      onClick={handleLinkClick}
+                    >
+                      <Icon name={item.icon} size={19} />
+                      <span>{item.title}</span>
+                    </NavLink>
+                  )}
 
                   {hasChildren && !showAsCollapsed && (
-                    <div className={`sidebar-submenu-wrap${active ? " is-expanded" : ""}`}>
+                    <div className={`sidebar-submenu-wrap${isExpanded ? " is-expanded" : ""}`}>
                       <div className="sidebar-submenu-inner">
                         <div className="sidebar-submenu">
                           {visibleChildren.map((child) => (

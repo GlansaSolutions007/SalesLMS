@@ -17,6 +17,7 @@ export default function EmployeeAssignmentFields({
   companiesLoading,
   companiesError,
   excludeEmployeeId,
+  isEdit,
 }) {
   const { token } = useAuth();
   const { branches, isLoading: branchesLoading } = useCompanyBranches(data.companyId);
@@ -71,8 +72,17 @@ export default function EmployeeAssignmentFields({
       </div>
 
       <div className="form-row">
-        <FormField label="Employee Code">
-          <input type="text" value={data.employeeCode || "Auto-generated on save"} readOnly disabled />
+        <FormField label="Employee Code" error={errors.employeeCode}>
+          {isEdit ? (
+            <input type="text" value={data.employeeCode || "Auto-generated on save"} readOnly disabled />
+          ) : (
+            <input
+              type="text"
+              value={data.employeeCode}
+              onChange={(e) => onChange("employeeCode", e.target.value)}
+              placeholder="Auto-generated if left blank"
+            />
+          )}
         </FormField>
         {showCompanyDropdown ? (
           <FormField label="Company *" error={errors.companyId || companiesError}>

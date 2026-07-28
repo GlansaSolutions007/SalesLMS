@@ -151,6 +151,11 @@ function normalizePlanList(response) {
   return [];
 }
 
+function normalizePagination(response) {
+  const payload = response?.data ?? response;
+  return payload?.data?.pagination ?? null;
+}
+
 function getStatusTone(status) {
   const value = String(status || "").toLowerCase();
   if (value === "active") return "green";
@@ -210,13 +215,19 @@ export default function SubscriptionPlanList() {
     setIsLoading(true);
     setApiError(null);
     try {
-      const res = await getSubscriptionPlans(token);
-      const normalized = normalizePlanList(res);
-      console.log("Fetched subscription plans:", normalized);
-      setPlans(normalized);
+      const params = {
+        page,
+        per_page: PAGE_SIZE,
+        ...(debouncedSearch ? { search: debouncedSearch } : {}),
+        ...(statusFilter !== "All" ? { status: statusFilter } : {}),
+      };
+      const res = await getSubscriptionPlans(params, token);
+      setPlans(normalizePlanList(res));
+      setPagination(normalizePagination(res) ?? DEFAULT_PAGINATION);
     } catch {
       setApiError("Could not load subscription plans. Please try again.");
       setPlans([]);
+      setPagination(DEFAULT_PAGINATION);
     } finally {
       setIsLoading(false);
     }
@@ -226,15 +237,8 @@ export default function SubscriptionPlanList() {
     fetchPlans();
   }, [fetchPlans]);
 
-  const filtered = (Array.isArray(plans) ? plans : []).filter((p) => {
-    const term = search.toLowerCase();
-    return (
-      p.plan_name?.toLowerCase().includes(term) ||
-      String(p.status || "").toLowerCase().includes(term)
-    );
-  });
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pageItems = Array.isArray(plans) ? plans : [];
+  const totalPages = Math.max(1, pagination.last_page || 1);
 
   function openAdd() {
     setForm({ ...EMPTY_FORM, features: { ...EMPTY_FEATURES } });

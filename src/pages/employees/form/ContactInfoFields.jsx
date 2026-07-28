@@ -24,49 +24,40 @@ export default function ContactInfoFields({ data, errors, onChange, isEdit }) {
       </div>
 
       {!isEdit && (
-        <>
-          <label className="ef-same-address">
-            <input type="checkbox" checked={data.createLogin} onChange={(e) => onChange("createLogin", e.target.checked)} />
-            <span>Create a portal login for this employee</span>
-          </label>
-
-          {data.createLogin && (
-            <div className="form-row">
-              <FormField label="Password *" error={errors.password}>
-                <div className="form-password-input">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={data.password}
-                    onChange={(e) => onChange("password", e.target.value)}
-                    placeholder="Minimum 8 characters"
-                  />
-                  <button type="button" onClick={() => setShowPassword((s) => !s)} aria-label="Toggle password visibility">
-                    <Icon name="eye" size={16} />
-                  </button>
-                </div>
-                {data.password && (
-                  <div className="form-password-strength">
-                    <ProgressBar value={strength.score * 25} tone={strength.tone} showLabel={false} />
-                    <span className={`form-strength-label tone-${strength.tone}`}>{strength.label}</span>
-                  </div>
-                )}
-              </FormField>
-              <FormField label="Confirm Password *" error={errors.confirmPassword}>
-                <div className="form-password-input">
-                  <input
-                    type={showConfirm ? "text" : "password"}
-                    value={data.confirmPassword}
-                    onChange={(e) => onChange("confirmPassword", e.target.value)}
-                    placeholder="Re-enter password"
-                  />
-                  <button type="button" onClick={() => setShowConfirm((s) => !s)} aria-label="Toggle password visibility">
-                    <Icon name="eye" size={16} />
-                  </button>
-                </div>
-              </FormField>
+        <div className="form-row">
+          <FormField label="Password *" error={errors.password}>
+            <div className="form-password-input">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={data.password}
+                onChange={(e) => onChange("password", e.target.value)}
+                placeholder="Minimum 8 characters"
+              />
+              <button type="button" onClick={() => setShowPassword((s) => !s)} aria-label="Toggle password visibility">
+                <Icon name="eye" size={16} />
+              </button>
             </div>
-          )}
-        </>
+            {data.password && (
+              <div className="form-password-strength">
+                <ProgressBar value={strength.score * 25} tone={strength.tone} showLabel={false} />
+                <span className={`form-strength-label tone-${strength.tone}`}>{strength.label}</span>
+              </div>
+            )}
+          </FormField>
+          <FormField label="Confirm Password *" error={errors.confirmPassword}>
+            <div className="form-password-input">
+              <input
+                type={showConfirm ? "text" : "password"}
+                value={data.confirmPassword}
+                onChange={(e) => onChange("confirmPassword", e.target.value)}
+                placeholder="Re-enter password"
+              />
+              <button type="button" onClick={() => setShowConfirm((s) => !s)} aria-label="Toggle password visibility">
+                <Icon name="eye" size={16} />
+              </button>
+            </div>
+          </FormField>
+        </div>
       )}
 
       {isEdit && (
