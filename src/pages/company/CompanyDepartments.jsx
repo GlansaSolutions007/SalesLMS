@@ -111,13 +111,14 @@ function buildColumns(companyId, onEdit, editingRowId) {
 
 export default function CompanyDepartments() {
   const { toggleCollapsed } = useOutletContext();
-  const { token } = useAuth();
-  const { options: companies, isLoading: companiesLoading, error: companiesError } = useCompanyOptions();
-  const [companyId, setCompanyId] = useState("");
+  const { token, roleName, user } = useAuth();
+  const isSuperAdmin = roleName === "Super Admin";
+  const { options: companies, isLoading: companiesLoading, error: companiesError } = useCompanyOptions(isSuperAdmin);
+  const [companyId, setCompanyId] = useState(() => (isSuperAdmin ? "" : String(user?.company?.id ?? "")));
 
   useEffect(() => {
-    if (!companyId && companies.length > 0) setCompanyId(String(companies[0].id));
-  }, [companies, companyId]);
+    if (isSuperAdmin && !companyId && companies.length > 0) setCompanyId(String(companies[0].id));
+  }, [isSuperAdmin, companies, companyId]);
 
   const { departments, isLoading, error, refetch } = useCompanyDepartments(companyId);
 
@@ -216,22 +217,24 @@ export default function CompanyDepartments() {
         <CompanyTabs />
 
         <div className="panel cl-panel">
-          <div className="dt-toolbar" style={{ paddingBottom: 0 }}>
-            <select
-              className="dt-select"
-              value={companyId}
-              onChange={(e) => setCompanyId(e.target.value)}
-              disabled={companiesLoading || companies.length === 0}
-              aria-label="Select company"
-            >
-              {companies.length === 0 && <option value="">No companies found</option>}
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.company_name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {isSuperAdmin && (
+            <div className="dt-toolbar" style={{ paddingBottom: 0 }}>
+              <select
+                className="dt-select"
+                value={companyId}
+                onChange={(e) => setCompanyId(e.target.value)}
+                disabled={companiesLoading || companies.length === 0}
+                aria-label="Select company"
+              >
+                {companies.length === 0 && <option value="">No companies found</option>}
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.company_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <DataToolbar
             search={search}

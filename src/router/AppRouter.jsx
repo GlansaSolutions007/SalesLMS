@@ -2,7 +2,7 @@ import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import AppLayout from "../components/AppLayout.jsx";
-import { flattenMenu, isMenuItemVisible } from "../config/menuConfig.js";
+import { menuConfig, flattenMenu, isMenuItemVisible } from "../config/menuConfig.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { ROUTES } from "./routePaths.js";
 
@@ -43,11 +43,19 @@ const EditCompanyPage = lazy(() => import("../pages/company/edit-company/EditCom
 
 const SubscriptionPlanList = lazy(() => import("../pages/masters/SubscriptionPlanList.jsx"));
 const RoleList = lazy(() => import("../pages/masters/RoleList.jsx"));
+const RolePermissions = lazy(() => import("../pages/masters/RolePermissions.jsx"));
 
 // "Company Management" is a pure container with no page of its own — land
-// on its first child section instead of a blank Placeholder.
+// on the first child section the current role can actually see (a Company
+// Admin can't see "Companies", so hard-coding that path here would bounce
+// them straight to the Dashboard via GuardedMenuRoute).
 function CompanyRedirect() {
-  return <Navigate to={ROUTES.COMPANY_COMPANIES} replace />;
+  const { roleName, permissions } = useAuth();
+  const companyItem = menuConfig.find((item) => item.id === "company");
+  const firstVisibleChild = companyItem?.children?.find((child) =>
+    isMenuItemVisible(child, { roleName, permissions })
+  );
+  return <Navigate to={firstVisibleChild?.path ?? ROUTES.DASHBOARD} replace />;
 }
 
 // Menu entries with a real, already-built page. Everything else in
@@ -115,6 +123,7 @@ export default function AppRouter() {
             <Route path={ROUTES.COMPANY_BRANCH_VIEW} element={<CompanyBranchView />} />
             <Route path={ROUTES.COMPANY_DEPARTMENT_VIEW} element={<CompanyDepartmentView />} />
             <Route path={ROUTES.COMPANY_DESIGNATION_VIEW} element={<CompanyDesignationView />} />
+            <Route path={ROUTES.MASTERS_ROLE_PERMISSIONS} element={<RolePermissions />} />
             <Route path={ROUTES.COMPANY_ADD} element={<AddCompanyPage />} />
             <Route path={ROUTES.COMPANY_VIEW} element={<CompanyView />} />
             <Route path={ROUTES.COMPANY_EDIT} element={<EditCompanyPage />} />

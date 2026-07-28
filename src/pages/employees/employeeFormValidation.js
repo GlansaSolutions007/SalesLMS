@@ -16,8 +16,7 @@ export function validateEmployeeDetails(data, { requireCompany }) {
 
   errors.mobile = req(data.mobile, "Mobile number is required.") || (!MOBILE_REGEX.test(data.mobile) ? "Enter a valid mobile number." : null);
 
-  // Portal login credentials are optional — only required when the admin
-  // opts in via the "Create portal login" checkbox, matching the backend's
+  // A portal login is always created for new employees, matching the backend's
   // `login_password` => required_if:create_login,true.
   if (data.createLogin) {
     errors.password = req(data.password, "Password is required.") || (passwordStrength(data.password).score < 3 ? "Password is too weak." : null);

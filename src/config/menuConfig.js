@@ -28,7 +28,9 @@ export const menuConfig = [
     roles: [SA, CA],
     permissions: ["companies.view"],
     children: [
-      { id: "company-companies", title: "Companies", path: ROUTES.COMPANY_COMPANIES, roles: [SA, CA], permissions: ["companies.view"] },
+      // Super Admin only — a Company Admin manages their own single company
+      // via the profile/settings pages, not this cross-company list.
+      { id: "company-companies", title: "Companies", path: ROUTES.COMPANY_COMPANIES, roles: [SA] },
       { id: "company-branches", title: "Branches", path: ROUTES.COMPANY_BRANCHES, roles: [SA, CA], permissions: ["branches.view"] },
       { id: "company-departments", title: "Departments", path: ROUTES.COMPANY_DEPARTMENTS, roles: [SA, CA], permissions: ["departments.view"] },
       { id: "company-designations", title: "Designations", path: ROUTES.COMPANY_DESIGNATIONS, roles: [SA, CA], permissions: ["designations.view"] },
@@ -37,17 +39,19 @@ export const menuConfig = [
   { id: "employees", title: "Employees", icon: "users", path: ROUTES.EMPLOYEES, roles: [SA, CA, SM], permissions: ["employees.view"] },
   { id: "trainers", title: "Trainers", icon: "presentation", path: ROUTES.TRAINERS, roles: [SA, CA], permissions: ["trainers.view"] },
   {
+    // Company Admin no longer gets this section — courses are managed by
+    // Super Admin / Trainers; a Company Admin only assigns/tracks them via
+    // Training.
     id: "courses",
     title: "Courses",
     icon: "book",
     path: ROUTES.COURSES,
-    roles: [SA, CA, TR, SE],
-    permissions: ["courses.view"],
+    roles: [SA, TR, SE],
     children: [
-      { id: "courses-categories", title: "Categories", path: ROUTES.COURSES_CATEGORIES, roles: [SA, CA, TR], permissions: ["course_categories.view"] },
-      { id: "courses-modules", title: "Modules", path: ROUTES.COURSES_MODULES, roles: [SA, CA, TR], permissions: ["courses.view"] },
-      { id: "courses-lessons", title: "Lessons", path: ROUTES.COURSES_LESSONS, roles: [SA, CA, TR], permissions: ["lessons.view"] },
-      { id: "courses-resources", title: "Resources", path: ROUTES.COURSES_RESOURCES, roles: [SA, CA, TR], permissions: ["lessons.view"] },
+      { id: "courses-categories", title: "Categories", path: ROUTES.COURSES_CATEGORIES, roles: [SA, TR] },
+      { id: "courses-modules", title: "Modules", path: ROUTES.COURSES_MODULES, roles: [SA, TR] },
+      { id: "courses-lessons", title: "Lessons", path: ROUTES.COURSES_LESSONS, roles: [SA, TR] },
+      { id: "courses-resources", title: "Resources", path: ROUTES.COURSES_RESOURCES, roles: [SA, TR] },
     ],
   },
   {

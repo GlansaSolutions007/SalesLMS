@@ -4,92 +4,6 @@
    .dash-primary-btn / .dash-icon-btn now live in styles/controls.css —
    they're shared across every page, not just this one. */
 
-/* Topbar */
-.dash-topbar {
-  position: sticky;
-  top: 16px;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  height: 62px;
-  margin: 16px 24px 0;
-  padding: 0 20px;
-  border-radius: 18px;
-  border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  box-shadow: var(--shadow-sm);
-}
-
-.dash-search {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-  max-width: 420px;
-  color: #94a3b8;
-}
-
-.dash-search input {
-  flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 13px;
-  color: var(--color-text);
-}
-
-.dash-topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-
-.dash-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: #f1f5f9;
-  color: var(--color-muted);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.dash-status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-success);
-}
-
-.dash-bell {
-  position: relative;
-}
-
-.dash-bell::after {
-  content: "";
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--color-danger);
-  border: 2px solid white;
-}
-
-.dash-divider {
-  width: 1px;
-  height: 26px;
-  background: var(--color-border);
-}
-
 /* Body */
 .dash-body {
   padding: 28px 24px 40px;
@@ -145,7 +59,7 @@
 /* Stat cards */
 .dash-stats {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
 }
 
@@ -677,10 +591,6 @@
 }
 
 @media (max-width: 1100px) {
-  .dash-topbar {
-    margin-left: 72px;
-  }
-
   .dash-charts,
   .dash-lower {
     grid-template-columns: 1fr;
@@ -694,10 +604,6 @@
 @media (max-width: 640px) {
   .dash-stats {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .dash-search {
-    max-width: none;
   }
 
   .dash-primary-btn span {

@@ -15,7 +15,8 @@ const EMPTY_FORM = {
 // toolbar) and the Designation View page (Edit button). Mirrors
 // DepartmentFormModal/BranchFormModal's shape.
 export default function DesignationFormModal({ mode, companyId, designationId, initialValues, onClose, onSuccess }) {
-  const { token } = useAuth();
+  const { token, roleName } = useAuth();
+  const isSuperAdmin = roleName === "Super Admin";
   const [form, setForm] = useState({ ...EMPTY_FORM, ...initialValues });
   const [formErrors, setFormErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -25,7 +26,7 @@ export default function DesignationFormModal({ mode, companyId, designationId, i
 
   useEffect(() => {
     let cancelled = false;
-    if (!companyId) return undefined;
+    if (!isSuperAdmin || !companyId) return undefined;
 
     getCompanyById(companyId, token)
       .then((company) => {
@@ -38,7 +39,7 @@ export default function DesignationFormModal({ mode, companyId, designationId, i
     return () => {
       cancelled = true;
     };
-  }, [companyId, token]);
+  }, [isSuperAdmin, companyId, token]);
 
   function setField(key, value) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -105,30 +106,22 @@ export default function DesignationFormModal({ mode, companyId, designationId, i
       <form id="designation-form" onSubmit={handleSubmit}>
         {formErrors._api && <p className="rl-api-error">{formErrors._api}</p>}
 
-        <FormField label="Company">
-          <select value={companyId} disabled>
-            <option value={companyId}>{companyName || "Loading…"}</option>
-          </select>
-        </FormField>
+        {isSuperAdmin && (
+          <FormField label="Company">
+            <select value={companyId} disabled>
+              <option value={companyId}>{companyName || "Loading…"}</option>
+            </select>
+          </FormField>
+        )}
 
-        <div className="form-row">
-          <FormField label="Designation Name" error={formErrors.designation_name}>
-            <input
-              type="text"
-              value={form.designation_name}
-              onChange={(e) => setField("designation_name", e.target.value)}
-              placeholder="e.g. Senior Sales Executive"
-            />
-          </FormField>
-          <FormField label="Designation Code" error={formErrors.designation_code}>
-            <input
-              type="text"
-              value={form.designation_code}
-              onChange={(e) => setField("designation_code", e.target.value)}
-              placeholder="Auto-generated if left blank"
-            />
-          </FormField>
-        </div>
+        <FormField label="Designation Name" error={formErrors.designation_name}>
+          <input
+            type="text"
+            value={form.designation_name}
+            onChange={(e) => setField("designation_name", e.target.value)}
+            placeholder="e.g. Senior Sales Executive"
+          />
+        </FormField>
 
         <FormField label="Description" error={formErrors.description}>
           <textarea
