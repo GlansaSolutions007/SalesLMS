@@ -4,6 +4,8 @@ import Icon from "../components/Icon.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { ROUTES } from "../router/routePaths.js";
 import { consumeSessionExpiredFlag } from "../utils/storage.js";
+import { forgotPassword, resetPassword } from "../services/authService.js";
+import { ApiValidationError } from "../services/axios.js";
 import "../App.css";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -158,13 +160,13 @@ function SidePanel() {
   );
 }
 
-function Field({ type, placeholder, showPassword, setShowPassword, label, value, onChange, onBlur, error }) {
+function Field({ type, placeholder, showPassword, setShowPassword, label, value, onChange, onBlur, error, icon }) {
   return (
     <label className="field">
       <span>{label || (type === "password" ? "Password" : "Email Address")}</span>
 
       <div className="input-wrapper">
-        <Icon name={type === "password" ? "lock" : "mail"} />
+        <Icon name={icon || (type === "password" ? "lock" : "mail")} />
 
         <input
           type={type === "password" && !showPassword ? "password" : "text"}
@@ -200,6 +202,18 @@ function AuthCard({ view, setView }) {
   const { login, isLoading, error } = useAuth();
   const navigate = useNavigate();
 
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotEmailError, setForgotEmailError] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotApiError, setForgotApiError] = useState("");
+
+  const [resetToken, setResetToken] = useState("");
+  const [resetPasswordValue, setResetPasswordValue] = useState("");
+  const [resetConfirmValue, setResetConfirmValue] = useState("");
+  const [resetErrors, setResetErrors] = useState({});
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetApiError, setResetApiError] = useState("");
+
   useEffect(() => {
     if (consumeSessionExpiredFlag()) setSessionExpired(true);
   }, []);
@@ -208,6 +222,64 @@ function AuthCard({ view, setView }) {
     if (!value.trim()) return "Email is required.";
     if (!EMAIL_RE.test(value.trim())) return "Enter a valid email address.";
     return "";
+  }
+
+  async function handleForgotSubmit(e) {
+    e.preventDefault();
+    const validationError = validateUsername(forgotEmail);
+    setForgotEmailError(validationError);
+    if (validationError) return;
+
+    setForgotLoading(true);
+    setForgotApiError("");
+    try {
+      await forgotPassword({ email: forgotEmail.trim() });
+      setView("reset");
+    } catch (err) {
+      setForgotApiError(err.message ?? "Could not send reset instructions. Please try again.");
+    } finally {
+      setForgotLoading(false);
+    }
+  }
+
+  async function handleResetSubmit(e) {
+    e.preventDefault();
+
+    const nextErrors = {};
+    if (!resetToken.trim()) nextErrors.token = "Reset token is required.";
+    if (!resetPasswordValue) nextErrors.password = "New password is required.";
+    else if (resetPasswordValue.length < 8) nextErrors.password = "Password must be at least 8 characters.";
+    if (!resetConfirmValue) nextErrors.confirm = "Please confirm your new password.";
+    else if (resetConfirmValue !== resetPasswordValue) nextErrors.confirm = "Passwords do not match.";
+
+    setResetErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+
+    setResetLoading(true);
+    setResetApiError("");
+    try {
+      await resetPassword({
+        email: forgotEmail.trim(),
+        token: resetToken.trim(),
+        password: resetPasswordValue,
+        password_confirmation: resetConfirmValue,
+      });
+      setView("success");
+    } catch (err) {
+      if (err instanceof ApiValidationError) {
+        const fieldErrors = {};
+        Object.entries(err.errors ?? {}).forEach(([field, messages]) => {
+          const message = Array.isArray(messages) ? messages[0] : messages;
+          if (field === "token") fieldErrors.token = message;
+          else if (field === "password" || field === "password_confirmation") fieldErrors.password = message;
+          else if (field === "email") fieldErrors.token = message;
+        });
+        setResetErrors((prev) => ({ ...prev, ...fieldErrors }));
+      }
+      setResetApiError(err.message ?? "Could not reset your password. Please try again.");
+    } finally {
+      setResetLoading(false);
+    }
   }
 
   async function handleLogin(e) {
@@ -240,9 +312,9 @@ function AuthCard({ view, setView }) {
   const subheading = isLogin
     ? "Sign in to continue your sales learning journey."
     : isForgot
-      ? "Enter your registered email and we’ll send you a reset link."
+      ? "Enter your registered email and we’ll send you a reset token."
       : isReset
-        ? "Create a secure new password for your account."
+        ? `Enter the reset token sent to ${forgotEmail || "your email"} along with your new password.`
         : "Your password has been reset successfully.";
 
   return (
@@ -350,24 +422,50 @@ function AuthCard({ view, setView }) {
             )}
 
             {isForgot && (
-              <>
-                <Field type="email" placeholder="Enter your registered email" label="Registered Email" />
+              <form onSubmit={handleForgotSubmit}>
+                <Field
+                  type="email"
+                  placeholder="Enter your registered email"
+                  label="Registered Email"
+                  value={forgotEmail}
+                  onChange={(e) => {
+                    setForgotEmail(e.target.value);
+                    if (forgotEmailError) setForgotEmailError("");
+                  }}
+                  onBlur={(e) => setForgotEmailError(validateUsername(e.target.value))}
+                  error={forgotEmailError}
+                />
 
-                <button className="primary" onClick={() => setView("reset")}>
-                  SEND RESET LINK
+                {forgotApiError && <p className="form-error">{forgotApiError}</p>}
+
+                <button className="primary" type="submit" disabled={forgotLoading || !forgotEmail.trim()}>
+                  {forgotLoading ? "SENDING…" : "SEND RESET TOKEN"}
                   <Icon name="arrow" />
                 </button>
-              </>
+              </form>
             )}
 
             {isReset && (
-              <>
+              <form onSubmit={handleResetSubmit}>
+                <Field
+                  type="text"
+                  icon="shield"
+                  placeholder="Paste the token from your email"
+                  label="Reset Token"
+                  value={resetToken}
+                  onChange={(e) => setResetToken(e.target.value)}
+                  error={resetErrors.token}
+                />
+
                 <Field
                   type="password"
                   placeholder="Enter new password"
                   label="New Password"
                   showPassword={showPassword}
                   setShowPassword={setShowPassword}
+                  value={resetPasswordValue}
+                  onChange={(e) => setResetPasswordValue(e.target.value)}
+                  error={resetErrors.password}
                 />
 
                 <Field
@@ -376,13 +474,22 @@ function AuthCard({ view, setView }) {
                   label="Confirm Password"
                   showPassword={showPassword}
                   setShowPassword={setShowPassword}
+                  value={resetConfirmValue}
+                  onChange={(e) => setResetConfirmValue(e.target.value)}
+                  error={resetErrors.confirm}
                 />
 
-                <button className="primary" onClick={() => setView("success")}>
-                  RESET PASSWORD
+                {resetApiError && <p className="form-error">{resetApiError}</p>}
+
+                <button
+                  className="primary"
+                  type="submit"
+                  disabled={resetLoading || !resetToken.trim() || !resetPasswordValue || !resetConfirmValue}
+                >
+                  {resetLoading ? "RESETTING…" : "RESET PASSWORD"}
                   <Icon name="arrow" />
                 </button>
-              </>
+              </form>
             )}
           </>
         )}

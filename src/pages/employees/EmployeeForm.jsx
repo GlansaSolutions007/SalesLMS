@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import Topbar from "../../components/Topbar.jsx";
 import Icon from "../../components/Icon.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
@@ -13,10 +13,27 @@ import AddressFields from "./form/AddressFields.jsx";
 import EmployeeDocumentsSection from "./form/EmployeeDocumentsSection.jsx";
 import SkillsSection from "./form/SkillsSection.jsx";
 import EmergencyContactSection from "./form/EmergencyContactSection.jsx";
-import { generateEmployeeCode, emptyDocumentRow, emptySkillRow, emptyEmergencyContact, emptyAddress } from "./employeeFormData.js";
+import { emptyDocumentRow, emptySkillRow, emptyEmergencyContact, emptyAddress, SKILL_LEVELS, RELATIONSHIPS } from "./employeeFormData.js";
 import { validateEmployeeDetails, validateAddressStep, validateDocuments, hasErrors } from "./employeeFormValidation.js";
-import { saveEmployeeDraft, createEmployee } from "../../services/employeeService.js";
-import { getCompanies } from "../../services/api/companyApi.js";
+import {
+  getCompanies,
+  getCompanyEmployee,
+  getCompanyEmployeeDocuments,
+  createCompanyEmployee,
+  updateCompanyEmployee,
+  updateCompanyEmployeeStatus,
+  saveCompanyEmployeeAddress,
+  createCompanyEmployeeSkill,
+  updateCompanyEmployeeSkill,
+  deleteCompanyEmployeeSkill,
+  createCompanyEmployeeEmergencyContact,
+  updateCompanyEmployeeEmergencyContact,
+  deleteCompanyEmployeeEmergencyContact,
+  createCompanyEmployeeDocument,
+  deleteCompanyEmployeeDocument,
+  ApiValidationError,
+} from "../../services/api/companyApi.js";
+import { resolveApiAssetUrl } from "../../utils/apiAssetUrl.js";
 import { ROUTES } from "../../router/routePaths.js";
 import "./EmployeeForm.css";
 
@@ -26,15 +43,33 @@ const STEPS = [
   { key: "skills", label: "Skills & Emergency Contact" },
 ];
 
+const DETAIL_FIELD_MAP = {
+  first_name: "firstName",
+  last_name: "lastName",
+  email: "email",
+  mobile: "mobile",
+  gender: "gender",
+  date_of_birth: "dob",
+  joining_date: "joiningDate",
+  branch_id: "branchId",
+  department_id: "departmentId",
+  designation_id: "designationId",
+  manager_id: "reportingManagerId",
+  employment_type: "employmentType",
+  profile_photo: "profilePhoto",
+  login_password: "password",
+};
+
 function buildInitialFormData(lockedCompanyId) {
   return {
     details: {
       profilePhoto: "",
-      employeeCode: generateEmployeeCode(),
+      profilePhotoFile: null,
+      employeeCode: "",
       companyId: lockedCompanyId ?? "",
       branchId: "",
       departmentId: "",
-      designation: "",
+      designationId: "",
       reportingManagerId: "",
       firstName: "",
       lastName: "",
@@ -44,7 +79,7 @@ function buildInitialFormData(lockedCompanyId) {
       employmentType: "Permanent",
       email: "",
       mobile: "",
-      username: "",
+      createLogin: false,
       password: "",
       confirmPassword: "",
       status: "Active",
@@ -60,22 +95,130 @@ function buildInitialFormData(lockedCompanyId) {
   };
 }
 
+function mapAddressRecord(record) {
+  if (!record) return emptyAddress();
+  return {
+    line1: record.address_line1 ?? "",
+    line2: record.address_line2 ?? "",
+    country: record.country ?? "",
+    state: record.state ?? "",
+    city: record.city ?? "",
+    pincode: record.pincode ?? "",
+  };
+}
+
+function mapEmployeeToFormData(employee, documents) {
+  const currentAddr = (employee.addresses ?? []).find((a) => a.address_type === "Current");
+  const permanentAddr = (employee.addresses ?? []).find((a) => a.address_type === "Permanent");
+
+  return {
+    details: {
+      profilePhoto: employee.profile_photo ? resolveApiAssetUrl(employee.profile_photo) : "",
+      profilePhotoFile: null,
+      employeeCode: employee.employee_code ?? "",
+      companyId: employee.company_id ?? "",
+      branchId: employee.branch_id ?? "",
+      departmentId: employee.department_id ?? "",
+      designationId: employee.designation_id ?? "",
+      reportingManagerId: employee.manager_id ?? "",
+      firstName: employee.first_name ?? "",
+      lastName: employee.last_name ?? "",
+      gender: employee.gender ?? "",
+      dob: employee.date_of_birth ? String(employee.date_of_birth).slice(0, 10) : "",
+      joiningDate: employee.joining_date ? String(employee.joining_date).slice(0, 10) : "",
+      employmentType: employee.employment_type ?? "Permanent",
+      email: employee.email ?? "",
+      mobile: employee.mobile ?? "",
+      createLogin: false,
+      password: "",
+      confirmPassword: "",
+      status: employee.status ?? "Active",
+    },
+    address: {
+      current: mapAddressRecord(currentAddr),
+      sameAsCurrent: !permanentAddr,
+      permanent: mapAddressRecord(permanentAddr),
+    },
+    documents: (documents ?? []).map((doc) => ({
+      id: doc.id,
+      persisted: true,
+      type: doc.document_type,
+      number: doc.document_number ?? "",
+      expiryDate: doc.expiry_date ? String(doc.expiry_date).slice(0, 10) : "",
+      verificationStatus: doc.verification_status ?? "Pending",
+      file: null,
+      fileName: doc.file_name,
+      filePath: doc.file_path,
+    })),
+    skills: (employee.skills ?? []).map((s) => ({
+      id: s.id,
+      persisted: true,
+      name: s.skill_name ?? "",
+      level: s.skill_level ?? SKILL_LEVELS[0],
+      experienceYears: s.experience_years != null ? String(s.experience_years) : "",
+    })),
+    emergencyContacts: (employee.emergency_contacts ?? []).map((c) => ({
+      id: c.id,
+      persisted: true,
+      name: c.contact_name ?? "",
+      relationship: c.relationship ?? RELATIONSHIPS[0],
+      mobile: c.mobile ?? "",
+      email: c.email ?? "",
+      address: c.address ?? "",
+    })),
+  };
+}
+
+function buildEmployeeFormData(details) {
+  const fd = new FormData();
+  const append = (key, value) => {
+    if (value === null || value === undefined || value === "") return;
+    fd.append(key, value);
+  };
+
+  append("first_name", details.firstName.trim());
+  append("last_name", details.lastName.trim());
+  append("email", details.email.trim());
+  append("mobile", details.mobile.trim());
+  append("gender", details.gender);
+  append("date_of_birth", details.dob);
+  append("joining_date", details.joiningDate);
+  append("branch_id", details.branchId);
+  append("department_id", details.departmentId);
+  append("designation_id", details.designationId);
+  append("manager_id", details.reportingManagerId);
+  append("employment_type", details.employmentType);
+  if (details.profilePhotoFile instanceof File) fd.append("profile_photo", details.profilePhotoFile);
+  if (details.createLogin) {
+    fd.append("create_login", "1");
+    append("login_password", details.password);
+  }
+  return fd;
+}
+
 export default function EmployeeForm() {
   const { toggleCollapsed } = useOutletContext();
   const navigate = useNavigate();
   const location = useLocation();
+  const params = useParams();
   const { roleName, user, token } = useAuth();
 
+  const isEdit = Boolean(params.employeeId);
+  const routeCompanyId = params.companyId ? Number(params.companyId) : null;
+  const routeEmployeeId = params.employeeId ? Number(params.employeeId) : null;
+
   // Three ways a Company can end up fixed for this employee: opened from a
-  // specific Company's Employees page (router state), or the logged-in user
-  // is a Company Admin (locked to their own company). Only a Super Admin
-  // landing here directly gets to choose.
+  // specific Company's Employees page (router state), editing an existing
+  // employee (company comes from the route), or the logged-in user is a
+  // Company Admin (locked to their own company). Only a Super Admin adding a
+  // new employee directly gets to choose.
   const fromCompanyId = location.state?.companyId ?? null;
   const isSuperAdmin = roleName === "Super Admin";
-  const showCompanyDropdown = isSuperAdmin && !fromCompanyId;
-  const lockedCompanyId = fromCompanyId ?? (!isSuperAdmin ? user?.company?.id ?? null : null);
+  const showCompanyDropdown = !isEdit && isSuperAdmin && !fromCompanyId;
+  const lockedCompanyId = isEdit ? routeCompanyId : (fromCompanyId ?? (!isSuperAdmin ? user?.company?.id ?? null : null));
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(isEdit);
+  const [loadError, setLoadError] = useState("");
   const [formData, setFormData] = useState(() => buildInitialFormData(lockedCompanyId));
   const [errors, setErrors] = useState({});
   const [currentStep, setCurrentStep] = useState(0);
@@ -89,10 +232,39 @@ export default function EmployeeForm() {
   const [companiesLoading, setCompaniesLoading] = useState(showCompanyDropdown);
   const [companiesError, setCompaniesError] = useState("");
 
+  const originalStatusRef = useRef("Active");
+  const originalSkillIdsRef = useRef([]);
+  const originalContactIdsRef = useRef([]);
+
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 550);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!isEdit) return undefined;
+    let cancelled = false;
+    setLoading(true);
+    setLoadError("");
+
+    Promise.all([
+      getCompanyEmployee(routeCompanyId, routeEmployeeId, token),
+      getCompanyEmployeeDocuments(routeCompanyId, routeEmployeeId, token),
+    ])
+      .then(([employee, documents]) => {
+        if (cancelled) return;
+        originalStatusRef.current = employee.status ?? "Active";
+        originalSkillIdsRef.current = (employee.skills ?? []).map((s) => s.id);
+        originalContactIdsRef.current = (employee.emergency_contacts ?? []).map((c) => c.id);
+        setFormData(mapEmployeeToFormData(employee, documents));
+      })
+      .catch((error) => {
+        if (!cancelled) setLoadError(error.message ?? "Could not load this employee.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit, routeCompanyId, routeEmployeeId, token]);
 
   useEffect(() => {
     if (!showCompanyDropdown) return undefined;
@@ -162,9 +334,18 @@ export default function EmployeeForm() {
     setFormData((prev) => ({ ...prev, documents: [...prev.documents, emptyDocumentRow()] }));
   }
 
-  function removeDocumentRow(id) {
+  async function removeDocumentRow(id) {
+    const row = formData.documents.find((r) => r.id === id);
+    if (row?.persisted) {
+      try {
+        await deleteCompanyEmployeeDocument(routeCompanyId, routeEmployeeId, id, token);
+      } catch (error) {
+        setToast({ tone: "error", message: error.message ?? "Could not delete this document." });
+        return;
+      }
+    }
     setDirty(true);
-    setFormData((prev) => ({ ...prev, documents: prev.documents.filter((row) => row.id !== id) }));
+    setFormData((prev) => ({ ...prev, documents: prev.documents.filter((r) => r.id !== id) }));
     setErrors((prev) => {
       if (!prev.documents?.[id]) return prev;
       const next = { ...prev.documents };
@@ -277,17 +458,116 @@ export default function EmployeeForm() {
     setCurrentStep(index);
   }
 
-  async function handleSaveDraft() {
-    setSaving(true);
-    try {
-      await saveEmployeeDraft(formData);
-      setSaving(false);
-      setDirty(false);
-      setToast({ tone: "success", message: "Draft saved successfully." });
-    } catch {
-      setSaving(false);
-      setToast({ tone: "error", message: "Could not save the draft. Please try again." });
+  function buildAddressTasks(companyId, employeeId) {
+    const tasks = [];
+    const current = formData.address.current;
+    if (current.line1 || current.city || current.state || current.country || current.pincode) {
+      tasks.push(
+        saveCompanyEmployeeAddress(
+          companyId,
+          employeeId,
+          {
+            address_type: "Current",
+            address_line1: current.line1,
+            address_line2: current.line2,
+            city: current.city,
+            state: current.state,
+            country: current.country,
+            pincode: current.pincode,
+          },
+          token
+        )
+      );
     }
+    if (!formData.address.sameAsCurrent) {
+      const permanent = formData.address.permanent;
+      if (permanent.line1 || permanent.city || permanent.state || permanent.country || permanent.pincode) {
+        tasks.push(
+          saveCompanyEmployeeAddress(
+            companyId,
+            employeeId,
+            {
+              address_type: "Permanent",
+              address_line1: permanent.line1,
+              address_line2: permanent.line2,
+              city: permanent.city,
+              state: permanent.state,
+              country: permanent.country,
+              pincode: permanent.pincode,
+            },
+            token
+          )
+        );
+      }
+    }
+    return tasks;
+  }
+
+  function buildSkillTasks(companyId, employeeId) {
+    const tasks = [];
+    const keptIds = new Set();
+
+    formData.skills.forEach((row) => {
+      if (!row.name.trim()) return;
+      const payload = {
+        skill_name: row.name.trim(),
+        skill_level: row.level,
+        experience_years: row.experienceYears === "" ? null : Number(row.experienceYears),
+      };
+      if (row.persisted) {
+        keptIds.add(row.id);
+        tasks.push(updateCompanyEmployeeSkill(companyId, employeeId, row.id, payload, token));
+      } else {
+        tasks.push(createCompanyEmployeeSkill(companyId, employeeId, payload, token));
+      }
+    });
+
+    originalSkillIdsRef.current
+      .filter((id) => !keptIds.has(id))
+      .forEach((id) => tasks.push(deleteCompanyEmployeeSkill(companyId, employeeId, id, token)));
+
+    return tasks;
+  }
+
+  function buildContactTasks(companyId, employeeId) {
+    const tasks = [];
+    const keptIds = new Set();
+
+    formData.emergencyContacts.forEach((row) => {
+      if (!row.name.trim()) return;
+      const payload = {
+        contact_name: row.name.trim(),
+        relationship: row.relationship,
+        mobile: row.mobile,
+        email: row.email,
+        address: row.address,
+      };
+      if (row.persisted) {
+        keptIds.add(row.id);
+        tasks.push(updateCompanyEmployeeEmergencyContact(companyId, employeeId, row.id, payload, token));
+      } else {
+        tasks.push(createCompanyEmployeeEmergencyContact(companyId, employeeId, payload, token));
+      }
+    });
+
+    originalContactIdsRef.current
+      .filter((id) => !keptIds.has(id))
+      .forEach((id) => tasks.push(deleteCompanyEmployeeEmergencyContact(companyId, employeeId, id, token)));
+
+    return tasks;
+  }
+
+  function buildDocumentTasks(companyId, employeeId) {
+    return formData.documents
+      .filter((row) => !row.persisted && row.file)
+      .map((row) => {
+        const fd = new FormData();
+        fd.append("document_type", row.type);
+        if (row.number) fd.append("document_number", row.number);
+        if (row.expiryDate) fd.append("expiry_date", row.expiryDate);
+        fd.append("file", row.file);
+        return createCompanyEmployeeDocument(companyId, employeeId, fd, token);
+      });
   }
 
   async function handleSaveEmployee() {
@@ -302,16 +582,53 @@ export default function EmployeeForm() {
       return;
     }
 
+    const activeCompanyId = isEdit ? routeCompanyId : formData.details.companyId;
+
     setSaving(true);
     try {
-      await createEmployee(formData);
+      const employeeFormData = buildEmployeeFormData(formData.details);
+      const employee = isEdit
+        ? await updateCompanyEmployee(activeCompanyId, routeEmployeeId, employeeFormData, token)
+        : (await createCompanyEmployee(activeCompanyId, employeeFormData, token)).employee;
+
+      const tasks = [
+        ...buildAddressTasks(activeCompanyId, employee.id),
+        ...buildSkillTasks(activeCompanyId, employee.id),
+        ...buildContactTasks(activeCompanyId, employee.id),
+        ...buildDocumentTasks(activeCompanyId, employee.id),
+      ];
+      if (isEdit && formData.details.status !== originalStatusRef.current) {
+        tasks.push(updateCompanyEmployeeStatus(activeCompanyId, employee.id, { status: formData.details.status }, token));
+      }
+
+      const results = await Promise.allSettled(tasks);
+      const failureCount = results.filter((r) => r.status === "rejected").length;
+
       setSaving(false);
       setDirty(false);
-      setToast({ tone: "success", message: "Employee created successfully." });
-      setTimeout(() => navigate(ROUTES.EMPLOYEES), 850);
-    } catch {
+
+      if (failureCount === 0) {
+        setToast({ tone: "success", message: isEdit ? "Employee updated successfully." : "Employee created successfully." });
+      } else {
+        setToast({
+          tone: "error",
+          message: `Employee ${isEdit ? "updated" : "created"}, but ${failureCount} related item${failureCount === 1 ? "" : "s"} couldn't be saved. Reopen this employee to retry.`,
+        });
+      }
+      setTimeout(() => navigate(ROUTES.EMPLOYEES), 1000);
+    } catch (err) {
       setSaving(false);
-      setToast({ tone: "error", message: "Something went wrong. Please try again." });
+      if (err instanceof ApiValidationError) {
+        const detailErrors = {};
+        Object.entries(err.errors ?? {}).forEach(([field, messages]) => {
+          const key = DETAIL_FIELD_MAP[field] ?? field;
+          detailErrors[key] = Array.isArray(messages) ? messages[0] : messages;
+        });
+        setErrors((prev) => ({ ...prev, details: { ...prev.details, ...detailErrors } }));
+        setCurrentStep(0);
+        setMaxReachedIndex((m) => Math.max(m, 0));
+      }
+      setToast({ tone: "error", message: err.message ?? "Something went wrong. Please try again." });
     }
   }
 
@@ -341,19 +658,26 @@ export default function EmployeeForm() {
               <Icon name="back" size={15} />
               Back to Employees
             </button>
-            <h1>Add Employee</h1>
+            <h1>{isEdit ? "Edit Employee" : "Add Employee"}</h1>
             <p className="cl-breadcrumb">
               <span>Dashboard</span>
               <Icon name="chevronRight" size={13} />
               <span>Employees</span>
               <Icon name="chevronRight" size={13} />
-              <span className="is-current">Add Employee</span>
+              <span className="is-current">{isEdit ? "Edit Employee" : "Add Employee"}</span>
             </p>
           </div>
         </div>
 
         {loading ? (
           <EmployeeFormSkeleton />
+        ) : loadError ? (
+          <div className="panel wizard-panel">
+            <p className="rl-api-error">{loadError}</p>
+            <button type="button" className="cl-btn" onClick={() => navigate(ROUTES.EMPLOYEES)}>
+              Back to Employees
+            </button>
+          </div>
         ) : (
           <>
             <WizardStepper steps={STEPS} currentIndex={currentStep} maxReachedIndex={maxReachedIndex} stepErrors={stepErrorFlags} onStepClick={goToStep} />
@@ -370,6 +694,7 @@ export default function EmployeeForm() {
                       companies={companies}
                       companiesLoading={companiesLoading}
                       companiesError={companiesError}
+                      excludeEmployeeId={routeEmployeeId}
                     />
 
                     <div className="form-section-divider">
@@ -380,7 +705,7 @@ export default function EmployeeForm() {
                     <div className="form-section-divider">
                       <span className="form-section-title">Contact Information</span>
                     </div>
-                    <ContactInfoFields data={formData.details} errors={errors.details ?? {}} onChange={updateDetails} />
+                    <ContactInfoFields data={formData.details} errors={errors.details ?? {}} onChange={updateDetails} isEdit={isEdit} />
                   </div>
                 )}
 
@@ -448,10 +773,6 @@ export default function EmployeeForm() {
                   </div>
 
                   <div className="wizard-step-footer-right">
-                    <button type="button" className="cl-btn" onClick={handleSaveDraft} disabled={saving}>
-                      <Icon name="download" size={15} style={{ transform: "rotate(90deg)" }} />
-                      Save Draft
-                    </button>
                     {currentStep < STEPS.length - 1 ? (
                       <button type="button" className="dash-primary-btn" onClick={handleNext} disabled={saving}>
                         Next
@@ -460,7 +781,7 @@ export default function EmployeeForm() {
                     ) : (
                       <button type="button" className="dash-primary-btn" onClick={handleSaveEmployee} disabled={saving}>
                         {saving ? <span className="fa-spinner light" /> : <Icon name="check" size={15} />}
-                        Save Employee
+                        {isEdit ? "Save Changes" : "Save Employee"}
                       </button>
                     )}
                   </div>

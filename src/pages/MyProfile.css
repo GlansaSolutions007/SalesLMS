@@ -1,0 +1,95 @@
+@import "../styles/controls.css";
+
+.mp-columns {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.mp-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 28px 24px;
+  text-align: center;
+}
+
+.mp-identity h2 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--color-heading);
+}
+
+.mp-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.mp-username {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.mp-meta-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 6px;
+  border-top: 1px solid var(--color-border);
+}
+
+.mp-meta-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+
+.mp-meta-list span {
+  color: var(--color-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.mp-meta-list p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.mp-password-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.mp-section {
+  padding: 22px;
+}
+
+.mp-section-title {
+  margin: 0 0 18px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-heading);
+}
+
+.mp-form-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+@media (max-width: 900px) {
+  .mp-columns {
+    grid-template-columns: 1fr;
+  }
+}

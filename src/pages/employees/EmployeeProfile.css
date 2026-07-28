@@ -58,6 +58,41 @@
   padding: 22px;
 }
 
+.ep-state-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 64px 24px;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+.ep-state-panel svg {
+  color: var(--color-primary-500);
+}
+
+.ep-state-panel h3 {
+  margin: 4px 0 0;
+  color: var(--color-heading);
+  font-size: 16px;
+}
+
+.ep-state-panel p {
+  margin: 0 0 6px;
+  max-width: 360px;
+  font-size: 13px;
+}
+
+.ep-empty-note {
+  margin: 0;
+  padding: 24px 4px;
+  color: var(--color-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
 .ep-skills {
   display: flex;
   flex-direction: column;

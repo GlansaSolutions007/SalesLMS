@@ -1,5 +1,4 @@
-import { EMAIL_REGEX, MOBILE_REGEX, USERNAME_REGEX, PINCODE_REGEX, req, passwordStrength } from "../../utils/formValidators.js";
-import { TAKEN_EMAILS, TAKEN_USERNAMES } from "./employeeFormData.js";
+import { EMAIL_REGEX, MOBILE_REGEX, PINCODE_REGEX, req, passwordStrength } from "../../utils/formValidators.js";
 
 export { passwordStrength };
 
@@ -8,25 +7,23 @@ export function validateEmployeeDetails(data, { requireCompany }) {
   if (requireCompany) errors.companyId = req(data.companyId, "Company is required.");
   errors.branchId = req(data.branchId, "Branch is required.");
   errors.departmentId = req(data.departmentId, "Department is required.");
-  errors.designation = req(data.designation, "Designation is required.");
+  errors.designationId = req(data.designationId, "Designation is required.");
   errors.firstName = req(data.firstName, "First name is required.");
   errors.lastName = req(data.lastName, "Last name is required.");
 
   errors.email =
-    req(data.email, "Email is required.") ||
-    (!EMAIL_REGEX.test(data.email) ? "Enter a valid email address." : null) ||
-    (TAKEN_EMAILS.includes(data.email.toLowerCase()) ? "This email is already in use." : null);
+    req(data.email, "Email is required.") || (!EMAIL_REGEX.test(data.email) ? "Enter a valid email address." : null);
 
   errors.mobile = req(data.mobile, "Mobile number is required.") || (!MOBILE_REGEX.test(data.mobile) ? "Enter a valid mobile number." : null);
 
-  errors.username =
-    req(data.username, "Username is required.") ||
-    (!USERNAME_REGEX.test(data.username) ? "3-32 characters: letters, numbers, dot, underscore, hyphen." : null) ||
-    (TAKEN_USERNAMES.includes(data.username.toLowerCase()) ? "This username is already taken." : null);
-
-  errors.password = req(data.password, "Password is required.") || (passwordStrength(data.password).score < 3 ? "Password is too weak." : null);
-  errors.confirmPassword =
-    req(data.confirmPassword, "Please confirm the password.") || (data.confirmPassword !== data.password ? "Passwords do not match." : null);
+  // Portal login credentials are optional — only required when the admin
+  // opts in via the "Create portal login" checkbox, matching the backend's
+  // `login_password` => required_if:create_login,true.
+  if (data.createLogin) {
+    errors.password = req(data.password, "Password is required.") || (passwordStrength(data.password).score < 3 ? "Password is too weak." : null);
+    errors.confirmPassword =
+      req(data.confirmPassword, "Please confirm the password.") || (data.confirmPassword !== data.password ? "Passwords do not match." : null);
+  }
 
   Object.keys(errors).forEach((k) => errors[k] === null && delete errors[k]);
   return errors;
@@ -52,6 +49,7 @@ export function validateAddressStep(addressState) {
 export function validateDocuments(rows) {
   const rowErrors = {};
   rows.forEach((row) => {
+    if (row.persisted) return; // already saved server-side, nothing to validate
     const errs = {};
     if (row.fileName && !row.number.trim()) errs.number = "Document number is required.";
     if (row.number.trim() && !row.fileName) errs.file = "Please upload a file for this document.";

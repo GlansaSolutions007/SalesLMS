@@ -62,6 +62,18 @@ export async function refreshToken() {
   }
 }
 
+// POST /auth/profile (multipart/form-data — profile_image is a file)
+export async function updateProfile(formData) {
+  try {
+    const res = await axiosInstance.post("/auth/profile", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not update your profile.");
+  }
+}
+
 // POST /auth/change-password
 export async function changePassword({ current_password, password, password_confirmation }) {
   try {
@@ -69,5 +81,25 @@ export async function changePassword({ current_password, password, password_conf
     return res.data;
   } catch (error) {
     throw toApiError(error, "Could not change your password.");
+  }
+}
+
+// POST /auth/forgot-password — public route, no Authorization header required.
+export async function forgotPassword({ email }) {
+  try {
+    const res = await axiosInstance.post("/auth/forgot-password", { email });
+    return res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not send reset instructions. Please try again.");
+  }
+}
+
+// POST /auth/reset-password — public route, no Authorization header required.
+export async function resetPassword({ email, token, password, password_confirmation }) {
+  try {
+    const res = await axiosInstance.post("/auth/reset-password", { email, token, password, password_confirmation });
+    return res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not reset your password. Please try again.");
   }
 }

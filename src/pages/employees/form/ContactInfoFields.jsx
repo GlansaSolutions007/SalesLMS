@@ -7,7 +7,7 @@ import { EMPLOYEE_STATUSES } from "../employeeFormData.js";
 
 const STATUS_TONE = { Active: "tone-success", Inactive: "tone-warning", Resigned: "tone-warning", Terminated: "tone-danger" };
 
-export default function ContactInfoFields({ data, errors, onChange }) {
+export default function ContactInfoFields({ data, errors, onChange, isEdit }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const strength = passwordStrength(data.password);
@@ -23,59 +23,68 @@ export default function ContactInfoFields({ data, errors, onChange }) {
         </FormField>
       </div>
 
-      <FormField label="Username *" error={errors.username}>
-        <input type="text" value={data.username} onChange={(e) => onChange("username", e.target.value)} placeholder="e.g. jane.doe" />
-      </FormField>
+      {!isEdit && (
+        <>
+          <label className="ef-same-address">
+            <input type="checkbox" checked={data.createLogin} onChange={(e) => onChange("createLogin", e.target.checked)} />
+            <span>Create a portal login for this employee</span>
+          </label>
 
-      <div className="form-row">
-        <FormField label="Password *" error={errors.password}>
-          <div className="form-password-input">
-            <input
-              type={showPassword ? "text" : "password"}
-              value={data.password}
-              onChange={(e) => onChange("password", e.target.value)}
-              placeholder="Minimum 8 characters"
-            />
-            <button type="button" onClick={() => setShowPassword((s) => !s)} aria-label="Toggle password visibility">
-              <Icon name="eye" size={16} />
-            </button>
-          </div>
-          {data.password && (
-            <div className="form-password-strength">
-              <ProgressBar value={strength.score * 25} tone={strength.tone} showLabel={false} />
-              <span className={`form-strength-label tone-${strength.tone}`}>{strength.label}</span>
+          {data.createLogin && (
+            <div className="form-row">
+              <FormField label="Password *" error={errors.password}>
+                <div className="form-password-input">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={data.password}
+                    onChange={(e) => onChange("password", e.target.value)}
+                    placeholder="Minimum 8 characters"
+                  />
+                  <button type="button" onClick={() => setShowPassword((s) => !s)} aria-label="Toggle password visibility">
+                    <Icon name="eye" size={16} />
+                  </button>
+                </div>
+                {data.password && (
+                  <div className="form-password-strength">
+                    <ProgressBar value={strength.score * 25} tone={strength.tone} showLabel={false} />
+                    <span className={`form-strength-label tone-${strength.tone}`}>{strength.label}</span>
+                  </div>
+                )}
+              </FormField>
+              <FormField label="Confirm Password *" error={errors.confirmPassword}>
+                <div className="form-password-input">
+                  <input
+                    type={showConfirm ? "text" : "password"}
+                    value={data.confirmPassword}
+                    onChange={(e) => onChange("confirmPassword", e.target.value)}
+                    placeholder="Re-enter password"
+                  />
+                  <button type="button" onClick={() => setShowConfirm((s) => !s)} aria-label="Toggle password visibility">
+                    <Icon name="eye" size={16} />
+                  </button>
+                </div>
+              </FormField>
             </div>
           )}
-        </FormField>
-        <FormField label="Confirm Password *" error={errors.confirmPassword}>
-          <div className="form-password-input">
-            <input
-              type={showConfirm ? "text" : "password"}
-              value={data.confirmPassword}
-              onChange={(e) => onChange("confirmPassword", e.target.value)}
-              placeholder="Re-enter password"
-            />
-            <button type="button" onClick={() => setShowConfirm((s) => !s)} aria-label="Toggle password visibility">
-              <Icon name="eye" size={16} />
-            </button>
+        </>
+      )}
+
+      {isEdit && (
+        <FormField label="Status">
+          <div className="seg-group">
+            {EMPLOYEE_STATUSES.map((opt) => (
+              <button
+                type="button"
+                key={opt}
+                className={`seg-chip${data.status === opt ? ` is-active ${STATUS_TONE[opt]}` : ""}`}
+                onClick={() => onChange("status", opt)}
+              >
+                {opt}
+              </button>
+            ))}
           </div>
         </FormField>
-      </div>
-
-      <FormField label="Status">
-        <div className="seg-group">
-          {EMPLOYEE_STATUSES.map((opt) => (
-            <button
-              type="button"
-              key={opt}
-              className={`seg-chip${data.status === opt ? ` is-active ${STATUS_TONE[opt]}` : ""}`}
-              onClick={() => onChange("status", opt)}
-            >
-              {opt}
-            </button>
-          ))}
-        </div>
-      </FormField>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ export const ROUTES = {
   LOGIN: "/login",
   DASHBOARD: "/dashboard",
   ANALYTICS: "/analytics",
+  MY_PROFILE: "/my-profile",
 
   COMPANY: "/company",
   COMPANY_COMPANIES: "/company/companies",
@@ -9,13 +10,17 @@ export const ROUTES = {
   COMPANY_VIEW: "/company/view/:id",
   COMPANY_EDIT: "/company/edit/:id",
   COMPANY_BRANCHES: "/company/branches",
+  COMPANY_BRANCH_VIEW: "/company/branches/:companyId/:branchId",
   COMPANY_DEPARTMENTS: "/company/departments",
+  COMPANY_DEPARTMENT_VIEW: "/company/departments/:companyId/:departmentId",
   COMPANY_DESIGNATIONS: "/company/designations",
+  COMPANY_DESIGNATION_VIEW: "/company/designations/:companyId/:designationId",
 
   EMPLOYEES: "/employees",
   EMPLOYEES_ADD: "/employees/add",
+  EMPLOYEES_EDIT: "/employees/edit/:companyId/:employeeId",
   EMPLOYEES_LEAVE: "/employees/leave",
-  EMPLOYEE_PROFILE: "/employees/profile",
+  EMPLOYEE_PROFILE: "/employees/profile/:companyId/:employeeId",
 
   TRAINERS: "/trainers",
   TRAINERS_BATCHES: "/trainers/batches",
@@ -30,6 +35,8 @@ export const ROUTES = {
 
   TRAINING: "/training",
   TRAINING_SESSIONS: "/training/sessions",
+  TRAINING_ASSIGN_COURSES: "/training/assign-courses",
+  TRAINING_ASSIGN_COURSES_ADD: "/training/assign-courses/add",
 
   BATCHES: "/batches",
   ASSESSMENTS: "/assessments",
@@ -56,4 +63,24 @@ export function companyViewPath(id) {
 
 export function companyEditPath(id) {
   return ROUTES.COMPANY_EDIT.replace(":id", id);
+}
+
+export function companyBranchViewPath(companyId, branchId) {
+  return ROUTES.COMPANY_BRANCH_VIEW.replace(":companyId", companyId).replace(":branchId", branchId);
+}
+
+export function companyDepartmentViewPath(companyId, departmentId) {
+  return ROUTES.COMPANY_DEPARTMENT_VIEW.replace(":companyId", companyId).replace(":departmentId", departmentId);
+}
+
+export function companyDesignationViewPath(companyId, designationId) {
+  return ROUTES.COMPANY_DESIGNATION_VIEW.replace(":companyId", companyId).replace(":designationId", designationId);
+}
+
+export function employeeEditPath(companyId, employeeId) {
+  return ROUTES.EMPLOYEES_EDIT.replace(":companyId", companyId).replace(":employeeId", employeeId);
+}
+
+export function employeeProfilePath(companyId, employeeId) {
+  return ROUTES.EMPLOYEE_PROFILE.replace(":companyId", companyId).replace(":employeeId", employeeId);
 }

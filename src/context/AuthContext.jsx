@@ -86,6 +86,13 @@ export function AuthProvider({ children }) {
     return freshUser;
   }
 
+  async function updateProfile(formData) {
+    const freshUser = await authService.updateProfile(formData);
+    setStoredUser(freshUser, getRememberPreference());
+    setUser(freshUser);
+    return freshUser;
+  }
+
   const permissions = user?.permissions ?? [];
   const roleName = user?.role?.name ?? null;
 
@@ -108,6 +115,7 @@ export function AuthProvider({ children }) {
     refreshToken: refreshTokenValue,
     changePassword,
     fetchCurrentUser,
+    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -59,6 +59,7 @@ export const menuConfig = [
     permissions: ["training_sessions.view"],
     children: [
       { id: "training-sessions", title: "Training Sessions", path: ROUTES.TRAINING_SESSIONS, roles: [SA, CA, TR], permissions: ["training_sessions.view"] },
+      { id: "training-assign-courses", title: "Assign Courses", path: ROUTES.TRAINING_ASSIGN_COURSES, roles: [SA, CA, TR], permissions: ["training_sessions.view"] },
     ],
   },
   { id: "batches", title: "Batches", icon: "calendar", path: ROUTES.BATCHES, roles: [SA, CA, TR], permissions: ["batches.view"] },

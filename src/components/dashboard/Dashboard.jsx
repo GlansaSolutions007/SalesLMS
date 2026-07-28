@@ -33,7 +33,7 @@ export default function Dashboard() {
             <Icon name="bell" size={18} />
           </button>
           <div className="dash-divider" />
-          <button
+          {/* <button
             type="button"
             className="topbar-profile"
             style={{ cursor: "default" }}
@@ -45,7 +45,7 @@ export default function Dashboard() {
               <b>{user?.name}</b>
               <span>{roleName}</span>
             </span>
-          </button>
+          </button> */}
           <button
             type="button"
             className="dash-ghost-btn"

@@ -1,6 +1,6 @@
 import Icon from "../../../components/Icon.jsx";
 import DocumentUploader from "../../../components/DocumentUploader.jsx";
-import { DOCUMENT_TYPES, VERIFICATION_STATUSES } from "../employeeFormData.js";
+import { DOCUMENT_TYPES } from "../employeeFormData.js";
 import { ACCEPTED_DOCUMENT_TYPES, MAX_DOCUMENT_SIZE_MB } from "../../../utils/fileUploadLimits.js";
 
 export default function EmployeeDocumentsSection({ rows, errors, onAddRow, onRemoveRow, onChangeRow, onFileSelect, onFileRemove }) {
@@ -37,6 +37,32 @@ export default function EmployeeDocumentsSection({ rows, errors, onAddRow, onRem
             <tbody>
               {rows.map((row) => {
                 const rowErrors = errors[row.id] ?? {};
+                if (row.persisted) {
+                  // Already uploaded and saved — there's no backend endpoint to edit an
+                  // existing document's metadata, only to delete or re-verify it, so this
+                  // row renders read-only instead of implying edits here would be saved.
+                  return (
+                    <tr key={row.id} className="form-doc-row-persisted">
+                      <td>{row.type}</td>
+                      <td>{row.number || "—"}</td>
+                      <td>{row.expiryDate || "—"}</td>
+                      <td>
+                        <span className={`form-doc-badge form-verify-${row.verificationStatus.toLowerCase()}`}>{row.verificationStatus}</span>
+                      </td>
+                      <td>
+                        <span className="duploader-chip">
+                          <Icon name="file" size={14} />
+                          <span title={row.fileName}>{row.fileName}</span>
+                        </span>
+                      </td>
+                      <td>
+                        <button type="button" className="dash-icon-btn" aria-label="Delete document" onClick={() => onRemoveRow(row.id)}>
+                          <Icon name="trash" size={15} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                }
                 return (
                   <tr key={row.id}>
                     <td>
@@ -67,17 +93,7 @@ export default function EmployeeDocumentsSection({ rows, errors, onAddRow, onRem
                       />
                     </td>
                     <td>
-                      <select
-                        value={row.verificationStatus}
-                        onChange={(e) => onChangeRow(row.id, "verificationStatus", e.target.value)}
-                        className={`form-doc-select form-verify-${row.verificationStatus.toLowerCase()}`}
-                      >
-                        {VERIFICATION_STATUSES.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
+                      <span className="form-doc-badge form-verify-pending">Pending</span>
                     </td>
                     <td>
                       <DocumentUploader

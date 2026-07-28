@@ -99,6 +99,17 @@ export default function Topbar({
                   className="topbar-profile-menu-item"
                   onClick={() => {
                     setMenuOpen(false);
+                    navigate(ROUTES.MY_PROFILE);
+                  }}
+                >
+                  <Icon name="users" size={15} />
+                  My Profile
+                </button>
+                <button
+                  type="button"
+                  className="topbar-profile-menu-item"
+                  onClick={() => {
+                    setMenuOpen(false);
                     setChangePasswordOpen(true);
                   }}
                 >

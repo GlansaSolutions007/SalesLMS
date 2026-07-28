@@ -88,26 +88,36 @@ export default function DataToolbar({
 
       <div className="dt-spacer" />
 
-      <button type="button" className="cl-btn" onClick={onExportCsv}>
-        <Icon name="download" size={15} />
-        Export Excel
-      </button>
+      {onExportCsv && (
+        <button type="button" className="cl-btn" onClick={onExportCsv}>
+          <Icon name="download" size={15} />
+          Export Excel
+        </button>
+      )}
 
-      <button type="button" className="cl-btn" onClick={onExportPdf}>
-        <Icon name="download" size={15} />
-        Export PDF
-      </button>
+      {onExportPdf && (
+        <button type="button" className="cl-btn" onClick={onExportPdf}>
+          <Icon name="download" size={15} />
+          Export PDF
+        </button>
+      )}
 
-      <button type="button" className="cl-btn" onClick={() => fileInputRef.current?.click()}>
-        <Icon name="download" size={15} style={{ transform: "rotate(180deg)" }} />
-        Import Excel
-      </button>
-      <input ref={fileInputRef} type="file" accept=".csv" hidden onChange={handleImportChange} />
+      {onImportCsv && (
+        <>
+          <button type="button" className="cl-btn" onClick={() => fileInputRef.current?.click()}>
+            <Icon name="download" size={15} style={{ transform: "rotate(180deg)" }} />
+            Import Excel
+          </button>
+          <input ref={fileInputRef} type="file" accept=".csv" hidden onChange={handleImportChange} />
+        </>
+      )}
 
-      <button type="button" className="dash-primary-btn cl-add-btn" onClick={onAdd}>
-        <Icon name="plus" size={16} />
-        {addLabel}
-      </button>
+      {onAdd && addLabel && (
+        <button type="button" className="dash-primary-btn cl-add-btn" onClick={onAdd}>
+          <Icon name="plus" size={16} />
+          {addLabel}
+        </button>
+      )}
     </div>
   );
 }
