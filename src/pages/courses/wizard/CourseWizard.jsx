@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import Topbar from "../../../components/Topbar.jsx";
 import Icon from "../../../components/Icon.jsx";
@@ -22,7 +22,22 @@ import {
   emptyQuestion,
 } from "./courseWizardData.js";
 import { validateCourseDetails, validateModulesStep, validateAssessmentStep, validatePublishConfirmation, stepHasErrors } from "./courseWizardValidation.js";
-import { saveCourseDraft, publishCourse } from "../../../services/courseService.js";
+import {
+  fetchCategories,
+  createCourse,
+  updateCourse,
+  createModule,
+  updateModule,
+  deleteModule as deleteModuleApi,
+  createLesson,
+  updateLesson,
+  deleteLesson as deleteLessonApi,
+  createAssessment,
+  updateAssessment,
+  createQuestion,
+  updateQuestion,
+  deleteQuestion as deleteQuestionApi,
+} from "../../../services/courseService.js";
 import { ROUTES } from "../../../router/routePaths.js";
 import "./CourseWizard.css";
 
@@ -37,6 +52,7 @@ function buildInitialState() {
   return {
     details: {
       thumbnail: "",
+      thumbnailFile: null,
       category: "",
       code: generateCourseCode(),
       name: "",
@@ -85,12 +101,89 @@ function findModuleIdByLessonId(modules, lessonId) {
   return modules.find((m) => m.lessons.some((l) => l.id === lessonId))?.id ?? null;
 }
 
+function buildCourseFormData(course, targetStatus) {
+  const fd = new FormData();
+  fd.append("course_name", course.details.name);
+  if (course.details.category) fd.append("category_id", course.details.category);
+  fd.append("course_code", course.details.code);
+  if (course.details.description) fd.append("description", course.details.description);
+  if (course.details.difficulty) fd.append("difficulty_level", course.details.difficulty);
+
+  const h = Number(course.details.durationHours) || 0;
+  const m = Number(course.details.durationMinutes) || 0;
+  if (h || m) fd.append("duration_hours", (h + m / 60).toFixed(2));
+
+  fd.append("status", targetStatus ?? course.details.status ?? "Draft");
+
+  if (course.details.thumbnailFile instanceof File) {
+    fd.append("thumbnail", course.details.thumbnailFile);
+  }
+  return fd;
+}
+
+function buildModulePayload(module, index) {
+  return {
+    module_name: module.name,
+    description: module.description || null,
+    estimated_duration: module.estimatedDuration ? Number(module.estimatedDuration) : null,
+    sequence_no: index + 1,
+  };
+}
+
+function buildLessonPayload(lesson, index) {
+  return {
+    lesson_title: lesson.title,
+    lesson_description: lesson.description || null,
+    lesson_type: lesson.type || null,
+    duration_minutes: lesson.duration ? Number(lesson.duration) : null,
+    sequence_no: index + 1,
+  };
+}
+
+function buildAssessmentPayload(assessment, courseId) {
+  return {
+    assessment_title: assessment.title,
+    assessment_code: assessment.code,
+    assessment_type: assessment.type,
+    course_id: courseId,
+    duration_minutes: assessment.durationMinutes ? Number(assessment.durationMinutes) : null,
+    pass_marks: assessment.passMarks ? Number(assessment.passMarks) : 0,
+    max_attempts: assessment.maxAttempts ? Number(assessment.maxAttempts) : 1,
+    status: assessment.status ?? "Draft",
+  };
+}
+
+function buildQuestionPayload(question, index) {
+  const options = [];
+  if (question.type === "MCQ") {
+    question.options.forEach((opt, i) => {
+      if (opt.text.trim()) {
+        options.push({ option_text: opt.text, is_correct: opt.id === question.correctOptionId, sequence_no: i + 1 });
+      }
+    });
+  } else if (question.type === "True / False") {
+    options.push({ option_text: "True", is_correct: question.correctOptionId === "true", sequence_no: 1 });
+    options.push({ option_text: "False", is_correct: question.correctOptionId === "false", sequence_no: 2 });
+  }
+  return {
+    question_type: question.type,
+    question: question.question,
+    marks: question.marks ? Number(question.marks) : 1,
+    sequence_no: index + 1,
+    options,
+  };
+}
+
 export default function CourseWizard() {
   const { toggleCollapsed } = useOutletContext();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState([]);
   const [course, setCourse] = useState(buildInitialState);
+  const [courseId, setCourseId] = useState(null);
+  const [assessmentId, setAssessmentId] = useState(null);
+
   const [currentStep, setCurrentStep] = useState(0);
   const [maxReachedIndex, setMaxReachedIndex] = useState(0);
   const [selectedModuleId, setSelectedModuleId] = useState(null);
@@ -106,9 +199,17 @@ export default function CourseWizard() {
   const [assessmentStepErrors, setAssessmentStepErrors] = useState({ general: null, fields: {}, questions: {} });
   const [publishErrors, setPublishErrors] = useState({ confirmed: null });
 
+  // Tracks items deleted from UI that were already persisted to the API
+  const pendingDeletes = useRef({ modules: [], lessons: [], questions: [] });
+  // Mirror of course state for synchronous reads before state updates
+  const courseRef = useRef(course);
+  useEffect(() => { courseRef.current = course; }, [course]);
+
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 550);
-    return () => clearTimeout(timer);
+    fetchCategories()
+      .then(setCategories)
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const effectiveModuleId = selectedModuleId ?? course.modules[0]?.id ?? null;
@@ -125,6 +226,14 @@ export default function CourseWizard() {
     });
   }
 
+  function updateThumbnail(dataUrl, file) {
+    setDirty(true);
+    setCourse((prev) => ({
+      ...prev,
+      details: { ...prev.details, thumbnail: dataUrl ?? "", thumbnailFile: file ?? null },
+    }));
+  }
+
   function addModule() {
     setDirty(true);
     const module = emptyModule(course.modules.length + 1);
@@ -134,6 +243,10 @@ export default function CourseWizard() {
 
   function deleteModule(moduleId) {
     setDirty(true);
+    const module = courseRef.current.modules.find((m) => m.id === moduleId);
+    if (module?.apiId) {
+      pendingDeletes.current.modules.push({ moduleApiId: module.apiId });
+    }
     setCourse((prev) => {
       const nextModules = prev.modules.filter((m) => m.id !== moduleId);
       if (effectiveModuleId === moduleId) setSelectedModuleId(nextModules[0]?.id ?? null);
@@ -162,6 +275,11 @@ export default function CourseWizard() {
 
   function deleteLesson(moduleId, lessonId) {
     setDirty(true);
+    const module = courseRef.current.modules.find((m) => m.id === moduleId);
+    const lesson = module?.lessons.find((l) => l.id === lessonId);
+    if (lesson?.apiId && module?.apiId) {
+      pendingDeletes.current.lessons.push({ moduleApiId: module.apiId, lessonApiId: lesson.apiId });
+    }
     setCourse((prev) => ({
       ...prev,
       modules: mapModules(prev.modules, moduleId, (m) => ({ ...m, lessons: m.lessons.filter((l) => l.id !== lessonId) })),
@@ -237,6 +355,10 @@ export default function CourseWizard() {
 
   function deleteQuestion(questionId) {
     setDirty(true);
+    const question = courseRef.current.assessment.questions.find((q) => q.id === questionId);
+    if (question?.apiId && assessmentId) {
+      pendingDeletes.current.questions.push({ assessmentApiId: assessmentId, questionApiId: question.apiId });
+    }
     setCourse((prev) => {
       const nextQuestions = prev.assessment.questions.filter((q) => q.id !== questionId);
       if (effectiveQuestionId === questionId) setSelectedQuestionId(nextQuestions[0]?.id ?? null);
@@ -289,6 +411,122 @@ export default function CourseWizard() {
     if (field === "confirmed") setPublishErrors({ confirmed: null });
   }
 
+  // ── API persistence ──────────────────────────────────────────────────────────
+
+  async function persistAll(targetStatus) {
+    setSaving(true);
+    try {
+      const snap = courseRef.current;
+
+      // 1. Save course
+      const formData = buildCourseFormData(snap, targetStatus);
+      let cid = courseId;
+      if (!cid) {
+        const created = await createCourse(formData);
+        cid = created.id;
+        setCourseId(cid);
+      } else {
+        await updateCourse(cid, formData);
+      }
+
+      // 2. Process pending module deletes
+      await Promise.allSettled(
+        pendingDeletes.current.modules.map(({ moduleApiId }) => deleteModuleApi(cid, moduleApiId))
+      );
+      pendingDeletes.current.modules = [];
+
+      // 3. Sync modules (sequential to preserve order)
+      const updatedModules = [];
+      for (let mIdx = 0; mIdx < snap.modules.length; mIdx++) {
+        const module = snap.modules[mIdx];
+        const modPayload = buildModulePayload(module, mIdx);
+        let modApiId = module.apiId;
+        if (!modApiId) {
+          const created = await createModule(cid, modPayload);
+          modApiId = created.id;
+        } else {
+          await updateModule(cid, modApiId, modPayload);
+        }
+
+        // Pending lesson deletes for this module
+        const lessonDeletes = pendingDeletes.current.lessons.filter((l) => l.moduleApiId === modApiId);
+        await Promise.allSettled(lessonDeletes.map(({ lessonApiId }) => deleteLessonApi(cid, modApiId, lessonApiId)));
+        pendingDeletes.current.lessons = pendingDeletes.current.lessons.filter((l) => l.moduleApiId !== modApiId);
+
+        // Sync lessons
+        const updatedLessons = [];
+        for (let lIdx = 0; lIdx < module.lessons.length; lIdx++) {
+          const lesson = module.lessons[lIdx];
+          const lesPayload = buildLessonPayload(lesson, lIdx);
+          let lesApiId = lesson.apiId;
+          if (!lesApiId) {
+            const created = await createLesson(cid, modApiId, lesPayload);
+            lesApiId = created.id;
+          } else {
+            await updateLesson(cid, modApiId, lesApiId, lesPayload);
+          }
+          updatedLessons.push({ ...lesson, apiId: lesApiId });
+        }
+
+        updatedModules.push({ ...module, apiId: modApiId, lessons: updatedLessons });
+      }
+
+      // 4. Sync assessment
+      let updatedAssessment = snap.assessment;
+      let asmId = assessmentId;
+      if (snap.assessment.enabled) {
+        const asmPayload = buildAssessmentPayload(snap.assessment, cid);
+        if (!asmId) {
+          const created = await createAssessment(asmPayload);
+          asmId = created.id;
+          setAssessmentId(asmId);
+        } else {
+          await updateAssessment(asmId, asmPayload);
+        }
+
+        // Pending question deletes
+        await Promise.allSettled(
+          pendingDeletes.current.questions.map(({ questionApiId }) => deleteQuestionApi(asmId, questionApiId))
+        );
+        pendingDeletes.current.questions = [];
+
+        // Sync questions
+        const updatedQuestions = [];
+        for (let qIdx = 0; qIdx < snap.assessment.questions.length; qIdx++) {
+          const q = snap.assessment.questions[qIdx];
+          const qPayload = buildQuestionPayload(q, qIdx);
+          let qApiId = q.apiId;
+          if (!qApiId) {
+            const created = await createQuestion(asmId, qPayload);
+            qApiId = created.id;
+          } else {
+            await updateQuestion(asmId, qApiId, qPayload);
+          }
+          updatedQuestions.push({ ...q, apiId: qApiId });
+        }
+        updatedAssessment = { ...snap.assessment, questions: updatedQuestions };
+      }
+
+      // 5. Commit API IDs back to state
+      setCourse((prev) => ({
+        ...prev,
+        modules: updatedModules,
+        assessment: updatedAssessment,
+      }));
+
+      setSaving(false);
+      setDirty(false);
+      return cid;
+    } catch (err) {
+      setSaving(false);
+      const msg = err?.message ?? "Something went wrong. Please try again.";
+      setToast({ tone: "error", message: msg });
+      throw err;
+    }
+  }
+
+  // ── Step validation ──────────────────────────────────────────────────────────
+
   function validateStep(index) {
     if (index === 0) {
       const errs = validateCourseDetails(course.details);
@@ -338,16 +576,10 @@ export default function CourseWizard() {
   }
 
   async function handleSaveDraft() {
-    setSaving(true);
     try {
-      await saveCourseDraft(course);
-      setSaving(false);
-      setDirty(false);
+      await persistAll();
       setToast({ tone: "success", message: "Draft saved successfully." });
-    } catch {
-      setSaving(false);
-      setToast({ tone: "error", message: "Could not save the draft. Please try again." });
-    }
+    } catch {}
   }
 
   async function handlePublish() {
@@ -361,9 +593,7 @@ export default function CourseWizard() {
     setAssessmentStepErrors(assessmentResult);
     setPublishErrors({ confirmed: confirmErr });
 
-    const badStepIndex = [Object.keys(detailsErrs).length > 0, stepHasErrors(modulesResult), stepHasErrors(assessmentResult), Boolean(confirmErr)].findIndex(
-      Boolean
-    );
+    const badStepIndex = [Object.keys(detailsErrs).length > 0, stepHasErrors(modulesResult), stepHasErrors(assessmentResult), Boolean(confirmErr)].findIndex(Boolean);
 
     if (badStepIndex !== -1) {
       setCurrentStep(badStepIndex);
@@ -372,17 +602,11 @@ export default function CourseWizard() {
       return;
     }
 
-    setSaving(true);
     try {
-      await publishCourse(course);
-      setSaving(false);
-      setDirty(false);
+      await persistAll("Published");
       setToast({ tone: "success", message: "Course published successfully." });
       setTimeout(() => navigate(ROUTES.COURSES), 900);
-    } catch {
-      setSaving(false);
-      setToast({ tone: "error", message: "Something went wrong. Please try again." });
-    }
+    } catch {}
   }
 
   function handleCancel() {
@@ -447,7 +671,9 @@ export default function CourseWizard() {
                   <CourseDetailsStep
                     data={course.details}
                     errors={detailsErrors}
+                    categories={categories}
                     onChange={updateDetails}
+                    onThumbnailChange={updateThumbnail}
                     onCancel={handleCancel}
                     onSaveDraft={handleSaveDraft}
                     onNext={handleNext}

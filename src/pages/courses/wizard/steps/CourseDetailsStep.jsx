@@ -2,9 +2,9 @@ import FormField from "../../../../components/FormField.jsx";
 import ImageUploader from "../../../../components/ImageUploader.jsx";
 import RichTextEditor from "../../../../components/RichTextEditor.jsx";
 import Icon from "../../../../components/Icon.jsx";
-import { COURSE_CATEGORIES, DIFFICULTY_LEVELS, COURSE_STATUSES } from "../courseWizardData.js";
+import { DIFFICULTY_LEVELS, COURSE_STATUSES } from "../courseWizardData.js";
 
-export default function CourseDetailsStep({ data, errors, onChange, onCancel, onSaveDraft, onNext, saving }) {
+export default function CourseDetailsStep({ data, errors, categories, onChange, onThumbnailChange, onCancel, onSaveDraft, onNext, saving }) {
   return (
     <div className="cw-step-body">
       <div className="cw-thumb-row">
@@ -13,8 +13,8 @@ export default function CourseDetailsStep({ data, errors, onChange, onCancel, on
           hint="PNG or JPG, up to 2MB"
           shape="wide"
           value={data.thumbnail}
-          onChange={(dataUrl) => onChange("thumbnail", dataUrl)}
-          onRemove={() => onChange("thumbnail", "")}
+          onChange={onThumbnailChange}
+          onRemove={() => onThumbnailChange("", null)}
         />
       </div>
 
@@ -22,9 +22,9 @@ export default function CourseDetailsStep({ data, errors, onChange, onCancel, on
         <FormField label="Course Category *" error={errors.category}>
           <select value={data.category} onChange={(e) => onChange("category", e.target.value)}>
             <option value="">Select category</option>
-            {COURSE_CATEGORIES.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.category_name}
               </option>
             ))}
           </select>

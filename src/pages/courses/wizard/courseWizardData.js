@@ -69,6 +69,7 @@ export function generateAssessmentCode() {
 export function emptyModule(sequence) {
   return {
     id: uid("mod"),
+    apiId: null,
     name: "",
     description: "",
     estimatedDuration: "",
@@ -80,6 +81,7 @@ export function emptyModule(sequence) {
 export function emptyLesson(sequence) {
   return {
     id: uid("les"),
+    apiId: null,
     title: "",
     type: LESSON_TYPES[0],
     duration: "",
@@ -102,6 +104,7 @@ export function emptyResource() {
 export function emptyQuestion(sequence) {
   return {
     id: uid("qn"),
+    apiId: null,
     type: QUESTION_TYPES[0],
     question: "",
     marks: "",
