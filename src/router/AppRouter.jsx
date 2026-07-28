@@ -28,6 +28,7 @@ const EmployeeProfile = lazy(() => import("../pages/employees/EmployeeProfile.js
 const TrainerList = lazy(() => import("../pages/trainers/TrainerList.jsx"));
 const TrainerBatchAllocations = lazy(() => import("../pages/trainers/TrainerBatchAllocations.jsx"));
 const TrainerProfile = lazy(() => import("../pages/trainers/TrainerProfile.jsx"));
+const TrainerForm = lazy(() => import("../pages/trainers/TrainerForm.jsx"));
 
 const CompanyList = lazy(() => import("../pages/company/CompanyList.jsx"));
 const CompanyBranches = lazy(() => import("../pages/company/CompanyBranches.jsx"));
@@ -124,6 +125,7 @@ export default function AppRouter() {
             <Route path={ROUTES.EMPLOYEES_LEAVE} element={<EmployeeLeave />} />
             <Route path={ROUTES.EMPLOYEE_PROFILE} element={<EmployeeProfile />} />
             <Route path={ROUTES.TRAINERS_BATCHES} element={<TrainerBatchAllocations />} />
+            <Route path={ROUTES.TRAINER_ADD} element={<TrainerForm />} />
             <Route path={ROUTES.TRAINER_PROFILE} element={<TrainerProfile />} />
 
             <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
