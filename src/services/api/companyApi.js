@@ -46,6 +46,34 @@ export async function getCompanyById(id, token) {
   }
 }
 
+// GET /companies/{id} — same CompanyController@show as above, but reachable
+// by a Company Admin viewing their own company profile (not just Super
+// Admin browsing the companies list). CompanyController::authorizeCompanyAccess
+// still enforces that a Company Admin can only ever load their own company_id.
+export async function getCompanyProfile(id, token) {
+  try {
+    const res = await httpClient.get(`/companies/${id}`, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not load your company profile.");
+  }
+}
+
+// PUT /companies/{id} (multipart/form-data, method-spoofed like updateCompany
+// below) — the Company Admin counterpart of updateCompany, targeting the
+// non-admin-prefixed route a Company Admin is actually authorized to hit.
+export async function updateCompanyProfile(id, formData, token) {
+  try {
+    formData.append("_method", "PUT");
+    const res = await httpClient.post(`/companies/${id}`, formData, {
+      headers: { ...authHeaders(token), "Content-Type": "multipart/form-data" },
+    });
+    return res.data;
+  } catch (error) {
+    throw toApiError(error, "Something went wrong. Please try again.");
+  }
+}
+
 // POST /admin/companies (multipart/form-data)
 export async function createCompany(formData, token) {
   try {

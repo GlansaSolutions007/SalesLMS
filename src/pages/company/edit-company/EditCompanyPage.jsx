@@ -13,7 +13,14 @@ import FormTextField from "../../../components/FormTextField.jsx";
 import FormSelectField from "../../../components/FormSelectField.jsx";
 import LogoUploader from "../../../components/LogoUploader.jsx";
 import { useAuth } from "../../../context/AuthContext.jsx";
-import { getCompanyById, updateCompany, ApiError, ApiValidationError } from "../../../services/api/companyApi.js";
+import {
+  getCompanyById,
+  updateCompany,
+  getCompanyProfile,
+  updateCompanyProfile,
+  ApiError,
+  ApiValidationError,
+} from "../../../services/api/companyApi.js";
 import { resolveApiAssetUrl } from "../../../utils/apiAssetUrl.js";
 import { ROUTES, companyViewPath } from "../../../router/routePaths.js";
 import { INDUSTRIES } from "../companyData.js";
@@ -63,10 +70,16 @@ function buildUpdateFormData(values, logoRemoved) {
 }
 
 export default function EditCompanyPage() {
-  const { id } = useParams();
+  const { id: routeId } = useParams();
   const { toggleCollapsed } = useOutletContext();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+
+  // No :id in the URL means a Company Admin is editing their own company
+  // (/company/profile/edit) rather than Super Admin editing a company picked
+  // from the companies list (/company/edit/:id).
+  const isOwnProfile = !routeId;
+  const id = routeId ?? user?.company?.id;
 
   const [status, setStatus] = useState("loading"); // loading | notFound | error | success
   const [company, setCompany] = useState(null);
@@ -91,10 +104,13 @@ export default function EditCompanyPage() {
   });
 
   useEffect(() => {
+    if (!id) return undefined;
     let cancelled = false;
     setStatus("loading");
 
-    getCompanyById(id, token)
+    const fetchCompany = isOwnProfile ? getCompanyProfile : getCompanyById;
+
+    fetchCompany(id, token)
       .then((data) => {
         if (cancelled) return;
         setCompany(data);
@@ -116,15 +132,18 @@ export default function EditCompanyPage() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, token, retryKey]);
+  }, [id, token, retryKey, isOwnProfile]);
 
   const country = watch("country");
   const state = watch("state");
   const stateOptions = STATES_BY_COUNTRY[country] ?? [];
   const cityOptions = CITIES_BY_STATE[state] ?? [];
 
+  const backTarget = isOwnProfile ? ROUTES.COMPANY_PROFILE : companyViewPath(id);
+  const afterSaveTarget = isOwnProfile ? ROUTES.COMPANY_PROFILE : ROUTES.COMPANY_COMPANIES;
+
   function handleBack() {
-    navigate(companyViewPath(id));
+    navigate(backTarget);
   }
 
   function handleReset() {
@@ -136,9 +155,10 @@ export default function EditCompanyPage() {
   const onSubmit = handleSubmit(async (values) => {
     setSaving(true);
     try {
-      await updateCompany(id, buildUpdateFormData(values, logoRemoved), token);
+      const submitCompany = isOwnProfile ? updateCompanyProfile : updateCompany;
+      await submitCompany(id, buildUpdateFormData(values, logoRemoved), token);
       setToast({ tone: "success", message: "Company updated successfully." });
-      setTimeout(() => navigate(ROUTES.COMPANY_COMPANIES), 850);
+      setTimeout(() => navigate(afterSaveTarget), 850);
     } catch (error) {
       if (error instanceof ApiValidationError) {
         Object.entries(error.errors).forEach(([field, messages]) => {
@@ -166,15 +186,19 @@ export default function EditCompanyPage() {
       <div className="cl-body wizard-page-body ec-body">
         <div className="wizard-sticky-header">
           <div className="wizard-header-text">
-            <h1>Edit Company</h1>
+            <h1>{isOwnProfile ? "Edit Company Profile" : "Edit Company"}</h1>
             <p className="cl-breadcrumb">
               <span>Dashboard</span>
               <Icon name="chevronRight" size={13} />
               <span>Company Management</span>
+              {!isOwnProfile && (
+                <>
+                  <Icon name="chevronRight" size={13} />
+                  <span>Companies</span>
+                </>
+              )}
               <Icon name="chevronRight" size={13} />
-              <span>Companies</span>
-              <Icon name="chevronRight" size={13} />
-              <span className="is-current">Edit Company</span>
+              <span className="is-current">{isOwnProfile ? "Edit Company Profile" : "Edit Company"}</span>
             </p>
           </div>
 
@@ -201,8 +225,8 @@ export default function EditCompanyPage() {
             <Icon name="building" size={28} />
             <h3>Company not found</h3>
             <p>We couldn't find a company with this ID. It may have been removed.</p>
-            <button type="button" className="cl-btn" onClick={() => navigate(ROUTES.COMPANY_COMPANIES)}>
-              Back to Companies
+            <button type="button" className="cl-btn" onClick={() => navigate(backTarget)}>
+              {isOwnProfile ? "Back to Company Profile" : "Back to Companies"}
             </button>
           </div>
         )}
@@ -255,20 +279,24 @@ export default function EditCompanyPage() {
 
                 <div className="form-row">
                   <FormTextField control={control} name="website" label="Website" placeholder="https://example.com" error={errors.website?.message} />
-                  <FormField label="Status">
-                    <div className="seg-group">
-                      {STATUS_OPTIONS.map((opt) => (
-                        <button
-                          type="button"
-                          key={opt}
-                          className={`seg-chip${watch("status") === opt ? ` is-active ${opt === "Active" ? "tone-success" : "tone-warning"}` : ""}`}
-                          onClick={() => setValue("status", opt, { shouldDirty: true })}
-                        >
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
-                  </FormField>
+                  {/* A Company Admin can edit their own profile but shouldn't be able to
+                      deactivate/reactivate their own company — that stays a Super Admin action. */}
+                  {!isOwnProfile && (
+                    <FormField label="Status">
+                      <div className="seg-group">
+                        {STATUS_OPTIONS.map((opt) => (
+                          <button
+                            type="button"
+                            key={opt}
+                            className={`seg-chip${watch("status") === opt ? ` is-active ${opt === "Active" ? "tone-success" : "tone-warning"}` : ""}`}
+                            onClick={() => setValue("status", opt, { shouldDirty: true })}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    </FormField>
+                  )}
                 </div>
               </section>
 

@@ -31,6 +31,9 @@ export const menuConfig = [
       // Super Admin only — a Company Admin manages their own single company
       // via the profile/settings pages, not this cross-company list.
       { id: "company-companies", title: "Companies", path: ROUTES.COMPANY_COMPANIES, roles: [SA] },
+      // Company Admin only — their own company's profile (view + edit),
+      // resolved from the logged-in user rather than an :id in the URL.
+      { id: "company-profile", title: "Company Profile", path: ROUTES.COMPANY_PROFILE, roles: [CA] },
       { id: "company-branches", title: "Branches", path: ROUTES.COMPANY_BRANCHES, roles: [SA, CA], permissions: ["branches.view"] },
       { id: "company-departments", title: "Departments", path: ROUTES.COMPANY_DEPARTMENTS, roles: [SA, CA], permissions: ["departments.view"] },
       { id: "company-designations", title: "Designations", path: ROUTES.COMPANY_DESIGNATIONS, roles: [SA, CA], permissions: ["designations.view"] },

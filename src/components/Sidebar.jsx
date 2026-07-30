@@ -140,7 +140,7 @@ export default function Sidebar({ collapsed: collapsedProp, onToggleCollapsed })
           <path d="M0 0C50 100 150 50 200 200" stroke="white" strokeWidth="0.5" />
           <path d="M50 0C100 150 150 100 200 150" stroke="white" strokeWidth="0.5" />
         </svg>
-
+{/* 
         {!isMobile && (
           <button
             type="button"
@@ -151,7 +151,7 @@ export default function Sidebar({ collapsed: collapsedProp, onToggleCollapsed })
           >
             <Icon name="chevron" size={13} />
           </button>
-        )}
+        )} */}
 
         <div className="sidebar-brand">
           <div className="sidebar-mark">

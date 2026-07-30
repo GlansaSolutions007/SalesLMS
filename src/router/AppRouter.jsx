@@ -73,6 +73,7 @@ const PAGE_COMPONENTS = {
   trainers: TrainerList,
   company: CompanyRedirect,
   "company-companies": CompanyList,
+  "company-profile": CompanyView,
   "company-branches": CompanyBranches,
   "company-departments": CompanyDepartments,
   "company-designations": CompanyDesignations,
@@ -127,6 +128,7 @@ export default function AppRouter() {
             <Route path={ROUTES.COMPANY_ADD} element={<AddCompanyPage />} />
             <Route path={ROUTES.COMPANY_VIEW} element={<CompanyView />} />
             <Route path={ROUTES.COMPANY_EDIT} element={<EditCompanyPage />} />
+            <Route path={ROUTES.COMPANY_PROFILE_EDIT} element={<EditCompanyPage />} />
             <Route path={ROUTES.COURSES_CREATE} element={<CourseWizard />} />
             <Route path={ROUTES.TRAINING_ASSIGN_COURSES_ADD} element={<AssignCourseAdd />} />
             <Route path={ROUTES.EMPLOYEES_ADD} element={<EmployeeForm />} />

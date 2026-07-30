@@ -7,17 +7,25 @@ import Avatar from "../../components/Avatar.jsx";
 import StatCard from "../../components/StatCard.jsx";
 import Skeleton from "../../components/Skeleton.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { getCompanyById, ApiError } from "../../services/api/companyApi.js";
+import { getCompanyById, getCompanyProfile, ApiError } from "../../services/api/companyApi.js";
 import { resolveApiAssetUrl } from "../../utils/apiAssetUrl.js";
 import { ROUTES, companyEditPath } from "../../router/routePaths.js";
 import { PAYMENT_TONE, formatDate, formatStorage, formatCurrency, formatWeeklyOff, DetailField } from "./companyDisplay.jsx";
 import "./CompanyView.css";
 
 export default function CompanyView() {
-  const { id } = useParams();
+  const { id: routeId } = useParams();
   const { toggleCollapsed } = useOutletContext();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+
+  // No :id in the URL means this is a Company Admin viewing their own
+  // company (/company/profile) rather than Super Admin browsing a company
+  // from the companies list (/company/view/:id) — resolve the id from the
+  // logged-in user and hit the endpoint a Company Admin is actually
+  // authorized to call.
+  const isOwnProfile = !routeId;
+  const id = routeId ?? user?.company?.id;
 
   const [status, setStatus] = useState("loading"); // loading | notFound | error | success
   const [company, setCompany] = useState(null);
@@ -25,10 +33,13 @@ export default function CompanyView() {
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
+    if (!id) return undefined;
     let cancelled = false;
     setStatus("loading");
 
-    getCompanyById(id, token)
+    const fetchCompany = isOwnProfile ? getCompanyProfile : getCompanyById;
+
+    fetchCompany(id, token)
       .then((data) => {
         if (cancelled) return;
         setCompany(data);
@@ -47,7 +58,10 @@ export default function CompanyView() {
     return () => {
       cancelled = true;
     };
-  }, [id, token, retryKey]);
+  }, [id, token, retryKey, isOwnProfile]);
+
+  const backTarget = isOwnProfile ? ROUTES.DASHBOARD : ROUTES.COMPANY_COMPANIES;
+  const editTarget = isOwnProfile ? ROUTES.COMPANY_PROFILE_EDIT : companyEditPath(id);
 
   return (
     <>
@@ -61,26 +75,32 @@ export default function CompanyView() {
       <div className="cl-body wizard-page-body cv-body">
         <div className="cv-header">
           <div>
-            <h1>Company Details</h1>
+            <h1>{isOwnProfile ? "Company Profile" : "Company Details"}</h1>
             <p className="cl-breadcrumb">
               <span>Dashboard</span>
               <Icon name="chevronRight" size={13} />
               <span>Company Management</span>
+              {!isOwnProfile && (
+                <>
+                  <Icon name="chevronRight" size={13} />
+                  <span>Companies</span>
+                </>
+              )}
               <Icon name="chevronRight" size={13} />
-              <span>Companies</span>
-              <Icon name="chevronRight" size={13} />
-              <span className="is-current">View Company</span>
+              <span className="is-current">{isOwnProfile ? "Company Profile" : "View Company"}</span>
             </p>
           </div>
 
           <div className="cv-header-actions">
-            <button type="button" className="cl-btn" onClick={() => navigate(ROUTES.COMPANY_COMPANIES)}>
-              <Icon name="back" size={15} />
-              Back
-            </button>
-            <button type="button" className="dash-primary-btn" onClick={() => navigate(companyEditPath(id))}>
+            {!isOwnProfile && (
+              <button type="button" className="cl-btn" onClick={() => navigate(backTarget)}>
+                <Icon name="back" size={15} />
+                Back
+              </button>
+            )}
+            <button type="button" className="dash-primary-btn" onClick={() => navigate(editTarget)}>
               <Icon name="edit" size={15} />
-              Edit Company
+              {isOwnProfile ? "Edit Profile" : "Edit Company"}
             </button>
           </div>
         </div>
@@ -92,8 +112,8 @@ export default function CompanyView() {
             <Icon name="building" size={28} />
             <h3>Company not found</h3>
             <p>We couldn't find a company with this ID. It may have been removed.</p>
-            <button type="button" className="cl-btn" onClick={() => navigate(ROUTES.COMPANY_COMPANIES)}>
-              Back to Companies
+            <button type="button" className="cl-btn" onClick={() => navigate(backTarget)}>
+              {isOwnProfile ? "Back to Dashboard" : "Back to Companies"}
             </button>
           </div>
         )}

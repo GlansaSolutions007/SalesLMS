@@ -15,6 +15,11 @@ export const ROUTES = {
   COMPANY_DEPARTMENT_VIEW: "/company/departments/:companyId/:departmentId",
   COMPANY_DESIGNATIONS: "/company/designations",
   COMPANY_DESIGNATION_VIEW: "/company/designations/:companyId/:designationId",
+  // Company Admin's own company (no :id — resolved from the logged-in user),
+  // distinct from COMPANY_VIEW/COMPANY_EDIT which browse any company by id
+  // from the Super-Admin-only companies list.
+  COMPANY_PROFILE: "/company/profile",
+  COMPANY_PROFILE_EDIT: "/company/profile/edit",
 
   EMPLOYEES: "/employees",
   EMPLOYEES_ADD: "/employees/add",
