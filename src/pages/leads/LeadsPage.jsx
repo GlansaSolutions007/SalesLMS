@@ -1,24 +1,24 @@
-import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import Topbar from "../../components/Topbar.jsx";
 import Breadcrumb from "../../components/Breadcrumb.jsx";
-import SubNavTabs from "../../components/SubNavTabs.jsx";
 import LeadPool from "./LeadPool.jsx";
-import LeadVerificationQueue from "./LeadVerificationQueue.jsx";
+// import LeadVerificationQueue from "./LeadVerificationQueue.jsx";
 import MyAssignedLeads from "./MyAssignedLeads.jsx";
 
 // Leads are assigned only to individual employees — there is no "Sales
 // Teams" tab here (Sales Teams remain a separate, unrelated org-structure
 // feature, decoupled from lead ownership).
-const TABS = [
-  { key: "pool", label: "Lead Pool" },
-  { key: "verification", label: "Pending Verification" },
-];
+//
+// The "Pending Verification" tab (LeadVerificationQueue) is paused for now
+// along with the rest of the trimmed-down Sales Performance menu — Leads is
+// scoped to the lead pool (view/create/edit/import/search/filter/details)
+// only. LeadVerificationQueue.jsx and its API are untouched; re-enable by
+// restoring the SubNavTabs below.
 
-// Admins (Super Admin / Company Admin) manage the lead pool, assignment and
-// conversion verification; an Employee only ever sees their own assigned
-// leads (see MyLeadController on the backend — a separate, narrower API).
+// Admins (Super Admin / Company Admin) manage the lead pool; an Employee
+// only ever sees their own assigned leads (see MyLeadController on the
+// backend — a separate, narrower API).
 export default function LeadsPage() {
   const { roleName } = useAuth();
 
@@ -31,7 +31,6 @@ export default function LeadsPage() {
 
 function AdminLeadsView() {
   const { toggleCollapsed } = useOutletContext();
-  const [tab, setTab] = useState("pool");
 
   return (
     <>
@@ -44,10 +43,7 @@ function AdminLeadsView() {
           </div>
         </div>
 
-        <SubNavTabs tabs={TABS} active={tab} onNavigate={setTab} />
-
-        {tab === "pool" && <LeadPool />}
-        {tab === "verification" && <LeadVerificationQueue />}
+        <LeadPool />
       </div>
     </>
   );

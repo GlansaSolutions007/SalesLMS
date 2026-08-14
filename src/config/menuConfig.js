@@ -39,15 +39,21 @@ export const menuConfig = [
       // Admin only); an Employee gets their own separate "My Leads" entry
       // below instead, per the Lead Management spec's menu layout.
       { id: "leads", title: "Leads", path: ROUTES.LEADS, roles: [SA, CA] },
-      // Assign Leads: after manual creation or Excel/CSV import (which no
+      // Assign Employee: after manual creation or Excel/CSV import (which no
       // longer takes an Assigned Employee column), Company Admin/Super
       // Admin assign leads to an individual employee here — single lead or
       // bulk. Never a Team.
-      { id: "assign-leads", title: "Assign Leads", path: ROUTES.ASSIGN_LEADS, roles: [SA, CA] },
+      { id: "assign-leads", title: "Assign Employee", path: ROUTES.ASSIGN_LEADS, roles: [SA, CA] },
       { id: "my-leads", title: "My Leads", path: ROUTES.MY_LEADS, roles: ["Employee"] },
-      { id: "followups", title: "Follow-ups", path: ROUTES.FOLLOWUPS, roles: [SA, CA, "Employee"] },
-      { id: "targets", title: "Target", path: ROUTES.TARGETS, roles: [SA, CA, "Employee"] },
-      { id: "rewards", title: "Incentives", path: ROUTES.REWARDS, roles: [SA, CA, "Employee"] },
+      // Follow-ups/Targets/Incentives paused for now — Sales Performance is
+      // scoped down to just Leads + Assign Employee (Company Admin) and My
+      // Leads (Employee) per the current spec. Pages/routes/APIs are left
+      // intact (see FollowupsPage.jsx, TargetsPage.jsx, IncentivesPage.jsx);
+      // only the menu entries (and, via isMenuItemVisible/GuardedMenuRoute,
+      // direct-URL access) are disabled. Re-enable by uncommenting.
+      // { id: "followups", title: "Follow-ups", path: ROUTES.FOLLOWUPS, roles: [SA, CA, "Employee"] },
+      // { id: "targets", title: "Target", path: ROUTES.TARGETS, roles: [SA, CA, "Employee"] },
+      // { id: "rewards", title: "Incentives", path: ROUTES.REWARDS, roles: [SA, CA, "Employee"] },
     ],
   },
   // { id: "pipeline", title: "Sales Pipeline", icon: "pipeline", path: ROUTES.PIPELINE, roles: [SA, CA, SM] },

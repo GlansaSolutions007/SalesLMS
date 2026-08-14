@@ -108,8 +108,8 @@ export default function AssignLeadsPage() {
       <div className="cl-body">
         <div className="cl-header">
           <div>
-            <h1>Assign Leads</h1>
-            <Breadcrumb current="Assign Leads" />
+            <h1>Assign Employee</h1>
+            <Breadcrumb current="Assign Employee" />
           </div>
         </div>
 

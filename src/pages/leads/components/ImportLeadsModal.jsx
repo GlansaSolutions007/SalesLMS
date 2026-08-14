@@ -76,7 +76,7 @@ export default function ImportLeadsModal({ companyId, onClose, onImported }) {
           <p>
             Upload an Excel (.xlsx) or CSV file with columns: Customer Name*, Company Name, Email, Mobile*, Alternate
             Mobile, Address, City, State, Product / Service, Priority, Notes. Imported leads land unassigned — use
-            <strong> Assign Leads</strong> afterwards to assign them to employees, individually or in bulk. Rows with
+            <strong> Assign Employee</strong> afterwards to assign them to employees, individually or in bulk. Rows with
             a missing required field or a duplicate mobile/email are skipped and listed below after import.
           </p>
           <button type="button" className="cl-btn" onClick={handleDownloadTemplate}>
