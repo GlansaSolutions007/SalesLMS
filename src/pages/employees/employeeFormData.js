@@ -6,7 +6,10 @@ export const DOCUMENT_TYPES = ["ID Proof", "Address Proof", "Educational Certifi
 export const VERIFICATION_STATUSES = ["Pending", "Verified", "Rejected"];
 
 export const SKILL_LEVELS = ["Beginner", "Intermediate", "Advanced", "Expert"];
-export const RELATIONSHIPS = ["Spouse", "Parent", "Sibling", "Child", "Friend", "Other"];
+
+export const COMMISSION_TYPES = ["Fixed", "Percentage"];
+export const WORK_MODES = ["Field Sales", "Inside Sales", "Hybrid"];
+export const CUSTOMER_TYPES = ["B2B", "B2C", "Both"];
 
 function uid(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -26,10 +29,6 @@ export function emptyDocumentRow() {
 
 export function emptySkillRow() {
   return { id: uid("skill"), name: "", level: SKILL_LEVELS[0], experienceYears: "" };
-}
-
-export function emptyEmergencyContact() {
-  return { id: uid("ec"), name: "", relationship: RELATIONSHIPS[0], mobile: "", email: "", address: "" };
 }
 
 export function emptyAddress() {

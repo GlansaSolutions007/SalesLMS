@@ -4,7 +4,12 @@ import { ROUTES } from "../../router/routePaths.js";
 
 const TABS = [
   { key: "subscriptions", label: "Subscription Plans", path: ROUTES.MASTERS_SUBSCRIPTIONS },
+  { key: "all-subscriptions", label: "All Subscriptions", path: ROUTES.MASTERS_ALL_SUBSCRIPTIONS },
+  { key: "expired-subscriptions", label: "Expired Subscriptions", path: ROUTES.MASTERS_EXPIRED_SUBSCRIPTIONS },
+  { key: "renewal-requests", label: "Renewal Requests", path: ROUTES.MASTERS_RENEWAL_REQUESTS },
   { key: "roles", label: "Roles", path: ROUTES.MASTERS_ROLES },
+  { key: "permissions", label: "Permissions", path: ROUTES.MASTERS_PERMISSIONS },
+  { key: "certificate-templates", label: "Certificate Templates", path: ROUTES.MASTERS_CERTIFICATE_TEMPLATES },
 ];
 
 export default function MastersTabs() {

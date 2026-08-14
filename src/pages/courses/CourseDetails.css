@@ -1,0 +1,371 @@
+@import "../company/CompanyView.css";
+
+/* ── Hero ─────────────────────────────────────────────────────────────── */
+
+.cdv-hero {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 28px;
+  background: linear-gradient(135deg, var(--color-surface) 0%, white 60%);
+}
+
+.cdv-hero-thumb {
+  width: 108px;
+  height: 108px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  color: white;
+  box-shadow: var(--shadow-md);
+}
+
+.cdv-hero-thumb.tone-blue { background: linear-gradient(135deg, #60a5fa, #2563eb); }
+.cdv-hero-thumb.tone-green { background: linear-gradient(135deg, #34d399, #059669); }
+.cdv-hero-thumb.tone-orange { background: linear-gradient(135deg, #fbbf24, #d97706); }
+
+.cdv-hero-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 20px;
+}
+
+.cdv-hero-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cdv-hero-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cdv-hero-top h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: var(--color-heading);
+}
+
+.cdv-hero-code {
+  margin: 6px 0 0;
+  color: var(--color-muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cdv-hero-badges {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.cdv-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px 5px 10px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cdv-chip svg {
+  color: var(--color-primary-600);
+}
+
+/* ── Stats ────────────────────────────────────────────────────────────── */
+
+.cdv-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .cdv-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .cdv-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Description ──────────────────────────────────────────────────────── */
+
+.cdv-description {
+  max-width: 68ch;
+  color: var(--color-text);
+  font-size: 13.5px;
+  line-height: 1.75;
+}
+
+/* Content comes from RichTextEditor's contentEditable output — style the
+   actual tags its toolbar can produce (bold/italic/underline/lists/links). */
+.cdv-description p {
+  margin: 0 0 12px;
+}
+
+.cdv-description p:last-child {
+  margin-bottom: 0;
+}
+
+.cdv-description ul,
+.cdv-description ol {
+  margin: 0 0 12px;
+  padding-left: 22px;
+}
+
+.cdv-description li {
+  margin-bottom: 4px;
+}
+
+.cdv-description a {
+  color: var(--color-primary-600);
+  text-decoration: underline;
+}
+
+.cdv-description strong {
+  color: var(--color-heading);
+  font-weight: 700;
+}
+
+/* ── Curriculum / module accordion ───────────────────────────────────── */
+
+.cdv-curriculum-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cdv-module {
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.cdv-module.is-open {
+  border-color: var(--color-primary-500);
+}
+
+.cdv-module-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  background: white;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.cdv-module-head:hover {
+  background: var(--color-surface);
+}
+
+.cdv-module-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: #eaf2fc;
+  color: var(--color-primary-600);
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.cdv-module-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cdv-module-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cdv-module-meta svg {
+  transition: transform 0.18s ease;
+}
+
+.cdv-module.is-open .cdv-module-meta svg {
+  transform: rotate(90deg);
+}
+
+.cdv-module-body {
+  padding: 6px 16px 14px 60px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  animation: cdv-fade-in 0.15s ease;
+}
+
+@keyframes cdv-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cdv-lesson {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cdv-lesson:last-child {
+  border-bottom: none;
+}
+
+.cdv-lesson-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.cdv-lesson-chevron {
+  flex-shrink: 0;
+  color: var(--color-muted);
+  transition: transform 0.18s ease;
+}
+
+.cdv-lesson.is-open .cdv-lesson-chevron {
+  transform: rotate(90deg);
+}
+
+.cdv-lesson-body {
+  padding: 2px 0 18px 44px;
+  animation: cdv-fade-in 0.15s ease;
+}
+
+.cdv-lesson-resources-label {
+  margin: 12px 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.cdv-lesson-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 10px;
+}
+
+.cdv-lesson-icon.tone-blue { color: var(--color-primary-600); background: #eaf2fc; }
+.cdv-lesson-icon.tone-orange { color: var(--color-warning); background: var(--color-warning-soft); }
+.cdv-lesson-icon.tone-green { color: var(--color-success); background: var(--color-success-soft); }
+.cdv-lesson-icon.tone-gray { color: var(--color-muted); background: #f1f5f9; }
+.cdv-lesson-icon.tone-purple { color: #9333ea; background: #f3e8fd; }
+
+.cdv-lesson-text {
+  min-width: 0;
+}
+
+.cdv-lesson-text p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cdv-lesson-text span {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-muted);
+  font-size: 11.5px;
+}
+
+/* ── Course info sidebar card ────────────────────────────────────────── */
+
+.cdv-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cdv-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cdv-info-row span:first-child {
+  color: var(--color-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.cdv-info-row span:last-child,
+.cdv-info-row p {
+  margin: 0;
+  color: var(--color-heading);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .cdv-hero {
+    flex-direction: column;
+    text-align: center;
+    padding: 22px;
+  }
+
+  .cdv-hero-top,
+  .cdv-hero-badges {
+    justify-content: center;
+  }
+
+  .cdv-module-body {
+    padding-left: 16px;
+  }
+}

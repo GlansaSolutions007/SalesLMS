@@ -2,7 +2,6 @@
   border: 1px solid var(--color-border);
   border-radius: 10px;
   background: white;
-  overflow: hidden;
   transition: 0.16s ease;
 }
 
@@ -15,13 +14,42 @@
   border-color: var(--color-danger);
 }
 
+/* Corners are rounded on the toolbar/body individually (rather than
+   `overflow: hidden` on .rte) so the Video dropdown menu — an absolutely
+   positioned child of the toolbar — isn't clipped by the container it
+   pops out of. (Not :first-child/:last-child — the hidden file <input>s
+   that follow the body in the DOM would break that match.) */
+.rte-toolbar:first-of-type {
+  border-radius: 10px 10px 0 0;
+}
+
+.rte-editor-wrap,
+.rte-source-textarea {
+  border-radius: 0 0 10px 10px;
+}
+
 .rte-toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
   padding: 8px 10px;
   border-bottom: 1px solid #f1f5f9;
   background: var(--color-surface);
+}
+
+.rte-toolbar-table {
+  gap: 6px;
+  padding: 6px 10px;
+  background: #eaf2fc;
+}
+
+.rte-toolbar-table .rte-btn {
+  width: auto;
+  padding: 0 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  gap: 4px;
 }
 
 .rte-btn {
@@ -36,11 +64,22 @@
   background: transparent;
   font-size: 12px;
   font-weight: 800;
+  flex-shrink: 0;
 }
 
 .rte-btn:hover {
   color: var(--color-primary-600);
   background: #e9f1fc;
+}
+
+.rte-btn.is-active {
+  color: var(--color-primary-600);
+  background: #dceafd;
+}
+
+.rte-btn:disabled {
+  opacity: 0.35;
+  pointer-events: none;
 }
 
 .rte-btn-italic {
@@ -51,32 +90,112 @@
   text-decoration: underline;
 }
 
+.rte-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--color-border);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.rte-video-menu-wrap {
+  position: relative;
+}
+
+.rte-video-menu {
+  position: absolute;
+  top: 34px;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  padding: 6px;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+}
+
+.rte-video-menu button {
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.rte-video-menu button:hover {
+  background: var(--color-surface);
+  color: var(--color-primary-600);
+}
+
+.rte-uploading {
+  margin-left: auto;
+  padding: 0 6px;
+  color: var(--color-primary-600);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .rte-toolbar {
+    gap: 2px;
+  }
+
+  .rte-divider {
+    display: none;
+  }
+}
+
 .rte-editor-wrap {
   position: relative;
   padding: 12px 14px;
 }
 
-.rte-editor {
+.rte-editor-wrap .ProseMirror {
+  height: 100%;
+}
+
+.rte-source-textarea {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border: none;
   outline: none;
-  min-height: inherit;
-  font-size: 13px;
+  resize: vertical;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 12.5px;
   line-height: 1.6;
-  color: var(--color-text);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
-.rte-editor ul,
-.rte-editor ol {
-  margin: 0;
-  padding-left: 20px;
+/* ── Full-screen mode ────────────────────────────────────────────────── */
+
+.rte-fullscreen-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
 }
 
-.rte-placeholder {
-  position: absolute;
-  top: 12px;
-  left: 14px;
-  color: #94a3b8;
-  font-size: 13px;
-  pointer-events: none;
+.rte-fullscreen-body .rte-toolbar:first-of-type,
+.rte-fullscreen-body .rte-editor-wrap,
+.rte-fullscreen-body .rte-source-textarea {
+  border-radius: 0;
+}
+
+.rte-fullscreen-body .rte-editor-wrap,
+.rte-fullscreen-body .rte-source-textarea {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .rte-error {
@@ -85,4 +204,302 @@
   color: var(--color-danger);
   font-size: 11.5px;
   font-weight: 600;
+}
+
+/* ── Editing surface + rendered output (shared) ─────────────────────────
+   .rte-content is applied both to the live editor surface (so editing
+   matches the final look) and to wherever the stored HTML is rendered
+   read-only (course view, Employee Learning page) via
+   dangerouslySetInnerHTML — one set of rules for both. */
+
+.rte-editor {
+  outline: none;
+  min-height: inherit;
+}
+
+.rte-content {
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+.rte-content p {
+  margin: 0 0 12px;
+}
+
+.rte-content p:last-child {
+  margin-bottom: 0;
+}
+
+.rte-content h1,
+.rte-content h2,
+.rte-content h3 {
+  margin: 18px 0 10px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.rte-content h1:first-child,
+.rte-content h2:first-child,
+.rte-content h3:first-child {
+  margin-top: 0;
+}
+
+.rte-content h1 { font-size: 22px; }
+.rte-content h2 { font-size: 18px; }
+.rte-content h3 { font-size: 15px; }
+
+.rte-content ul,
+.rte-content ol {
+  margin: 0 0 12px;
+  padding-left: 22px;
+}
+
+.rte-content li {
+  margin-bottom: 4px;
+}
+
+.rte-content a {
+  color: var(--color-primary-600);
+  text-decoration: underline;
+}
+
+.rte-content strong {
+  color: var(--color-heading);
+  font-weight: 700;
+}
+
+.rte-content blockquote {
+  margin: 0 0 12px;
+  padding: 10px 18px;
+  border-left: 3px solid var(--color-primary-600);
+  background: var(--color-surface);
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+}
+
+.rte-content blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.rte-content pre {
+  margin: 0 0 12px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  font-size: 12.5px;
+  line-height: 1.6;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.rte-content pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.rte-content code {
+  background: #eef2f7;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.92em;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.rte-content hr {
+  margin: 16px 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.rte-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0 0 12px;
+  font-size: 12.5px;
+}
+
+.rte-content th,
+.rte-content td {
+  border: 1px solid var(--color-border);
+  padding: 7px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.rte-content th {
+  background: var(--color-surface);
+  font-weight: 700;
+}
+
+.rte-content img,
+.rte-content video {
+  max-width: 100%;
+  border-radius: 10px;
+  display: block;
+  margin: 0 0 12px;
+}
+
+.rte-content .rte-img-left { float: left; margin: 0 14px 12px 0; }
+.rte-content .rte-img-right { float: right; margin: 0 0 12px 14px; }
+.rte-content .rte-img-center { display: block; margin: 0 auto 12px; }
+.rte-content .rte-img-none { display: inline-block; }
+
+.rte-content [data-video-embed] {
+  width: 100%;
+}
+
+.rte-content [data-youtube-video],
+.rte-content .rte-embed {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+  margin: 0 0 12px;
+}
+
+.rte-content [data-youtube-video] iframe,
+.rte-content .rte-embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0;
+}
+
+.rte-content .rte-file-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  text-decoration: none !important;
+  transition: 0.15s ease;
+}
+
+.rte-content .rte-file-card:hover {
+  border-color: var(--color-primary-500);
+  background: #eaf2fc;
+}
+
+.rte-content .rte-file-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--color-primary-600);
+}
+
+.rte-content .rte-file-card-icon::before {
+  content: "";
+  width: 14px;
+  height: 16px;
+  background: white;
+  clip-path: polygon(20% 0, 70% 0, 100% 30%, 100% 100%, 0 100%, 0 0);
+}
+
+.rte-content .rte-file-card[data-kind="pdf"] .rte-file-card-icon { background: #dc2626; }
+.rte-content .rte-file-card[data-kind="ppt"] .rte-file-card-icon { background: #d97706; }
+.rte-content .rte-file-card[data-kind="doc"] .rte-file-card-icon { background: #2563eb; }
+
+.rte-content .rte-file-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rte-content .rte-file-card-meta strong {
+  font-size: 13px;
+  color: var(--color-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rte-content .rte-file-card-meta span {
+  font-size: 11.5px;
+  color: var(--color-muted);
+}
+
+/* ── Image NodeView (editing surface only) ──────────────────────────── */
+
+.rte-img-view {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.rte-img-view img {
+  max-width: 100%;
+  border-radius: 10px;
+  display: block;
+}
+
+.rte-img-view.rte-img-left { float: left; margin: 0 14px 12px 0; }
+.rte-img-view.rte-img-right { float: right; margin: 0 0 12px 14px; }
+.rte-img-view.rte-img-center { display: block; margin: 0 auto 12px; }
+
+.rte-img-view.is-selected img {
+  outline: 2px solid var(--color-primary-600);
+  outline-offset: 2px;
+}
+
+.rte-img-toolbar {
+  position: absolute;
+  top: -34px;
+  left: 0;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 8px;
+  background: #1f2937;
+  box-shadow: var(--shadow-md);
+}
+
+.rte-img-toolbar button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: #cbd5e1;
+}
+
+.rte-img-toolbar button:hover,
+.rte-img-toolbar button.is-active {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.rte-img-resize-handle {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px 0 3px 0;
+  background: var(--color-primary-600);
+  cursor: nwse-resize;
+  opacity: 0;
+}
+
+.rte-img-view:hover .rte-img-resize-handle,
+.rte-img-view.is-selected .rte-img-resize-handle {
+  opacity: 1;
 }

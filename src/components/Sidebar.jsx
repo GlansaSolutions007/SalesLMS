@@ -42,7 +42,13 @@ export default function Sidebar({ collapsed: collapsedProp, onToggleCollapsed })
   );
 
   function isSectionActive(item) {
-    return pathname === item.path || pathname.startsWith(`${item.path}/`);
+    if (pathname === item.path || pathname.startsWith(`${item.path}/`)) return true;
+    // Most grouped sections nest their children's URLs under the parent's
+    // own path prefix, so the check above already covers them. "Sales
+    // Performance" is the exception — its children (Leads/Target/Incentives)
+    // kept their original separate top-level routes, so the parent needs to
+    // check those directly to know it should render active/expanded.
+    return (item.children ?? []).some((child) => pathname === child.path || pathname.startsWith(`${child.path}/`));
   }
 
   // A parent's submenu opens by clicking the parent (an accordion, not a

@@ -18,49 +18,31 @@ import {
   updateSubscriptionPlan,
   deleteSubscriptionPlan,
 } from "../../services/subscriptionService.js";
+import { DetailField } from "../company/companyDisplay.jsx";
 import "./SubscriptionPlanList.css";
 
-const FEATURE_KEYS = [
-  "employee_management",
-  "trainer_management",
-  "attendance_management",
-  "payroll_management",
-  "performance_management",
-  "learning_management",
-  "assessment_management",
-  "discussion_forums",
-  "reports_and_analytics",
-  "api_access",
-  "custom_branding",
-  "priority_support",
-];
-
-const FEATURE_LABELS = {
-  employee_management: "Employee Management",
-  trainer_management: "Trainer Management",
-  attendance_management: "Attendance Management",
-  payroll_management: "Payroll Management",
-  performance_management: "Performance Management",
-  learning_management: "Learning Management",
-  assessment_management: "Assessment Management",
-  discussion_forums: "Discussion Forums",
-  reports_and_analytics: "Reports & Analytics",
-  api_access: "API Access",
-  custom_branding: "Custom Branding",
-  priority_support: "Priority Support",
-};
-
-const EMPTY_FEATURES = Object.fromEntries(FEATURE_KEYS.map((k) => [k, false]));
+const BILLING_CYCLES = ["Monthly", "Quarterly", "Half Yearly", "Yearly"];
+const STATUS_VALUES = ["Active", "Inactive"];
 
 const EMPTY_FORM = {
   plan_name: "",
-  duration_months: "",
+  billing_cycle: "Monthly",
+  price_per_employee: "",
+  description: "",
+  status: "Active",
+  is_unlimited_employees: false,
   employee_limit: "",
-  trainer_limit: "",
-  storage_limit: "",
-  price: "",
-  features: { ...EMPTY_FEATURES },
 };
+
+function formatPricePerEmployee(value) {
+  const num = Number(value ?? 0);
+  if (!Number.isFinite(num)) return "—";
+  return num.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
+}
+
+function formatEmployeeLimit(value) {
+  return value === null || value === undefined || value === "" ? "Unlimited" : value;
+}
 
 const COLUMNS = [
   {
@@ -69,70 +51,24 @@ const COLUMNS = [
     render: (r) => <b style={{ color: "var(--color-heading)" }}>{r.plan_name}</b>,
   },
   {
-    key: "duration_months",
-    header: "Duration",
-    render: (r) => `${r.duration_months} month${r.duration_months !== 1 ? "s" : ""}`,
+    key: "billing_cycle",
+    header: "Billing Cycle",
+    render: (r) => <Badge tone={r.billing_cycle === "Monthly" ? "blue" : "purple"}>{r.billing_cycle || "—"}</Badge>,
   },
   {
-    key: "price",
-    header: "Price",
-    render: (r) => {
-      const value = Number(r.price ?? 0);
-      return (
-        <span className="cl-numeric">
-          {Number.isFinite(value)
-            ? value.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })
-            : "—"}
-        </span>
-      );
-    },
+    key: "price_per_employee",
+    header: "Price Per Employee",
+    render: (r) => <span className="cl-numeric">{formatPricePerEmployee(r.price_per_employee)}</span>,
+  },
+  {
+    key: "employee_limit",
+    header: "Employee Limit",
+    render: (r) => <span className="cl-numeric">{formatEmployeeLimit(r.employee_limit)}</span>,
   },
   {
     key: "status",
     header: "Status",
     render: (r) => <Badge tone={getStatusTone(r.status)}>{r.status || "Unknown"}</Badge>,
-  },
-  {
-    key: "subscriptions",
-    header: "Subscriptions",
-    render: (r) => {
-      const active = Number(r.active_subscriptions_count ?? 0) || 0;
-      const total = Number(r.subscriptions_count ?? 0) || 0;
-      const label = total ? `${active}/${total}` : active ? `${active} active` : "0";
-      return <span className="cl-numeric">{label}</span>;
-    },
-  },
-  {
-    key: "employee_limit",
-    header: "Employees",
-    render: (r) => r.employee_limit,
-  },
-  {
-    key: "trainer_limit",
-    header: "Trainers",
-    render: (r) => r.trainer_limit,
-  },
-  {
-    key: "storage_limit",
-    header: "Storage",
-    render: (r) => {
-      const value = Number(r.storage_limit ?? 0);
-      const gb = Number.isFinite(value) ? Math.round(value / 1024) : 0;
-      return `${gb} GB`;
-    },
-  },
-  {
-    key: "features",
-    header: "Features",
-    render: (r) => {
-      const count = Object.values(r.features || {}).filter(Boolean).length;
-      return <Badge tone="blue">{count} / {FEATURE_KEYS.length}</Badge>;
-    },
-  },
-  {
-    key: "status",
-    header: "Status",
-    render: (r) => <Badge tone={r.status === "Active" ? "green" : "gray"}>{r.status}</Badge>,
   },
 ];
 
@@ -166,15 +102,11 @@ function getStatusTone(status) {
 function validateForm(form) {
   const errors = {};
   if (!form.plan_name.trim()) errors.plan_name = "Plan name is required.";
-  if (!form.duration_months || Number(form.duration_months) <= 0)
-    errors.duration_months = "Enter a valid duration.";
-  if (!form.employee_limit || Number(form.employee_limit) <= 0)
-    errors.employee_limit = "Enter a valid employee limit.";
-  if (!form.trainer_limit || Number(form.trainer_limit) <= 0)
-    errors.trainer_limit = "Enter a valid trainer limit.";
-  if (!form.storage_limit || Number(form.storage_limit) <= 0)
-    errors.storage_limit = "Enter a valid storage limit.";
-  if (!form.price || Number(form.price) <= 0) errors.price = "Enter a valid price.";
+  if (!form.billing_cycle) errors.billing_cycle = "Select a billing cycle.";
+  if (!form.price_per_employee || Number(form.price_per_employee) <= 0)
+    errors.price_per_employee = "Enter a price greater than zero.";
+  if (!form.is_unlimited_employees && (!form.employee_limit || Number(form.employee_limit) <= 0))
+    errors.employee_limit = "Enter a valid employee limit, or select Unlimited Employees.";
   return errors;
 }
 
@@ -199,6 +131,7 @@ export default function SubscriptionPlanList() {
   const [saving, setSaving] = useState(false);
 
   const [deletingId, setDeletingId] = useState(null);
+  const [viewingRow, setViewingRow] = useState(null);
 
   // Debounce the raw keystrokes before they drive a request.
   useEffect(() => {
@@ -241,7 +174,7 @@ export default function SubscriptionPlanList() {
   const totalPages = Math.max(1, pagination.last_page || 1);
 
   function openAdd() {
-    setForm({ ...EMPTY_FORM, features: { ...EMPTY_FEATURES } });
+    setForm({ ...EMPTY_FORM });
     setFormErrors({});
     setEditingId(null);
     setModalMode("add");
@@ -250,12 +183,12 @@ export default function SubscriptionPlanList() {
   function openEdit(row) {
     setForm({
       plan_name: row.plan_name ?? "",
-      duration_months: String(row.duration_months ?? ""),
-      employee_limit: String(row.employee_limit ?? ""),
-      trainer_limit: String(row.trainer_limit ?? ""),
-      storage_limit: String(row.storage_limit ?? ""),
-      price: String(row.price ?? ""),
-      features: { ...EMPTY_FEATURES, ...(row.features ?? {}) },
+      billing_cycle: row.billing_cycle ?? "Monthly",
+      price_per_employee: String(row.price_per_employee ?? ""),
+      description: row.description ?? "",
+      status: row.status ?? "Active",
+      is_unlimited_employees: row.employee_limit === null || row.employee_limit === undefined,
+      employee_limit: row.employee_limit != null ? String(row.employee_limit) : "",
     });
     setFormErrors({});
     setEditingId(row.id);
@@ -271,10 +204,6 @@ export default function SubscriptionPlanList() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  function toggleFeature(key) {
-    setForm((f) => ({ ...f, features: { ...f.features, [key]: !f.features[key] } }));
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
     const errors = validateForm(form);
@@ -284,12 +213,13 @@ export default function SubscriptionPlanList() {
     }
     const payload = {
       plan_name: form.plan_name.trim(),
-      duration_months: Number(form.duration_months),
-      employee_limit: Number(form.employee_limit),
-      trainer_limit: Number(form.trainer_limit),
-      storage_limit: Number(form.storage_limit),
-      price: Number(form.price),
-      features: form.features,
+      billing_cycle: form.billing_cycle,
+      price_per_employee: Number(form.price_per_employee),
+      description: form.description.trim() || null,
+      status: form.status,
+      // NULL employee_limit = Unlimited Employees — never a magic number.
+      is_unlimited_employees: form.is_unlimited_employees,
+      employee_limit: form.is_unlimited_employees ? null : Number(form.employee_limit),
     };
     setSaving(true);
     try {
@@ -325,6 +255,14 @@ export default function SubscriptionPlanList() {
       header: "",
       render: (row) => (
         <div className="cl-row-actions">
+          <button
+            type="button"
+            className="dash-icon-btn"
+            aria-label={`View ${row.plan_name}`}
+            onClick={() => setViewingRow(row)}
+          >
+            <Icon name="eye" size={15} />
+          </button>
           <button
             type="button"
             className="dash-icon-btn"
@@ -373,8 +311,6 @@ export default function SubscriptionPlanList() {
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
             statusOptions={STATUS_OPTIONS}
-            sort={{ key: "plan_name", dir: "asc" }}
-            onSortChange={() => {}}
             addLabel="Add New Plan"
             onAdd={openAdd}
           />
@@ -424,7 +360,7 @@ export default function SubscriptionPlanList() {
             {formErrors._api && <p className="sp-api-error">{formErrors._api}</p>}
 
             <div className="sp-section-label">Plan Details</div>
-            <div className="sp-grid-2">
+            <div className="sp-grid-3">
               <div style={{ gridColumn: "1 / -1" }}>
                 <FormField label="Plan Name" error={formErrors.plan_name}>
                   <input
@@ -435,72 +371,93 @@ export default function SubscriptionPlanList() {
                   />
                 </FormField>
               </div>
-              <FormField label="Duration (months)" error={formErrors.duration_months}>
-                <input
-                  type="number"
-                  min="1"
-                  value={form.duration_months}
-                  onChange={(e) => setField("duration_months", e.target.value)}
-                  placeholder="12"
-                />
+              <FormField label="Billing Cycle" error={formErrors.billing_cycle}>
+                <select
+                  value={form.billing_cycle}
+                  onChange={(e) => setField("billing_cycle", e.target.value)}
+                >
+                  {BILLING_CYCLES.map((cycle) => (
+                    <option key={cycle} value={cycle}>{cycle}</option>
+                  ))}
+                </select>
               </FormField>
-              <FormField label="Price (₹)" error={formErrors.price}>
+              <FormField label="Price Per Employee (₹)" error={formErrors.price_per_employee}>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
-                  value={form.price}
-                  onChange={(e) => setField("price", e.target.value)}
-                  placeholder="4999.00"
+                  value={form.price_per_employee}
+                  onChange={(e) => setField("price_per_employee", e.target.value)}
+                  placeholder="299.00"
                 />
               </FormField>
+              <FormField label="Status">
+                <select
+                  value={form.status}
+                  onChange={(e) => setField("status", e.target.value)}
+                >
+                  {STATUS_VALUES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </FormField>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <FormField label="Description (Optional)">
+                  <textarea
+                    rows={3}
+                    value={form.description}
+                    onChange={(e) => setField("description", e.target.value)}
+                    placeholder="Describe what's included in this plan..."
+                  />
+                </FormField>
+              </div>
             </div>
 
             <div className="sp-section-label">Limits</div>
-            <div className="sp-grid-3">
-              <FormField label="Employee Limit" error={formErrors.employee_limit}>
+            <div className="sp-grid-2">
+              <FormField label="Maximum Employees" error={formErrors.employee_limit}>
                 <input
                   type="number"
                   min="1"
                   value={form.employee_limit}
                   onChange={(e) => setField("employee_limit", e.target.value)}
                   placeholder="100"
+                  disabled={form.is_unlimited_employees}
                 />
               </FormField>
-              <FormField label="Trainer Limit" error={formErrors.trainer_limit}>
+              <label className="sp-feature-item sp-unlimited-toggle">
                 <input
-                  type="number"
-                  min="1"
-                  value={form.trainer_limit}
-                  onChange={(e) => setField("trainer_limit", e.target.value)}
-                  placeholder="10"
+                  type="checkbox"
+                  checked={form.is_unlimited_employees}
+                  onChange={(e) => setField("is_unlimited_employees", e.target.checked)}
                 />
-              </FormField>
-              <FormField label="Storage Limit (MB)" error={formErrors.storage_limit}>
-                <input
-                  type="number"
-                  min="1"
-                  value={form.storage_limit}
-                  onChange={(e) => setField("storage_limit", e.target.value)}
-                  placeholder="2048"
-                />
-              </FormField>
-            </div>
-
-            <div className="sp-section-label">Features</div>
-            <div className="sp-features-grid">
-              {FEATURE_KEYS.map((key) => (
-                <label key={key} className="sp-feature-item">
-                  <input
-                    type="checkbox"
-                    checked={form.features[key]}
-                    onChange={() => toggleFeature(key)}
-                  />
-                  <span>{FEATURE_LABELS[key]}</span>
-                </label>
-              ))}
+                Unlimited Employees
+              </label>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {viewingRow && (
+        <Modal
+          title={viewingRow.plan_name}
+          onClose={() => setViewingRow(null)}
+          footer={
+            <button type="button" className="cl-btn" onClick={() => setViewingRow(null)}>
+              Close
+            </button>
+          }
+        >
+          <div className="detail-grid">
+            <DetailField label="Plan Name">{viewingRow.plan_name}</DetailField>
+            <DetailField label="Billing Cycle">{viewingRow.billing_cycle}</DetailField>
+            <DetailField label="Price Per Employee">{formatPricePerEmployee(viewingRow.price_per_employee)}</DetailField>
+            <DetailField label="Employee Limit">{formatEmployeeLimit(viewingRow.employee_limit)}</DetailField>
+            <DetailField label="Description">{viewingRow.description}</DetailField>
+            <DetailField label="Status">
+              <Badge tone={getStatusTone(viewingRow.status)}>{viewingRow.status ?? "—"}</Badge>
+            </DetailField>
+          </div>
         </Modal>
       )}
 

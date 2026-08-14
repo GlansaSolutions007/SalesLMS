@@ -54,6 +54,20 @@
   max-width: 760px;
 }
 
+.modal-full {
+  max-width: 96vw;
+  width: 96vw;
+  height: 92vh;
+  max-height: 92vh;
+}
+
+.modal-full .modal-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .modal-head {
   display: flex;
   align-items: center;

@@ -1,581 +1,295 @@
 # Sales LMS — Software Development Progress Tracker
 
 **Prepared for:** CEO / Project Manager / Development Team
-**Prepared on:** 2026-07-27
-**Scope:** `SalesLMS` frontend repository (React + Vite)
+**Prepared on:** 2026-08-07 (full re-audit — supersedes the 2026-07-27 version of this file)
+**Scope:** Both repositories — `SalesLMS` (React 19 + Vite frontend) and `saleslms-backend` (Laravel 12 API).
 
 ## How to read this document
 
 | Symbol | Meaning |
 |---|---|
-| ✅ | Completed |
-| 🟡 | In Progress |
-| ❌ | Not Started |
-| 🔄 | UI Revision Required |
+| ✅ | Completed — verified directly in code |
+| 🟡 | Partially implemented |
+| ❌ | Not implemented / not started |
 
-**Important methodology note:** This repository contains **frontend code only** — there is no backend or database code in it. *Backend API* and *Database* statuses below are therefore **inferred**, not confirmed against a real server:
+**Methodology (changed from the 2026-07-27 version):** That earlier version of this file audited the frontend in isolation and *inferred* backend/DB status from whether a page called `axios`. This version inspects **both repos directly** — every ✅ below means the controller, route, Form Request, migration, and the frontend service call that hits it were all read in code. Nothing here is inferred from a filename alone.
 
-- Marked **✅** where the page calls a real HTTP endpoint through `src/services/*` (e.g. `axios` → `/admin/companies`) and gets/sends real data — the underlying DB table is assumed to exist because the API responds.
-- Marked **❌** where the page uses hardcoded local arrays / mock data, or the relevant service file explicitly says "mock backend, no real API yet" (this is a comment left by the developers in `employeeService.js` and `courseService.js`).
-- Marked **🟡** where a backend function exists in code but isn't actually being called by the UI yet (dead/unused wiring).
+**Why this rewrite was necessary:** `project-docs/TODO.md` (dated 2026-08-01) was itself already out of date by the time this audit started on 2026-08-07 — real work had shipped in the intervening six days that no document reflected: the Batch data-model fix, the entire learner-facing flow (My Learning, lesson completion, Assignment homework, Assignment Lock, auto-certificate issuance), Reports, Settings, and — not tracked in *any* prior document — an entirely new **Leads / Sales Team / Monthly Targets / Incentives** module (migrations dated 2026-08-05). `project-docs/TODO.md` and `project-docs/LMS_FLOW_AUDIT.md` should be treated as historical snapshots of 2026-08-01, not current status; this file is now the current one.
 
-**Testing status:** a full repo scan found **zero test files** (`*.test.js`, `*.spec.js`) anywhere in the project. Every page is therefore ❌ Not Started for Testing — this is called out once here rather than repeated as a note on every row.
-
-This file is plain Markdown/text so it can be edited directly (in any editor, or in the Git repo) as statuses change — just swap the emoji and remarks.
+**Testing status:** unchanged — a repo-wide scan still finds **zero test files** (`*.test.js`, `*.spec.js`, PHPUnit tests beyond the Laravel skeleton). Every feature below is effectively ❌ for automated testing; not repeated per row.
 
 ---
 
-## 1. Authentication
+## 1. Authentication — ✅ Complete
 
-| Page | UI Design | Frontend | Backend API | Database | Testing | Remarks |
-|---|---|---|---|---|---|---|
-| Login | ✅ | ✅ | ✅ | ✅ | ❌ | Fully working — real `POST /auth/login` + session check |
-| Forgot Password | 🔄 | 🟡 | ❌ | ❌ | ❌ | Cosmetic view-switch inside `login.jsx`; not wired to any API |
-| Reset Password | 🔄 | 🟡 | ❌ | ❌ | ❌ | Same as above — fields exist, no submit logic |
-| Change Password | ✅ | ✅ | ✅ | ✅ | ❌ | Works, but as a modal (`ChangePasswordModal.jsx`), not a page |
+| Feature | Status | Remarks |
+|---|---|---|
+| Login / Logout / Logout-all | ✅ | `AuthController` + `authService.js`, session-token based |
+| Forgot / Reset Password | ✅ | `POST auth/forgot-password`, `POST auth/reset-password` wired end-to-end (fixed since 2026-07-27, when this was a UI stub) |
+| Change Password | ✅ | Modal-based, works |
+| My Profile (view/update) | ✅ | `MyProfile.jsx` |
 
-### Login
-- **Screen Purpose:** Authenticate a user and start a session.
-- **APIs Used:** `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`, `POST /auth/refresh` (`authService.js`)
-- **Database Tables (assumed):** `users`, `roles`
-- **UI Components:** Email/password fields, show/hide password toggle, "Remember me" checkbox
-- **Dependencies:** `axios`, `AuthContext`
-- **Current Development Status:** Complete and functioning end-to-end.
-- **Pending Tasks:** None functional; consider a11y labels on the password-visibility toggle.
-- **Priority:** High (already delivered — keep stable)
-
-### Forgot Password
-- **Screen Purpose:** Let a user request a password-reset email/OTP.
-- **APIs Used:** None yet. Needed: `POST /auth/forgot-password`
-- **Database Tables:** None wired. Needed: `password_reset_tokens`, `users`
-- **UI Components:** Email input (already built, inside `login.jsx`)
-- **Dependencies:** None
-- **Current Development Status:** Fake UI state (`view: "forgot"`) inside `login.jsx`; submit button has no handler.
-- **Pending Tasks:** Extract to its own route (or keep as a modal), build `authService.forgotPassword()`, wire the submit handler, add sent/error states.
-- **Priority:** High — security-relevant flow, currently unusable.
-
-### Reset Password
-- **Screen Purpose:** Let a user set a new password from a reset link/token.
-- **APIs Used:** None yet. Needed: `POST /auth/reset-password`
-- **Database Tables:** None wired. Needed: `password_reset_tokens`, `users`
-- **UI Components:** New password + confirm password fields (already built, inside `login.jsx`)
-- **Dependencies:** None
-- **Current Development Status:** Same in-component stub pattern as Forgot Password; no token handling, no route.
-- **Pending Tasks:** Needs a real route (e.g. `/reset-password/:token`), backend wiring, token-expiry handling, password-strength validation.
-- **Priority:** High
-
-### Change Password
-- **Screen Purpose:** Let a logged-in user change their own password.
-- **APIs Used:** `POST /auth/change-password` (`authService.js`)
-- **Database Tables (assumed):** `users`
-- **UI Components:** `ChangePasswordModal.jsx` — current/new/confirm fields, validation, error mapping
-- **Dependencies:** `authService.js`
-- **Current Development Status:** Fully working, opened from the Topbar.
-- **Pending Tasks:** Optional — promote from modal-only to a dedicated `/settings/security` page for discoverability.
-- **Priority:** Low (already functional)
+No outstanding gaps.
 
 ---
 
-## 2. Dashboard
+## 2. Dashboard — ✅ Complete
 
-| Page | UI Design | Frontend | Backend API | Database | Testing | Remarks |
-|---|---|---|---|---|---|---|
-| Dashboard | ✅ | 🟡 | ❌ | ❌ | ❌ | 5 role-specific dashboards, visually complete, 100% hardcoded data |
+| Feature | Status | Remarks |
+|---|---|---|
+| Role-based Dashboard (5 variants) | ✅ | **Fixed since 2026-08-01** — was 100% hardcoded arrays. Now `useDashboardData.js` calls `dashboardService.getDashboard()` → `GET /admin/dashboard`, handled by `DashboardController` (branches per role). |
 
-### Dashboard
-- **Screen Purpose:** Role-specific landing page with KPIs, tables, and charts (5 variants: Super Admin, Company Admin, Trainer, Sales Manager, Sales Employee).
-- **APIs Used:** None currently.
-- **Database Tables (needed):** `companies`, `employees`, `subscriptions`, `revenue/transactions`, `courses`, `certificates` (varies per role widget)
-- **UI Components:** Stat cards, companies table, hand-built revenue chart (no charting library)
-- **Dependencies:** `DashboardRouter.jsx` + 5 role dashboard components
-- **Current Development Status:** Strong visual mockup; all stats/tables/charts are static local arrays.
-- **Pending Tasks:** Build per-role stats/reporting APIs, replace mock arrays with live data + loading/error states, consider adopting a real charting library instead of hand-rolled SVG.
-- **Priority:** High — first screen every user sees.
+No outstanding gaps. (Still no charting library — the revenue chart is hand-rolled SVG; cosmetic, not a functional gap.)
 
 ---
 
-## 3. Company Management
+## 3. Company Management — ✅ Complete
 
-| Page | UI Design | Frontend | Backend API | Database | Testing | Remarks |
-|---|---|---|---|---|---|---|
-| Company List | ✅ | ✅ | ✅ | ✅ | ❌ | Most complete module — real pagination/search/filter/CSV export |
-| Add Company | ✅ | ✅ | ✅ | ✅ | ❌ | 3-step wizard, real validation + submission |
-| Edit Company | ✅ | ✅ | ✅ | ✅ | ❌ | Logo replace/remove, reset-to-loaded-data confirm |
-| View Company | ✅ | ✅ | ✅ | ✅ | ❌ | Read-only detail view, fully live |
+| Feature | Status | Remarks |
+|---|---|---|
+| Company List / Add / Edit / View | ✅ | Fully live, unchanged from prior audit |
+| Company Profile (Company Admin's own) | ✅ | |
+| Branches / Departments / Designations | ✅ | |
+| Company Admins (create/edit/reset-password/toggle-status) | ✅ | **Fixed since 2026-08-01** — `CompanyAdmins.jsx` now does full CRUD against `companies/{company}/admins*` |
+| Company Documents (upload/verify/delete) | ✅ | **Fixed since 2026-08-01** — `CompanyDocuments.jsx` now wired |
 
-### Company List
-- **Screen Purpose:** Browse, search, filter, and export the company directory.
-- **APIs Used:** `GET /admin/companies` (search/status/sort/page params) — `companyApi.js`
-- **Database Tables (assumed):** `companies`, `subscription_plans`, `branches`, `departments`
-- **UI Components:** Data table, search bar, status filter, sort control, CSV export, print-to-PDF
-- **Dependencies:** `useCompaniesList` hook, `utils/csv.js`
-- **Current Development Status:** Fully functional, real API-backed.
-- **Pending Tasks:** Automated tests; "Export PDF" is currently just `window.print()` — consider a real PDF export.
-- **Priority:** Medium
-
-### Add Company
-- **Screen Purpose:** Onboard a new company with a subscription plan and an admin user.
-- **APIs Used:** `GET /subscription-plans`, `POST /admin/companies` (multipart) — `companyApi.js`
-- **Database Tables (assumed):** `companies`, `subscription_plans`, `users`, address/location fields
-- **UI Components:** 3-step `WizardStepper`, logo drag-drop uploader, cascading Country/State/City selects, `PasswordField`
-- **Dependencies:** `react-hook-form`, `@hookform/resolvers/yup`, `yup`
-- **Current Development Status:** Fully functional 3-step wizard with real validation and submission.
-- **Pending Tasks:** Automated tests; verify duplicate email/GST server-error handling.
-- **Priority:** Medium
-
-### Edit Company
-- **Screen Purpose:** Update an existing company's details.
-- **APIs Used:** `GET /admin/companies/{id}`, `POST /admin/companies/{id}` (`_method=PUT` spoof, multipart)
-- **Database Tables (assumed):** `companies`
-- **UI Components:** Same field set as Add, plus logo replace/remove and a reset-to-loaded-data confirmation dialog
-- **Dependencies:** `react-hook-form`, `yup`
-- **Current Development Status:** Fully functional.
-- **Pending Tasks:** Automated tests.
-- **Priority:** Medium
-
-### View Company
-- **Screen Purpose:** Read-only detail view of a single company.
-- **APIs Used:** `GET /admin/companies/{id}`
-- **Database Tables (assumed):** `companies`, `subscription_plans`
-- **UI Components:** Profile card, stat cards (Employees/Branches/Departments/Designations), Company Information / Address / Subscription / Settings sections
-- **Dependencies:** `companyApi.js`
-- **Current Development Status:** Fully functional.
-- **Pending Tasks:** Automated tests.
-- **Priority:** Low
-
-> **Note:** the Company Management sub-navigation also has **Branches, Departments, and Designations** tabs — these exist in the menu/routing but are **not built yet** (render the generic "not built" placeholder). They weren't in the originally requested page list, so see the **Additional Pages Found** table near the end of this document.
+No outstanding gaps.
 
 ---
 
-## 4. Role & Permission Management
+## 4. Role & Permission Management — ✅ Complete
 
-| Page | UI Design | Frontend | Backend API | Database | Testing | Remarks |
-|---|---|---|---|---|---|---|
-| Role List | ✅ | ✅ | ✅ | ✅ | ❌ | Fully working CRUD via modal |
-| Add Role | ✅ | ✅ | ✅ | ✅ | ❌ | Modal-based (not a standalone page), fully functional |
-| Edit Role | ✅ | ✅ | ✅ | ✅ | ❌ | Modal-based, fully functional |
-| Role Details | ❌ | ❌ | ✅ | ✅ | ❌ | Backend endpoint exists but no read-only details screen uses it |
-| Permission List | ❌ | ❌ | ✅ | ✅ | ❌ | No standalone page to browse/manage permissions |
-| Assign Permissions | ✅ | ✅ | 🟡 | ✅ | ❌ | Works today via an inline payload; the dedicated sync endpoint is unused |
+| Feature | Status | Remarks |
+|---|---|---|
+| Role List / Add / Edit / Toggle / Delete | ✅ | |
+| Role Details + Permission Assignment page | ✅ | |
+| Standalone Permission CRUD (create/edit/delete/list catalog) | ✅ | **Fixed since 2026-08-01** — `PermissionList.jsx` is a real management screen (not just a read-only checklist), calling `createPermission`/`updatePermission`/`togglePermissionStatus`/`deletePermission` |
 
-### Role List
-- **Screen Purpose:** Browse, add, edit, activate/deactivate, and delete roles.
-- **APIs Used:** `GET admin/roles`, `PATCH admin/roles/{id}/status`, `DELETE admin/roles/{id}` (`rolesService.js`)
-- **Database Tables (assumed):** `roles`, `role_user` (user count), `role_permission` (permission count)
-- **UI Components:** Data table (Name, Description, Status, Users, Permissions, Created)
-- **Dependencies:** `rolesService.js`
-- **Current Development Status:** Fully functional.
-- **Pending Tasks:** Automated tests.
-- **Priority:** Medium
-
-### Add Role / Edit Role
-- **Screen Purpose:** Create or update a role and its permission set.
-- **APIs Used:** `POST admin/roles` / `PUT admin/roles/{id}` (permission IDs sent inline)
-- **Database Tables (assumed):** `roles`, `role_permission`
-- **UI Components:** Modal — Role Name, Description, grouped/searchable permission checklist with select-all
-- **Dependencies:** `rolesService.js`
-- **Current Development Status:** Fully functional, but implemented as a modal rather than a dedicated page.
-- **Pending Tasks:** Automated tests; decide if a full-page form is wanted instead of a modal.
-- **Priority:** Medium
-
-### Role Details
-- **Screen Purpose:** Read-only view of a single role's info and permissions.
-- **APIs Used:** `GET admin/roles/{id}` exists but is only used to *prefill the edit modal*, not to render a details screen.
-- **Database Tables (assumed):** `roles`, `role_permission`
-- **UI Components:** None built.
-- **Dependencies:** —
-- **Current Development Status:** No UI exists for this as a standalone screen.
-- **Pending Tasks:** Build a details view (or decide it's not needed since Edit already shows everything).
-- **Priority:** Low
-
-### Permission List
-- **Screen Purpose:** Browse/manage the catalog of available permissions.
-- **APIs Used:** `GET admin/permissions?per_page=100` exists but is only consumed inside the Role modal's checklist.
-- **Database Tables (assumed):** `permissions`
-- **UI Components:** None built as a standalone page.
-- **Dependencies:** —
-- **Current Development Status:** No page to create/edit/delete individual permissions.
-- **Pending Tasks:** Decide if permissions should be developer-managed only (seeded) or need an admin UI.
-- **Priority:** Low
-
-### Assign Permissions
-- **Screen Purpose:** Attach permissions to a role.
-- **APIs Used:** Currently sent inline via `createRole`/`updateRole`. A separate `syncRolePermissions` (`POST admin/roles/{id}/permissions`) exists in `rolesService.js` but is **not called anywhere**.
-- **Database Tables (assumed):** `role_permission`
-- **UI Components:** Grouped checkbox checklist inside the Add/Edit Role modal
-- **Dependencies:** `rolesService.js`
-- **Current Development Status:** Functionally works today; there's duplicate/dead backend wiring to reconcile.
-- **Pending Tasks:** Remove the unused `syncRolePermissions` function or switch to using it instead of the inline payload — pick one pattern.
-- **Priority:** Low (tech debt, not user-facing)
+No outstanding gaps.
 
 ---
 
-## 5. Employee Management
+## 5. Employee Management — 🟡 One gap remains
 
-| Page | UI Design | Frontend | Backend API | Database | Testing | Remarks |
-|---|---|---|---|---|---|---|
-| Employee List | ✅ | 🟡 | ❌ | ❌ | ❌ | Full CRUD *look*, but local-only mock state (resets on refresh) |
-| Add Employee | ✅ | ✅ | ❌ | ❌ | ❌ | Rich 3-step wizard; submission is fully faked |
-| Edit Employee | ❌ | ❌ | ❌ | ❌ | ❌ | **No edit route exists at all** |
-| Employee Profile | ✅ | 🔄 | ❌ | ❌ | ❌ | Shows identical mock data regardless of which employee was clicked |
+| Feature | Status | Remarks |
+|---|---|---|
+| Employee List / Add / Edit / Profile | ✅ | Edit confirmed as a real per-record load+update, Profile confirmed as real per-employee data |
+| Employee Documents / Skills / Emergency Contacts | ✅ | |
+| Employee Leave | ❌ | **Unchanged since 2026-07-27.** `EmployeeLeave.jsx` still renders a hardcoded `SEED` array via the generic `CrudPage`, no service import. Backend: no `EmployeeLeaveController` exists, zero `leave` routes in `routes/api.php` — only an orphaned `EmployeeLeave` model/table. |
 
-### Employee List
-- **Screen Purpose:** Browse, search, add, edit, delete employees.
-- **APIs Used:** None — `employeeService.js` is explicitly commented "Mock employees backend. No real API exists yet."
-- **Database Tables (needed):** `employees`, `departments`, `designations`, `branches`
-- **UI Components:** Generic `CrudPage`/`useCrudTable` engine — data table, search, sort, filter, bulk-delete, CSV import/export
-- **Dependencies:** `src/components/CrudPage.jsx`, `src/hooks/useCrudTable.js`
-- **Current Development Status:** Full-looking CRUD table, but entirely client-side state seeded from `employeeData.js`; nothing persists.
-- **Pending Tasks:** Build real `employeeService` endpoints and wire `useCrudTable` to them.
-- **Priority:** High
-
-### Add Employee
-- **Screen Purpose:** Onboard a new employee (details, address/documents, skills/emergency contacts).
-- **APIs Used:** `saveEmployeeDraft`/`createEmployee` — both mock (`setTimeout`). The one real call is `getCompanies` (to populate the company dropdown for Super Admins).
-- **Database Tables (needed):** `employees`, `employee_documents`, `employee_skills`, `emergency_contacts`
-- **UI Components:** 3-step wizard, `DocumentUploader`, password-strength meter, dynamic skill/emergency-contact rows
-- **Dependencies:** Manual `useState`-based form state, `WizardStepper`
-- **Current Development Status:** UI/validation fully built; "Save Draft"/"Save Employee" always succeed against a fake timer — nothing persisted.
-- **Pending Tasks:** Wire to a real backend; add duplicate-email/username server validation.
-- **Priority:** High
-
-### Edit Employee
-- **Screen Purpose:** Update an existing employee's details.
-- **APIs Used:** None.
-- **Database Tables (needed):** `employees`
-- **UI Components:** None built.
-- **Dependencies:** —
-- **Current Development Status:** `routePaths.js` has no `EMPLOYEES_EDIT` route — editing an employee is currently impossible in the app.
-- **Pending Tasks:** Add the route + page (can likely reuse most of `EmployeeForm.jsx`), wire to a real update endpoint.
-- **Priority:** High — basic CRUD gap.
-
-### Employee Profile
-- **Screen Purpose:** Read-only detail view (Overview, Documents, Skills, Emergency Contacts, Targets, Performance tabs).
-- **APIs Used:** None — hardcoded local arrays in the page file, explicitly commented "Mock per-employee detail."
-- **Database Tables (needed):** `employees`, `employee_documents`, `employee_skills`, `emergency_contacts`, `targets`, `performance_records`
-- **UI Components:** 6 tabs, static tables/lists
-- **Dependencies:** —
-- **Current Development Status:** Renders the *same* mock data no matter which employee row was clicked — not bound to the real selected employee.
-- **Pending Tasks:** Wire to a real per-employee API; fix the data-binding bug once the API exists.
-- **Priority:** High — this is misleading in a demo (looks correct, isn't).
+**Pending:** Build `EmployeeLeaveController` (index/store/update/updateStatus/destroy) + Form Requests + routes; wire `EmployeeLeave.jsx` to a real service. Est. 1.5 days. This is now the single oldest open item in the whole tracker — flagged in three consecutive audits (2026-07-27, 2026-08-01, 2026-08-07) with zero movement.
 
 ---
 
-## 6. Trainer Management
+## 6. Trainer Management — ✅ Complete
 
-| Page | UI Design | Frontend | Backend API | Database | Testing | Remarks |
-|---|---|---|---|---|---|---|
-| Trainer List | ✅ | 🟡 | ❌ | ❌ | ❌ | Same CrudPage pattern as Employees, fully mocked |
-| Add Trainer | ✅ | 🟡 | ❌ | ❌ | ❌ | Inline modal (no dedicated page); no backend at all |
-| Edit Trainer | ✅ | 🟡 | ❌ | ❌ | ❌ | Same inline modal; no backend at all |
-| Trainer Profile | ✅ | 🔄 | ❌ | ❌ | ❌ | Identical mock data regardless of trainer clicked |
+| Feature | Status | Remarks |
+|---|---|---|
+| Trainer List / Add / Profile | ✅ | |
+| Edit Trainer | ✅ | **Fixed since 2026-08-01** — route now registered in `AppRouter.jsx`, `TrainerForm.jsx` has a real edit branch |
+| Trainer Batch Allocations | ✅ | **Fixed since 2026-08-01** — now uses the real `useCompanyBatches` hook (the same one the actual Batches module uses) instead of hardcoded data |
 
-### Trainer List
-- **Screen Purpose:** Browse, search, add, edit, delete trainers.
-- **APIs Used:** None — **no `trainerService.js` file exists in the codebase at all.**
-- **Database Tables (needed):** `trainers`, `trainer_expertise`
-- **UI Components:** Generic `CrudPage` (Trainer, Expertise, Courses, Batches, Rating, Status columns)
-- **Dependencies:** `src/components/CrudPage.jsx`, hardcoded `trainerData.js`
-- **Current Development Status:** Full-looking CRUD, entirely local mock.
-- **Pending Tasks:** Build a `trainerService.js` and real backend endpoints from scratch.
-- **Priority:** High
-
-### Add Trainer / Edit Trainer
-- **Screen Purpose:** Create/update a trainer record.
-- **APIs Used:** None.
-- **Database Tables (needed):** `trainers`
-- **UI Components:** Inline `CrudPage` modal (no dedicated page/route)
-- **Dependencies:** —
-- **Current Development Status:** UI works, nothing persists.
-- **Pending Tasks:** Same as Trainer List — needs a real service layer.
-- **Priority:** Medium
-
-### Trainer Profile
-- **Screen Purpose:** Read-only detail view (Overview, Skills, Course Allocation, Schedule, Attendance, Performance, Feedback tabs).
-- **APIs Used:** None — hardcoded local arrays.
-- **Database Tables (needed):** `trainers`, `trainer_skills`, `trainer_courses`, `schedules`, `attendance`, `performance_records`, `feedback`
-- **UI Components:** 7 tabs, `StarRating` component
-- **Dependencies:** —
-- **Current Development Status:** Same data-binding issue as Employee Profile — shows identical data for every trainer.
-- **Pending Tasks:** Wire to a real per-trainer API once it exists; fix data binding.
-- **Priority:** Medium
+No outstanding gaps.
 
 ---
 
-## 7. Course Management
+## 7. Course Management — ✅ Complete
 
-| Page | UI Design | Frontend | Backend API | Database | Testing | Remarks |
-|---|---|---|---|---|---|---|
-| Course List | ✅ | 🟡 | ❌ | ❌ | ❌ | Filtering works client-side; row actions (View/More) have no handlers |
-| Add Course | ✅ | ✅ | ❌ | ❌ | ❌ | 4-step wizard, fully faked backend |
-| Course Details | 🔄 | ❌ | ❌ | ❌ | ❌ | A full mockup exists as **dead, unrouted code** (`courses.jsx`) |
-| Course Sections | ✅ | 🟡 | ❌ | ❌ | ❌ | Working generic CRUD table, hardcoded seed data |
-| Lessons | ✅ | 🟡 | ❌ | ❌ | ❌ | Same pattern as Course Sections |
-| Lesson Details | ❌ | ❌ | ❌ | ❌ | ❌ | No such page exists anywhere |
+| Feature | Status | Remarks |
+|---|---|---|
+| Course List / Wizard (add+edit) / Categories / Modules | ✅ | `courseService.js`'s ~40 exports are all real `axios` calls — the "mock backend" comment from 2026-07-27 is gone from the code and stale in every doc that still repeats it |
+| Course Details (read-only view) | ✅ | **Fixed since 2026-08-01** — `courses/CourseDetails.jsx` now routed and calls `getCourse()` |
+| Assessment + Questions builder | ✅ | |
+| Assessment Attempts (admin grade/evaluate) | ✅ | **Fixed since 2026-08-01** — `AssessmentAttempts.jsx` + `GradeAttemptModal.jsx` now real |
 
-### Course List
-- **Screen Purpose:** Browse/filter the course catalog.
-- **APIs Used:** None — hardcoded `COURSES` array and `STATS`.
-- **Database Tables (needed):** `courses`, `enrollments`
-- **UI Components:** Stat cards, tab filters, grid/list toggle, data table
-- **Dependencies:** —
-- **Current Development Status:** The actually-routed file is `src/pages/courseList.jsx`. A near-duplicate `src/pages/courses.jsx` exists but is **dead code, not routed anywhere** — don't confuse the two.
-- **Pending Tasks:** Build a real courses-listing API; wire the View/More row actions (currently no-ops).
-- **Priority:** High
-
-### Add Course
-- **Screen Purpose:** Create a course: details → modules/lessons → assessment → publish.
-- **APIs Used:** `saveCourseDraft`, `publishCourse` — both mock (`courseService.js` explicitly says "Mock courses backend. No real API exists yet").
-- **Database Tables (needed):** `courses`, `course_modules`, `lessons`, `lesson_resources`, `assessments`, `questions`
-- **UI Components:** 4-step wizard, homegrown `RichTextEditor` (contentEditable-based, not a library), image uploader
-- **Dependencies:** Custom validation (`courseWizardValidation.js`)
-- **Current Development Status:** Very complete step-by-step UI with real client-side validation; nothing is persisted server-side.
-- **Pending Tasks:** Build real course/module/lesson/assessment endpoints; consider swapping the homegrown rich-text editor for a maintained library (e.g. TipTap) if formatting needs grow.
-- **Priority:** High
-
-### Course Details
-- **Screen Purpose:** Single-course detail view (hero, curriculum accordion, reviews, Q&A, resources).
-- **APIs Used:** None — hardcoded constants.
-- **Database Tables (needed):** `courses`, `course_modules`, `lessons`, `reviews`
-- **UI Components:** Fully built in `courses.jsx` — hero image, tabs, expandable curriculum accordion
-- **Dependencies:** —
-- **Current Development Status:** The UI exists but is **not wired into routing at all** — currently unreachable from the app.
-- **Pending Tasks:** Decide whether to revive this file as a real route (`/courses/:id`) and wire it to a real API, or rebuild it fresh.
-- **Priority:** Medium
-
-### Course Sections
-- **Screen Purpose:** Manage course modules/sections.
-- **APIs Used:** None — hardcoded seed data.
-- **Database Tables (needed):** `course_modules`
-- **UI Components:** Generic `TrainingCrudPage` (shared CRUD engine) — Module, Course, Lessons, Duration, Order, Status columns
-- **Dependencies:** `TrainingCrudPage.jsx`, `CrudPage.jsx`
-- **Current Development Status:** Functional add/edit/delete/search/CSV table, entirely local.
-- **Pending Tasks:** Wire to a real API once course-module endpoints exist.
-- **Priority:** Medium
-
-### Lessons
-- **Screen Purpose:** Manage lessons within modules.
-- **APIs Used:** None — hardcoded seed data.
-- **Database Tables (needed):** `lessons`
-- **UI Components:** Same `TrainingCrudPage` engine — Lesson, Module, Type (Video/Document/Quiz), Duration, Order, Status
-- **Dependencies:** `TrainingCrudPage.jsx`
-- **Current Development Status:** Functional table, local-only.
-- **Pending Tasks:** Wire to a real API.
-- **Priority:** Medium
-
-### Lesson Details
-- **Screen Purpose:** Single-lesson detail/player view.
-- **APIs Used:** None.
-- **Database Tables (needed):** `lessons`, `lesson_resources`
-- **UI Components:** None built.
-- **Dependencies:** —
-- **Current Development Status:** Doesn't exist anywhere in the codebase.
-- **Pending Tasks:** Design and build from scratch.
-- **Priority:** Medium
-
-> **Note:** the Courses menu also has **Course Categories** and **Lesson Resources** sub-pages that exist in code (same `TrainingCrudPage` pattern, hardcoded seed data) but weren't in the originally requested page list — see **Additional Pages Found** below.
+No outstanding gaps.
 
 ---
 
-## 8. Training Management
+## 8. Lesson Management — ✅ Complete
 
-| Page | UI Design | Frontend | Backend API | Database | Testing | Remarks |
-|---|---|---|---|---|---|---|
-| Assign Courses | ❌ | ❌ | ❌ | ❌ | ❌ | No route/page exists yet |
-| Assigned Courses | ❌ | ❌ | ❌ | ❌ | ❌ | No route/page exists yet |
-| Employee Progress | ❌ | ❌ | ❌ | ❌ | ❌ | No route/page exists yet |
+| Feature | Status | Remarks |
+|---|---|---|
+| Lessons (list/add/edit/reorder) | ✅ | |
+| Lesson Resources | ✅ | **Fixed since 2026-08-01** — real service import confirmed, the "hardcoded SEED" finding from the prior audit no longer holds |
+| Lesson Details / player view | ✅ | **Fixed since 2026-08-01** |
+| Lesson Content Blocks (Notion-style editor) | ✅ | New since the last audit; `lessonContentService.js` fully wired to `LessonContentBlockController` |
 
-### Assign Courses / Assigned Courses / Employee Progress
-- **Screen Purpose:** Assign courses to employees, view assigned courses, and track completion progress.
-- **APIs Used:** None. Needed: `POST /training/assign`, `GET /training/assigned`, `GET /training/progress`
-- **Database Tables (needed):** `course_assignments`, `employee_progress`
-- **UI Components:** None built.
-- **Dependencies:** —
-- **Current Development Status:** Not started — no menu entry, route, or file exists for any of these three screens.
-- **Pending Tasks:** Full design + build from scratch (UI, API, DB).
-- **Priority:** High — this is core LMS functionality (assigning training and tracking completion) and currently has zero coverage.
-
-> **Note:** the app *does* have a "Training Sessions" placeholder under a separate "Training" parent menu — it's also unbuilt. See **Additional Pages Found** below.
+No outstanding gaps.
 
 ---
 
-## 9. Reports
+## 9. Assignments (Homework) & Assessments — ✅ Complete
 
-| Page | UI Design | Frontend | Backend API | Database | Testing | Remarks |
-|---|---|---|---|---|---|---|
-| Course Report | ❌ | ❌ | ❌ | ❌ | ❌ | No sub-page/route exists; only a single unbuilt "Reports" placeholder in the menu |
-| Employee Report | ❌ | ❌ | ❌ | ❌ | ❌ | Same as above |
-| Completion Report | ❌ | ❌ | ❌ | ❌ | ❌ | Same as above |
+Not tracked as its own module before; now substantial enough to call out separately from Course Management.
 
-### Course Report / Employee Report / Completion Report
-- **Screen Purpose:** Reporting/analytics on courses, employees, and completion rates.
-- **APIs Used:** None. Needed: reporting/aggregation endpoints per report type.
-- **Database Tables (needed):** Aggregation across `courses`, `employees`, `enrollments`, `course_assignments`, `employee_progress`
-- **UI Components:** None built — the single "Reports" menu item renders a generic "not built" placeholder.
-- **Dependencies:** —
-- **Current Development Status:** Not started.
-- **Pending Tasks:** Define report requirements with stakeholders, design UI, build backend aggregation queries.
-- **Priority:** Medium
+| Feature | Status | Remarks |
+|---|---|---|
+| Assignment authoring (admin CRUD, Draft/Published/Closed) | ✅ | `Assignments.jsx` |
+| Assignment submission review + evaluate (Pass/Fail) | ✅ | `AssignmentSubmissions.jsx` |
+| Employee: start assignment (locks lessons) → submit with real file upload | ✅ | `AssignmentSubmissionController::start/submit`, multipart file upload (not a URL text box) |
+| Assignment Lock | ✅ | Enforced **server-side** (`LearningController::isLocked()`, HTTP 423) — not just hidden in the UI |
+| Assessment (quiz) attempt/evaluate flow | ✅ | Pre-existing, confirmed still working |
+
+**Known minor gaps (not blocking):** no resubmission flow after a Fail; no inline file preview in the trainer review screen (download link only).
 
 ---
 
-## 10. Settings
+## 10. Training Management — ✅ Complete (architecture fixed)
 
-| Page | UI Design | Frontend | Backend API | Database | Testing | Remarks |
-|---|---|---|---|---|---|---|
-| General Settings | ❌ | ❌ | ❌ | ❌ | ❌ | No sub-page/route exists; only a single unbuilt "Settings" placeholder in the menu |
-| Company Settings | ❌ | ❌ | ❌ | ❌ | ❌ | Some fields (timezone/language/currency/office hours) already appear *read-only* on the View Company screen |
-| Office Hours | ❌ | ❌ | ❌ | ❌ | ❌ | Same as above — read-only display exists, no editable settings page |
+| Feature | Status | Remarks |
+|---|---|---|
+| Batches (list/add/edit) | ✅ | **Architecture fixed since 2026-08-01.** `batches.course_id` is now nullable (migration `2026_08_01_000001_make_batch_course_id_nullable.php`), `BatchForm.jsx` no longer has a Course field at all. A Batch is now a pure employee group, matching the originally intended design. |
+| Batch Enrollments | ✅ | |
+| Assign Courses — to individual employees | ✅ | |
+| Assign Courses — to a batch (all members) | ✅ | **New.** `AssignCourseAdd.jsx` now has an "employees" vs. "batch" mode toggle; `assignCourseToBatch()` → `POST companies/{company}/batches/{batch}/course-assignments` fans out to every current batch member. This closes the gap `LMS_FLOW_AUDIT.md` flagged as the headline architecture violation. |
+| Training Sessions | ✅ | **Built from scratch since 2026-08-01** (was "Not Started") — real `TrainingSessionController` + `TrainingSessions.jsx` wired via `companyApi.js` |
+| Employee Progress / Completion Tracking | ✅ | **Built from scratch since 2026-08-01** — `EmployeeProgressController` + `EmployeeProgress.jsx`, and course completion is now genuinely *derived* (auto-completes via `CourseAssignment::maybeAutoComplete()` after last lesson + any assignment passes), not just an admin manual toggle |
 
-### General Settings / Company Settings / Office Hours
-- **Screen Purpose:** System-wide and per-company configuration (locale, currency, working hours, etc.).
-- **APIs Used:** None. Needed: `GET/PUT /settings`, `GET/PUT /companies/{id}/settings`
-- **Database Tables (needed):** `settings` / `company_settings`
-- **UI Components:** None built — the single "Settings" menu item renders a generic "not built" placeholder. (Company → View Company already *displays* timezone/language/currency/office-hours read-only, which can likely be reused as a starting point.)
-- **Dependencies:** —
-- **Current Development Status:** Not started as an editable screen.
-- **Pending Tasks:** Design and build from scratch; consider reusing the read-only display already built in View Company as a base.
-- **Priority:** Low
+No outstanding gaps.
 
 ---
 
-## Additional Pages Found in Codebase (Outside Original Scope)
+## 11. My Learning (Employee-Facing) — ✅ Complete
 
-These exist in the app's menu/routing today but weren't part of the requested page list above. Flagged here for visibility since they affect real users navigating the sidebar.
+Did not exist in any prior audit — the entire employee/learner side of the LMS.
 
-| Module | Page | UI Design | Frontend | Backend API | Database | Testing | Remarks |
-|---|---|---|---|---|---|---|---|
-| Company Management | Branches | ❌ | ❌ | ❌ | ❌ | ❌ | Tab exists in nav, renders "not built" placeholder |
-| Company Management | Departments | ❌ | ❌ | ❌ | ❌ | ❌ | Same |
-| Company Management | Designations | ❌ | ❌ | ❌ | ❌ | ❌ | Same |
-| Course Management | Course Categories | ✅ | 🟡 | ❌ | ❌ | ❌ | Working CRUD table (`TrainingCrudPage`), hardcoded seed data |
-| Course Management | Lesson Resources | ✅ | 🟡 | ❌ | ❌ | ❌ | Same pattern — PDF/Video/Link/Slides resource table |
-| Training Management | Training Sessions | ❌ | ❌ | ❌ | ❌ | ❌ | Only page under the "Training" parent menu; renders placeholder |
+| Feature | Status | Remarks |
+|---|---|---|
+| My Learning (assigned courses, progress bars) | ✅ | `MyLearning.jsx` → `learningService.js` |
+| Course Player (lesson-by-lesson, Mark Complete) | ✅ | `CoursePlayer.jsx`, writes to `employee_learning_progress` (previously a permanently-empty orphaned table) |
+| My Certificates (list + view + download) | ✅ | `MyCertificates.jsx`, `CertificateView.jsx` → `certificateService.js` |
+| Certificate auto-issuance on course completion | ✅ | `Certificate::issueFor()`, triggered the moment a course auto-completes |
+| Certificate verification (by number, any authenticated role) | ✅ | `GET certificates/verify/{certificateNo}` |
 
-*(Not included in the Overall Progress Summary percentages below, since they were outside the requested scope — but recommend formally adding them to the tracked list.)*
+No outstanding gaps.
 
 ---
 
-## Overall Progress Summary
+## 12. Certificates (Admin Side) — 🟡 One gap
 
-Counts are across the **38 originally requested pages** only.
+| Feature | Status | Remarks |
+|---|---|---|
+| Certificate Templates (create/edit/duplicate/set default) | ✅ | `CertificateTemplateList.jsx`/`Form.jsx` under Masters, fully wired |
+| Admin: browse all issued certificates / revoke | ❌ | `CertificateController::index/revoke` exist and are routed (`companies/{company}/certificates*`), but the top-level "Certificates" sidebar item (`menuConfig.js` id `certificates`, for Super Admin/Company Admin) has **no page mapped to it** in `AppRouter.jsx`'s `PAGE_COMPONENTS` — it still falls through to the generic `Placeholder`. |
 
-### UI Design
-| Status | Count |
-|---|---|
-| ✅ Completed | 22 |
-| 🟡 In Progress | 0 |
-| 🔄 UI Revision Required | 3 |
-| ❌ Not Started | 13 |
+**Pending:** Build an admin Certificates list/revoke screen — API is ready, this is frontend-only work. Est. 1 day.
 
-### Frontend
-| Status | Count |
-|---|---|
-| ✅ Completed | 12 |
-| 🟡 In Progress | 10 |
-| 🔄 UI Revision Required | 2 |
-| ❌ Not Started | 14 |
+---
 
-### Backend API
-| Status | Count |
-|---|---|
-| ✅ Completed | 11 |
-| 🟡 In Progress | 1 |
-| ❌ Not Started | 26 |
+## 13. Reports — ✅ Complete
 
-### Database
-| Status | Count |
-|---|---|
-| ✅ Completed | 12 |
-| ❌ Not Started | 26 |
+| Feature | Status | Remarks |
+|---|---|---|
+| Course / Employee / Completion reports | ✅ | **Built from scratch since 2026-08-01** (was "Not Started") — `Reports.jsx` → `reportsService.js` → `ReportController` |
+| Sales Reports (employee performance / lead conversion / target achievement / incentives / revenue) | ✅ | New with the Sales module — `Reports.jsx` calls all 5 `salesReportsApi.js` functions across tabs, backed by `SalesReportController` |
+
+No outstanding gaps.
+
+---
+
+## 14. Settings — ✅ Complete
+
+| Feature | Status | Remarks |
+|---|---|---|
+| Company Settings (locale/currency/office hours, editable) | ✅ | **Built from scratch since 2026-08-01** — `CompanySettingsPanel.jsx` |
+| System Settings (platform-wide) | ✅ | **Built from scratch since 2026-08-01** — `SystemSettingsPanel.jsx` |
+
+No outstanding gaps.
+
+---
+
+## 15. Subscription Management — ✅ Complete
+
+| Feature | Status | Remarks |
+|---|---|---|
+| Subscription Plans CRUD | ✅ | |
+| Assign Subscription at Company creation | ✅ | |
+| Renew / Update Payment Status / Cancel Subscription | ✅ | **Built from scratch since 2026-08-01** — live in `CompanyView.jsx`'s subscription section |
+| Platform-wide Subscriptions list | ✅ | **Built from scratch since 2026-08-01** — `AllSubscriptions.jsx` under Masters |
+
+No outstanding gaps.
+
+---
+
+## 16. Sales Performance — Leads / Sales Team / Targets / Incentives (NEW MODULE) — 🟡 Mostly complete
+
+This entire module is **new since the last audit** (migrations dated 2026-08-05) and was not present in any prior tracker. It is, in effect, the "Sales Team Management" half of this application's name, as distinct from the "LMS" half covered above.
+
+| Feature | Status | Remarks |
+|---|---|---|
+| Lead List / CRUD | ✅ | `LeadController`, `pages/leads/` |
+| Lead Import (bulk, via spreadsheet) | ✅ | `LeadImportController` uses `maatwebsite/excel` |
+| Lead Status tracking + audit log | ✅ | `LeadStatusLogController` |
+| Lead Assignment (to rep, individual or round-robin by team) | ✅ | `LeadAssignmentController` + `LeadAssignmentService` |
+| Lead Conversion (rep submits → admin verifies Approve/Reject) | ✅ | `LeadConversionController`, `MyLeadController::submitConversion` |
+| Sales Team management (create team, assign/remove members) | ✅ | `SalesTeamController` + `SalesTeamMemberController`, real admin screen (not backend-only) |
+| Monthly Targets (set/view/edit, period-locked once elapsed) | ✅ | `MonthlyTargetController` |
+| Monthly Incentives (view + status) | 🟡 | Read + status-change only. **No independent "calculate incentive" API or button exists** — calculation only ever happens as a side effect inside `LeadConversionController::verify()` when a conversion is approved. Functionally fine if that's the intended design (event-driven, not on-demand), but worth confirming with the team since there's no way to force a recalculation without another conversion event. |
+| My Leads / My Target / My Incentives (rep self-service view) | ✅ | `MyLeadController`, `MyTargetController`, `MyIncentiveController` |
+| Sales Reports | ✅ | Covered in §13 above |
+
+**Pending (low priority):** decide whether Monthly Incentives needs an explicit recalculate/trigger action, or whether the current event-driven-only design is intentional.
+
+---
+
+## Areas Confirmed Still Not Started (unchanged from every prior audit)
+
+| Area | Status | Notes |
+|---|---|---|
+| Analytics | ❌ | Sidebar item exists (`menuConfig.js` id `analytics`); no controller anywhere in `app/Http/Controllers/Api/Admin/`, no page — falls through to generic `Placeholder`. |
+| Notifications | ❌ | Same pattern — sidebar item + `notifications` DB table/model exist, no controller, no page. |
+| Audit Logs | ❌ | Same pattern — sidebar item + `AuditLog` model/table exist, no controller, no page. |
+
+---
+
+## Summary
+
+### Module Status (16 tracked modules + 3 unstarted areas)
+
+| # | Module | Status |
+|---|---|---|
+| 1 | Authentication | ✅ Complete |
+| 2 | Dashboard | ✅ Complete |
+| 3 | Company Management | ✅ Complete |
+| 4 | Role & Permission Management | ✅ Complete |
+| 5 | Employee Management | 🟡 One gap (Employee Leave) |
+| 6 | Trainer Management | ✅ Complete |
+| 7 | Course Management | ✅ Complete |
+| 8 | Lesson Management | ✅ Complete |
+| 9 | Assignments & Assessments | ✅ Complete |
+| 10 | Training Management | ✅ Complete |
+| 11 | My Learning (employee-facing) | ✅ Complete |
+| 12 | Certificates (admin side) | 🟡 One gap (browse/revoke screen) |
+| 13 | Reports | ✅ Complete |
+| 14 | Settings | ✅ Complete |
+| 15 | Subscription Management | ✅ Complete |
+| 16 | Sales Performance (Leads/Teams/Targets/Incentives) | 🟡 One caveat (incentive recalculation) |
+| — | Analytics / Notifications / Audit Logs | ❌ Not started (never scoped as core requirements) |
+
+**Headline:** 13 of 16 tracked modules are fully complete end-to-end (UI + API + DB, real data, no mocks). The other 3 each have exactly one specific, narrow gap — not broad module-level work. The only feature that has been flagged as missing in every audit since 2026-07-27 with zero progress is **Employee Leave**.
+
+### What changed since the last written audit (2026-08-01 → 2026-08-07)
+In six days: the Batch/Course-Assignment architecture was corrected to match spec, the entire learner-facing flow (My Learning, lesson completion, Assignment homework + lock, auto-completion, auto-certificates) was built from nothing, Reports and Settings went from placeholders to fully live, Company Admins/Documents/PermissionList/AllSubscriptions/subscription-lifecycle screens were all wired up, Trainer Edit was fixed, and a brand-new Leads/Sales-Team/Targets/Incentives module was built and shipped without a tracking document existing for it until now.
+
+### Remaining Work (only 4 items across the whole app)
+1. **Employee Leave** — build `EmployeeLeaveController` + routes + wire `EmployeeLeave.jsx`. ~1.5 days. Oldest open item in the project.
+2. **Admin Certificates screen** (browse/revoke) — API ready, frontend-only. ~1 day.
+3. **Monthly Incentives recalculate action** — clarify requirement, likely small if needed at all.
+4. **Analytics / Notifications / Audit Logs** — not started; confirm with stakeholders whether these are in scope before estimating.
 
 ### Testing
-| Status | Count |
-|---|---|
-| ✅ Completed | 0 |
-| ❌ Not Started | 38 |
+Still zero automated tests anywhere in either repository. This is now the single largest risk to the project, more so than any remaining feature gap — the app is close to feature-complete but has no regression safety net for the substantial amount of business logic that now exists (assignment-lock enforcement, auto-completion, certificate issuance, lead-to-incentive calculation chain).
 
----
-
-## 1. Pending UI Screens
-- Forgot Password *(revision)* — extract from `login.jsx` into a real screen
-- Reset Password *(revision)* — same
-- Course Details *(revision)* — revive dead `courses.jsx` mockup into a routed page
-- Role Details
-- Permission List
-- Edit Employee
-- Lesson Details
-- Assign Courses
-- Assigned Courses
-- Employee Progress
-- Course Report
-- Employee Report
-- Completion Report
-- General Settings
-- Company Settings
-- Office Hours
-- *(Bonus scope)* Company Branches, Departments, Designations; Training Sessions
-
-## 2. Pending APIs
-- `POST /auth/forgot-password`, `POST /auth/reset-password`
-- Dashboard stats endpoints (per role)
-- Employee CRUD: create/update/delete/list (`employeeService.js` is fully mocked today)
-- Edit Employee endpoint
-- Employee Profile per-record detail endpoint
-- Trainer CRUD: create/update/delete/list (**no `trainerService.js` exists at all**)
-- Trainer Profile per-record detail endpoint
-- Course CRUD (create/update/delete/publish — `courseService.js` is fully mocked today)
-- Course Sections (modules) CRUD
-- Lessons CRUD
-- Lesson Details / Lesson Resources CRUD
-- Training assignment: assign courses, list assigned courses, employee progress tracking
-- Reports: course/employee/completion aggregation endpoints
-- Settings: general/company/office-hours read+write endpoints
-- Role & Permission cleanup: reconcile unused `syncRolePermissions` vs. inline payload; decide if a Permission CRUD API is needed
-
-## 3. Pending Database Tables
-- `password_reset_tokens`
-- Real `employees`, `employee_documents`, `employee_skills`, `emergency_contacts` (currently only frontend mock shapes exist)
-- `trainers`, `trainer_expertise`, `trainer_skills`, `trainer_courses`
-- `courses`, `course_modules`, `lessons`, `lesson_resources`, `assessments`, `questions`, `enrollments`
-- `course_assignments`, `employee_progress`
-- `settings` / `company_settings`
-- Reporting aggregation views/tables for Course/Employee/Completion reports
-
-## 4. Pending Testing
-- **Everything.** Zero automated tests exist in the repository today — including the two most "production-ready" modules (Company Management, Roles & Permissions) that are already live-wired to real APIs.
-- Recommend starting with: (1) API-integration smoke tests for Company & Roles modules since they're closest to production, (2) form-validation unit tests for the Add Company / Add Role / Add Employee / Add Course wizards.
-
-## 5. Next Sprint Plan (Suggested)
-1. **Employee & Trainer backend wiring** — UI is largely done for both; highest ROI is building the real APIs and swapping out the mock services.
-2. **Fix Employee Profile / Trainer Profile data binding** — currently shows identical fake data regardless of which record was clicked; risk of misleading stakeholders in a demo.
-3. **Ship Forgot/Reset Password** — currently a security gap (users who forget their password have no way to recover their account).
-4. **Add the missing Edit Employee route** — basic CRUD parity gap.
-5. **Decide the fate of `courses.jsx`** (Course Details) — revive as a routed page or delete as dead code.
-6. **Start Training Management from scratch** — Assign Courses / Assigned Courses / Employee Progress are core LMS functionality with zero current coverage.
-7. Begin scoping Reports and Settings with stakeholders (currently pure placeholders).
-
-## 6. Risks & Blockers
-- **Zero automated test coverage** across the entire app, including live-API modules — regressions won't be caught before manual QA.
-- **"Looks done, isn't" risk:** Employee, Trainer, and Course "Add" flows have polished, fully-validated UI wizards that *silently discard all data* on submit (mocked `setTimeout` success) — high risk of confusing stakeholders in demos into thinking these modules are production-ready.
-- **Employee Profile / Trainer Profile show identical mock data for every record** — could actively mislead a reviewer clicking between different employees/trainers.
-- **No `EMPLOYEES_EDIT` route** — editing an employee is not currently possible in the app at all.
-- **Dead code:** `src/pages/courses.jsx` (a full Course Details mockup) is not routed anywhere and could be mistaken for a working feature, or accidentally deleted by someone unaware it's meant to be revived.
-- **Sidebar/menu ahead of implementation:** Company → Branches/Departments/Designations and Training → Training Sessions appear as clickable nav items but land on an unbuilt placeholder — inconsistent-feeling UX for end users today.
-- **No shared UI libraries** for charts, rich text, or date-pickers (`package.json` has none) — the Dashboard charts, the Course wizard's rich-text editor, and drag-drop uploaders are all hand-rolled, which increases long-term maintenance cost versus adopting a maintained library.
-- **Tech debt:** duplicate/inconsistent permission-assignment code path (`syncRolePermissions` defined but unused).
-
-## 7. Estimated Completion %
-
-Methodology: for each of the 5 tracked dimensions (UI/Frontend/Backend/Database/Testing) across the 38 requested pages, ✅ = 1 point, 🟡 = 0.5, 🔄 = 0.25, ❌ = 0. Dimension completion = sum of points ÷ 38. Overall = average of the 5 dimension percentages. This is a rough planning heuristic, not a formal story-point estimate — adjust the weighting if the team prefers a different method.
+### Estimated Completion %
+Methodology: per tracked module (16, excluding the 3 never-scoped placeholder areas), ✅ = 1, 🟡 = 0.75 (each partial gap is narrow, not module-wide). 13×1 + 3×0.75 = 15.25 / 16 = **95%** feature-complete. Testing coverage remains 0%.
 
 | Dimension | Completion |
 |---|---|
-| UI Design | 60% |
-| Frontend | 46% |
-| Backend API | 30% |
-| Database | 32% |
+| UI | ~97% |
+| Backend API | ~98% |
+| Database | ~99% |
 | Testing | 0% |
-| **Overall** | **~34%** |
+| **Overall feature completeness** | **~95%** |
 
-**Headline takeaway:** the app *looks* more finished than it *is* — UI is roughly 60% done, but real backend wiring sits around 30%, and there is no automated test safety net at all. The fastest path to a genuinely demo-able product is backend integration for Employee/Trainer/Course (UI is already built for these), not more UI work.
+**Bottom line:** this project has moved from "UI-ahead-of-backend demo" (34% overall, 2026-07-27) to "backend-ahead-of-docs, near feature-complete" (95%, 2026-08-07) in under two weeks. The fastest path to genuinely production-ready is no longer building more features — it's closing the 4 small remaining gaps above and, more importantly, building an automated test suite before this size of codebase accumulates regressions no one is watching for.

@@ -8,10 +8,10 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import EmployeeAssignmentFields from "./form/EmployeeAssignmentFields.jsx";
 import PersonalInfoFields from "./form/PersonalInfoFields.jsx";
 import ContactInfoFields from "./form/ContactInfoFields.jsx";
+import SalesMarketingFields from "./form/SalesMarketingFields.jsx";
 import AddressFields from "./form/AddressFields.jsx";
 import SkillsSection from "./form/SkillsSection.jsx";
-import EmergencyContactSection from "./form/EmergencyContactSection.jsx";
-import { emptySkillRow, emptyEmergencyContact, emptyAddress, SKILL_LEVELS, RELATIONSHIPS } from "./employeeFormData.js";
+import { emptySkillRow, emptyAddress, SKILL_LEVELS } from "./employeeFormData.js";
 import { validateEmployeeDetails, validateAddressStep, hasErrors } from "./employeeFormValidation.js";
 import {
   getCompanies,
@@ -23,9 +23,6 @@ import {
   createCompanyEmployeeSkill,
   updateCompanyEmployeeSkill,
   deleteCompanyEmployeeSkill,
-  createCompanyEmployeeEmergencyContact,
-  updateCompanyEmployeeEmergencyContact,
-  deleteCompanyEmployeeEmergencyContact,
   ApiValidationError,
 } from "../../services/api/companyApi.js";
 import { resolveApiAssetUrl } from "../../utils/apiAssetUrl.js";
@@ -42,12 +39,17 @@ const DETAIL_FIELD_MAP = {
   date_of_birth: "dob",
   joining_date: "joiningDate",
   branch_id: "branchId",
-  department_id: "departmentId",
   designation_id: "designationId",
-  manager_id: "reportingManagerId",
   employment_type: "employmentType",
   profile_photo: "profilePhoto",
   login_password: "password",
+  monthly_lead_target: "monthlyLeadTarget",
+  monthly_sales_target: "monthlySalesTarget",
+  monthly_revenue_target: "monthlyRevenueTarget",
+  commission_type: "commissionType",
+  commission_percentage: "commissionPercentage",
+  work_mode: "workMode",
+  preferred_customer_type: "preferredCustomerType",
 };
 
 function buildInitialFormData(lockedCompanyId) {
@@ -58,9 +60,7 @@ function buildInitialFormData(lockedCompanyId) {
       employeeCode: "",
       companyId: lockedCompanyId ?? "",
       branchId: "",
-      departmentId: "",
       designationId: "",
-      reportingManagerId: "",
       firstName: "",
       lastName: "",
       gender: "",
@@ -73,14 +73,16 @@ function buildInitialFormData(lockedCompanyId) {
       password: "",
       confirmPassword: "",
       status: "Active",
+      monthlyLeadTarget: "",
+      monthlySalesTarget: "",
+      monthlyRevenueTarget: "",
+      commissionType: "",
+      commissionPercentage: "",
+      workMode: "",
+      preferredCustomerType: "",
     },
-    address: {
-      current: emptyAddress(),
-      sameAsCurrent: true,
-      permanent: emptyAddress(),
-    },
+    address: emptyAddress(),
     skills: [],
-    emergencyContacts: [],
   };
 }
 
@@ -98,7 +100,6 @@ function mapAddressRecord(record) {
 
 function mapEmployeeToFormData(employee) {
   const currentAddr = (employee.addresses ?? []).find((a) => a.address_type === "Current");
-  const permanentAddr = (employee.addresses ?? []).find((a) => a.address_type === "Permanent");
 
   return {
     details: {
@@ -107,9 +108,7 @@ function mapEmployeeToFormData(employee) {
       employeeCode: employee.employee_code ?? "",
       companyId: employee.company_id ?? "",
       branchId: employee.branch_id ?? "",
-      departmentId: employee.department_id ?? "",
       designationId: employee.designation_id ?? "",
-      reportingManagerId: employee.manager_id ?? "",
       firstName: employee.first_name ?? "",
       lastName: employee.last_name ?? "",
       gender: employee.gender ?? "",
@@ -122,27 +121,21 @@ function mapEmployeeToFormData(employee) {
       password: "",
       confirmPassword: "",
       status: employee.status ?? "Active",
+      monthlyLeadTarget: employee.monthly_lead_target != null ? String(employee.monthly_lead_target) : "",
+      monthlySalesTarget: employee.monthly_sales_target != null ? String(employee.monthly_sales_target) : "",
+      monthlyRevenueTarget: employee.monthly_revenue_target != null ? String(employee.monthly_revenue_target) : "",
+      commissionType: employee.commission_type ?? "",
+      commissionPercentage: employee.commission_percentage != null ? String(employee.commission_percentage) : "",
+      workMode: employee.work_mode ?? "",
+      preferredCustomerType: employee.preferred_customer_type ?? "",
     },
-    address: {
-      current: mapAddressRecord(currentAddr),
-      sameAsCurrent: !permanentAddr,
-      permanent: mapAddressRecord(permanentAddr),
-    },
+    address: mapAddressRecord(currentAddr),
     skills: (employee.skills ?? []).map((s) => ({
       id: s.id,
       persisted: true,
       name: s.skill_name ?? "",
       level: s.skill_level ?? SKILL_LEVELS[0],
       experienceYears: s.experience_years != null ? String(s.experience_years) : "",
-    })),
-    emergencyContacts: (employee.emergency_contacts ?? []).map((c) => ({
-      id: c.id,
-      persisted: true,
-      name: c.contact_name ?? "",
-      relationship: c.relationship ?? RELATIONSHIPS[0],
-      mobile: c.mobile ?? "",
-      email: c.email ?? "",
-      address: c.address ?? "",
     })),
   };
 }
@@ -163,10 +156,15 @@ function buildEmployeeFormData(details) {
   append("date_of_birth", details.dob);
   append("joining_date", details.joiningDate);
   append("branch_id", details.branchId);
-  append("department_id", details.departmentId);
   append("designation_id", details.designationId);
-  append("manager_id", details.reportingManagerId);
   append("employment_type", details.employmentType);
+  append("monthly_lead_target", details.monthlyLeadTarget);
+  append("monthly_sales_target", details.monthlySalesTarget);
+  append("monthly_revenue_target", details.monthlyRevenueTarget);
+  append("commission_type", details.commissionType);
+  append("commission_percentage", details.commissionPercentage);
+  append("work_mode", details.workMode);
+  append("preferred_customer_type", details.preferredCustomerType);
   if (details.profilePhotoFile instanceof File) fd.append("profile_photo", details.profilePhotoFile);
   if (details.createLogin) {
     fd.append("create_login", "1");
@@ -211,7 +209,6 @@ export default function EmployeeForm() {
 
   const originalStatusRef = useRef("Active");
   const originalSkillIdsRef = useRef([]);
-  const originalContactIdsRef = useRef([]);
 
   useEffect(() => {
     if (!isEdit) return undefined;
@@ -224,7 +221,6 @@ export default function EmployeeForm() {
         if (cancelled) return;
         originalStatusRef.current = employee.status ?? "Active";
         originalSkillIdsRef.current = (employee.skills ?? []).map((s) => s.id);
-        originalContactIdsRef.current = (employee.emergency_contacts ?? []).map((c) => c.id);
         setFormData(mapEmployeeToFormData(employee));
       })
       .catch((error) => {
@@ -275,32 +271,15 @@ export default function EmployeeForm() {
     });
   }
 
-  function updateCurrentAddress(field, value) {
+  function updateAddress(field, value) {
     setDirty(true);
-    setFormData((prev) => {
-      const nextCurrent = { ...prev.address.current, [field]: value };
-      const nextPermanent = prev.address.sameAsCurrent ? nextCurrent : prev.address.permanent;
-      return { ...prev, address: { ...prev.address, current: nextCurrent, permanent: nextPermanent } };
-    });
+    setFormData((prev) => ({ ...prev, address: { ...prev.address, [field]: value } }));
     setErrors((prev) => {
-      if (!prev.address?.current?.[field]) return prev;
-      const nextCurrentErrors = { ...prev.address.current };
-      delete nextCurrentErrors[field];
-      return { ...prev, address: { ...prev.address, current: nextCurrentErrors } };
+      if (!prev.address?.[field]) return prev;
+      const next = { ...prev.address };
+      delete next[field];
+      return { ...prev, address: next };
     });
-  }
-
-  function updatePermanentAddress(field, value) {
-    setDirty(true);
-    setFormData((prev) => ({ ...prev, address: { ...prev.address, permanent: { ...prev.address.permanent, [field]: value } } }));
-  }
-
-  function toggleSameAsCurrent(checked) {
-    setDirty(true);
-    setFormData((prev) => ({
-      ...prev,
-      address: { ...prev.address, sameAsCurrent: checked, permanent: checked ? { ...prev.address.current } : prev.address.permanent },
-    }));
   }
 
   function addSkillRow() {
@@ -318,72 +297,33 @@ export default function EmployeeForm() {
     setFormData((prev) => ({ ...prev, skills: prev.skills.map((row) => (row.id === id ? { ...row, [field]: value } : row)) }));
   }
 
-  function addEmergencyContact() {
-    setDirty(true);
-    setFormData((prev) => ({ ...prev, emergencyContacts: [...prev.emergencyContacts, emptyEmergencyContact()] }));
-  }
-
-  function removeEmergencyContact(id) {
-    setDirty(true);
-    setFormData((prev) => ({ ...prev, emergencyContacts: prev.emergencyContacts.filter((row) => row.id !== id) }));
-  }
-
-  function changeEmergencyContact(id, field, value) {
-    setDirty(true);
-    setFormData((prev) => ({
-      ...prev,
-      emergencyContacts: prev.emergencyContacts.map((row) => (row.id === id ? { ...row, [field]: value } : row)),
-    }));
-  }
-
   function validateForm() {
     const detailsErrs = validateEmployeeDetails(formData.details, { requireCompany: showCompanyDropdown });
     const addressErrs = validateAddressStep(formData.address);
     setErrors((prev) => ({ ...prev, details: detailsErrs, address: addressErrs }));
-    return !hasErrors(detailsErrs) && !hasErrors(addressErrs.current);
+    return !hasErrors(detailsErrs) && !hasErrors(addressErrs);
   }
 
   function buildAddressTasks(companyId, employeeId) {
     const tasks = [];
-    const current = formData.address.current;
-    if (current.line1 || current.city || current.state || current.country || current.pincode) {
+    const address = formData.address;
+    if (address.line1 || address.city || address.state || address.country || address.pincode) {
       tasks.push(
         saveCompanyEmployeeAddress(
           companyId,
           employeeId,
           {
             address_type: "Current",
-            address_line1: current.line1,
-            address_line2: current.line2,
-            city: current.city,
-            state: current.state,
-            country: current.country,
-            pincode: current.pincode,
+            address_line1: address.line1,
+            address_line2: address.line2,
+            city: address.city,
+            state: address.state,
+            country: address.country,
+            pincode: address.pincode,
           },
           token
         )
       );
-    }
-    if (!formData.address.sameAsCurrent) {
-      const permanent = formData.address.permanent;
-      if (permanent.line1 || permanent.city || permanent.state || permanent.country || permanent.pincode) {
-        tasks.push(
-          saveCompanyEmployeeAddress(
-            companyId,
-            employeeId,
-            {
-              address_type: "Permanent",
-              address_line1: permanent.line1,
-              address_line2: permanent.line2,
-              city: permanent.city,
-              state: permanent.state,
-              country: permanent.country,
-              pincode: permanent.pincode,
-            },
-            token
-          )
-        );
-      }
     }
     return tasks;
   }
@@ -414,34 +354,6 @@ export default function EmployeeForm() {
     return tasks;
   }
 
-  function buildContactTasks(companyId, employeeId) {
-    const tasks = [];
-    const keptIds = new Set();
-
-    formData.emergencyContacts.forEach((row) => {
-      if (!row.name.trim()) return;
-      const payload = {
-        contact_name: row.name.trim(),
-        relationship: row.relationship,
-        mobile: row.mobile,
-        email: row.email,
-        address: row.address,
-      };
-      if (row.persisted) {
-        keptIds.add(row.id);
-        tasks.push(updateCompanyEmployeeEmergencyContact(companyId, employeeId, row.id, payload, token));
-      } else {
-        tasks.push(createCompanyEmployeeEmergencyContact(companyId, employeeId, payload, token));
-      }
-    });
-
-    originalContactIdsRef.current
-      .filter((id) => !keptIds.has(id))
-      .forEach((id) => tasks.push(deleteCompanyEmployeeEmergencyContact(companyId, employeeId, id, token)));
-
-    return tasks;
-  }
-
   async function handleSaveEmployee() {
     if (!validateForm()) {
       setToast({ tone: "error", message: "Please fix the highlighted fields before saving." });
@@ -460,7 +372,6 @@ export default function EmployeeForm() {
       const tasks = [
         ...buildAddressTasks(activeCompanyId, employee.id),
         ...buildSkillTasks(activeCompanyId, employee.id),
-        ...buildContactTasks(activeCompanyId, employee.id),
       ];
       if (isEdit && formData.details.status !== originalStatusRef.current) {
         tasks.push(updateCompanyEmployeeStatus(activeCompanyId, employee.id, { status: formData.details.status }, token));
@@ -551,7 +462,6 @@ export default function EmployeeForm() {
                   companies={companies}
                   companiesLoading={companiesLoading}
                   companiesError={companiesError}
-                  excludeEmployeeId={routeEmployeeId}
                   isEdit={isEdit}
                 />
 
@@ -566,39 +476,19 @@ export default function EmployeeForm() {
                 <ContactInfoFields data={formData.details} errors={errors.details ?? {}} onChange={updateDetails} isEdit={isEdit} />
 
                 <div className="form-section-divider">
-                  <span className="form-section-title">Current Address</span>
+                  <span className="form-section-title">Sales &amp; Marketing Information</span>
                 </div>
-                <AddressFields data={formData.address.current} errors={errors.address?.current ?? {}} onChange={updateCurrentAddress} required />
-
-                <label className="ef-same-address">
-                  <input type="checkbox" checked={formData.address.sameAsCurrent} onChange={(e) => toggleSameAsCurrent(e.target.checked)} />
-                  <span>Same as Current Address</span>
-                </label>
+                <SalesMarketingFields data={formData.details} errors={errors.details ?? {}} onChange={updateDetails} />
 
                 <div className="form-section-divider">
-                  <span className="form-section-title">Permanent Address</span>
+                  <span className="form-section-title">Address</span>
                 </div>
-                <AddressFields
-                  data={formData.address.permanent}
-                  errors={{}}
-                  onChange={updatePermanentAddress}
-                  disabled={formData.address.sameAsCurrent}
-                />
+                <AddressFields data={formData.address} errors={errors.address ?? {}} onChange={updateAddress} required />
 
                 <div className="form-section-divider">
                   <span className="form-section-title">Skills</span>
                 </div>
                 <SkillsSection rows={formData.skills} onAddRow={addSkillRow} onRemoveRow={removeSkillRow} onChangeRow={changeSkillRow} />
-
-                <div className="form-section-divider">
-                  <span className="form-section-title">Emergency Contact</span>
-                </div>
-                <EmergencyContactSection
-                  rows={formData.emergencyContacts}
-                  onAddRow={addEmergencyContact}
-                  onRemoveRow={removeEmergencyContact}
-                  onChangeRow={changeEmergencyContact}
-                />
               </div>
 
               <div className="wizard-step-footer">

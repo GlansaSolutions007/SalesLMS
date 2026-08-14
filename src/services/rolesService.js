@@ -39,3 +39,33 @@ export function syncRolePermissions(id, permission_ids, token) {
 export function getPermissions(token) {
   return api.get("admin/permissions", { params: { per_page: 100 }, headers: authHeader(token) });
 }
+
+// ── Standalone Permission CRUD (Permission Management module) ──────────────
+
+export function getPermissionsPaginated(params, token) {
+  return api.get("admin/permissions", { params, headers: authHeader(token) });
+}
+
+export function getPermissionModules(token) {
+  return api.get("admin/permissions/modules", { headers: authHeader(token) });
+}
+
+export function getPermission(id, token) {
+  return api.get(`admin/permissions/${id}`, { headers: authHeader(token) });
+}
+
+export function createPermission(data, token) {
+  return api.post("admin/permissions", data, { headers: authHeader(token) });
+}
+
+export function updatePermission(id, data, token) {
+  return api.put(`admin/permissions/${id}`, data, { headers: authHeader(token) });
+}
+
+export function togglePermissionStatus(id, token) {
+  return api.patch(`admin/permissions/${id}/status`, {}, { headers: authHeader(token) });
+}
+
+export function deletePermission(id, token) {
+  return api.delete(`admin/permissions/${id}`, { headers: authHeader(token) });
+}

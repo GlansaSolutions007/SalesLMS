@@ -17,7 +17,7 @@ import {
   ApiValidationError,
 } from "../../services/api/trainersApi.js";
 import { SKILL_LEVELS } from "../employees/employeeFormData.js";
-import { ROUTES } from "../../router/routePaths.js";
+import { ROUTES, trainerEditPath } from "../../router/routePaths.js";
 import "../employees/EmployeeProfile.css";
 import "./TrainerProfile.css";
 
@@ -253,6 +253,10 @@ export default function TrainerProfile() {
             <Breadcrumb current={trainer.full_name} />
           </div>
           <div className="tp-header-actions">
+            <button type="button" className="cl-btn" onClick={() => navigate(trainerEditPath(trainer.id))}>
+              <Icon name="edit" size={14} />
+              Edit
+            </button>
             <button
               type="button"
               className={isActive ? "cl-btn tp-deactivate-btn" : "dash-primary-btn"}

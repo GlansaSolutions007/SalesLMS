@@ -642,6 +642,34 @@
   gap: 2px;
 }
 
+/* Kept in the DOM (still registered/submitted) but hidden from view — e.g.
+   fields auto-filled from a selection that shouldn't be user-editable */
+.is-hidden {
+  display: none;
+}
+
+/* "Same as X" / "Use X details" toggle checkbox row (address forms, admin
+   details copied from the company, etc.) */
+.ef-same-address {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 6px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.ef-same-address input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary-600);
+}
+
 .form-logo-row {
   margin-bottom: 14px;
 }

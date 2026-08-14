@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
+import SubscriptionBanner from "./SubscriptionBanner.jsx";
 import useDocumentTitle from "../hooks/useDocumentTitle.js";
 import "../styles/controls.css";
 
@@ -12,6 +13,7 @@ export default function AppLayout() {
     <div className="dash-shell">
       <Sidebar collapsed={collapsed} onToggleCollapsed={setCollapsed} />
       <main className="dash-main">
+        <SubscriptionBanner />
         <Outlet context={{ collapsed, toggleCollapsed: () => setCollapsed((c) => !c) }} />
       </main>
     </div>

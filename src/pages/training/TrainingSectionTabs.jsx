@@ -3,8 +3,11 @@ import SubNavTabs from "../../components/SubNavTabs.jsx";
 import { ROUTES } from "../../router/routePaths.js";
 
 const TABS = [
+  { key: "trainers", label: "Trainers", path: ROUTES.TRAINERS },
+  { key: "batches", label: "Batches", path: ROUTES.BATCHES },
   { key: "sessions", label: "Training Sessions", path: ROUTES.TRAINING_SESSIONS },
   { key: "assign-courses", label: "Assign Courses", path: ROUTES.TRAINING_ASSIGN_COURSES },
+  { key: "employee-progress", label: "Employee Progress", path: ROUTES.TRAINING_EMPLOYEE_PROGRESS },
 ];
 
 // Subnav for the "Training" section itself (Training Sessions, Assign

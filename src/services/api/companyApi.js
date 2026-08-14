@@ -415,3 +415,325 @@ export async function updateCompany(id, formData, token) {
     throw toApiError(error, "Something went wrong. Please try again.");
   }
 }
+
+// GET /companies/{company}/batches?course_id=&status=&per_page=&sort=&dir=&page=
+// Response shape: { success, message, data: { data: [...batches], pagination: {...} } }
+export async function getCompanyBatches(companyId, params, token) {
+  try {
+    const res = await httpClient.get(`/companies/${companyId}/batches`, { headers: authHeaders(token), params });
+    const body = res.data?.data ?? res.data;
+    return {
+      items: body?.data ?? [],
+      pagination: { ...DEFAULT_PAGINATION, ...body?.pagination },
+    };
+  } catch (error) {
+    throw toApiError(error, "Could not load batches for this company.");
+  }
+}
+
+// GET /companies/{company}/batches/{batch}
+export async function getCompanyBatch(companyId, batchId, token) {
+  try {
+    const res = await httpClient.get(`/companies/${companyId}/batches/${batchId}`, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not load this batch.");
+  }
+}
+
+// POST /companies/{company}/batches
+export async function createCompanyBatch(companyId, payload, token) {
+  try {
+    const res = await httpClient.post(`/companies/${companyId}/batches`, payload, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not create this batch.");
+  }
+}
+
+// PUT /companies/{company}/batches/{batch}
+export async function updateCompanyBatch(companyId, batchId, payload, token) {
+  try {
+    const res = await httpClient.put(`/companies/${companyId}/batches/${batchId}`, payload, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not update this batch.");
+  }
+}
+
+// ── Company Settings (Super Admin + Company Admin) ──────────────────────────
+// GET /companies/{company}/settings
+export async function getCompanySettings(companyId, token) {
+  try {
+    const res = await httpClient.get(`/companies/${companyId}/settings`, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not load company settings.");
+  }
+}
+
+// PUT /companies/{company}/settings
+export async function updateCompanySettings(companyId, payload, token) {
+  try {
+    const res = await httpClient.put(`/companies/${companyId}/settings`, payload, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not update company settings.");
+  }
+}
+
+// ── Company Admins (Super Admin only) ───────────────────────────────────────
+// GET /admin/companies/{company}/admins
+export async function getCompanyAdmins(companyId, token) {
+  try {
+    const res = await httpClient.get(`/admin/companies/${companyId}/admins`, { headers: authHeaders(token) });
+    return res.data?.data ?? [];
+  } catch (error) {
+    throw toApiError(error, "Could not load admins for this company.");
+  }
+}
+
+// POST /admin/companies/{company}/admins
+export async function createCompanyAdmin(companyId, payload, token) {
+  try {
+    const res = await httpClient.post(`/admin/companies/${companyId}/admins`, payload, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not create this admin.");
+  }
+}
+
+// PUT /admin/companies/{company}/admins/{admin}
+export async function updateCompanyAdmin(companyId, adminId, payload, token) {
+  try {
+    const res = await httpClient.put(`/admin/companies/${companyId}/admins/${adminId}`, payload, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not update this admin.");
+  }
+}
+
+// PATCH /admin/companies/{company}/admins/{admin}/reset-password
+export async function resetCompanyAdminPassword(companyId, adminId, payload, token) {
+  try {
+    const res = await httpClient.patch(`/admin/companies/${companyId}/admins/${adminId}/reset-password`, payload, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not reset this admin's password.");
+  }
+}
+
+// PATCH /admin/companies/{company}/admins/{admin}/toggle-status
+export async function toggleCompanyAdminStatus(companyId, adminId, token) {
+  try {
+    const res = await httpClient.patch(`/admin/companies/${companyId}/admins/${adminId}/toggle-status`, {}, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not update this admin's status.");
+  }
+}
+
+// ── Company Documents (Super Admin + Company Admin) ─────────────────────────
+// GET /companies/{company}/documents
+export async function getCompanyDocuments(companyId, token) {
+  try {
+    const res = await httpClient.get(`/companies/${companyId}/documents`, { headers: authHeaders(token) });
+    return res.data?.data ?? [];
+  } catch (error) {
+    throw toApiError(error, "Could not load documents for this company.");
+  }
+}
+
+// POST /companies/{company}/documents (multipart/form-data)
+export async function createCompanyDocument(companyId, formData, token) {
+  try {
+    const res = await httpClient.post(`/companies/${companyId}/documents`, formData, {
+      headers: { ...authHeaders(token), "Content-Type": "multipart/form-data" },
+    });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not upload this document.");
+  }
+}
+
+// PATCH /companies/{company}/documents/{document}/verify
+export async function verifyCompanyDocument(companyId, documentId, payload, token) {
+  try {
+    const res = await httpClient.patch(`/companies/${companyId}/documents/${documentId}/verify`, payload, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not update this document's verification status.");
+  }
+}
+
+// DELETE /companies/{company}/documents/{document}
+export async function deleteCompanyDocument(companyId, documentId, token) {
+  try {
+    const res = await httpClient.delete(`/companies/${companyId}/documents/${documentId}`, { headers: authHeaders(token) });
+    return res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not delete this document.");
+  }
+}
+
+// ── Batch Enrollments ────────────────────────────────────────────────────────
+// GET /companies/{company}/batches/{batch}/enrollments
+export async function getBatchEnrollments(companyId, batchId, token) {
+  try {
+    const res = await httpClient.get(`/companies/${companyId}/batches/${batchId}/enrollments`, { headers: authHeaders(token) });
+    return res.data?.data ?? [];
+  } catch (error) {
+    throw toApiError(error, "Could not load enrollments for this batch.");
+  }
+}
+
+// POST /companies/{company}/batches/{batch}/enrollments
+export async function enrollBatchEmployees(companyId, batchId, employeeIds, token) {
+  try {
+    const res = await httpClient.post(`/companies/${companyId}/batches/${batchId}/enrollments`, { employee_ids: employeeIds }, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not enroll these employees.");
+  }
+}
+
+// PATCH /companies/{company}/batches/{batch}/enrollments/{enrollment}
+export async function updateBatchEnrollment(companyId, batchId, enrollmentId, payload, token) {
+  try {
+    const res = await httpClient.patch(`/companies/${companyId}/batches/${batchId}/enrollments/${enrollmentId}`, payload, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not update this enrollment.");
+  }
+}
+
+// DELETE /companies/{company}/batches/{batch}/enrollments/{enrollment}
+export async function unenrollBatchEmployee(companyId, batchId, enrollmentId, token) {
+  try {
+    const res = await httpClient.delete(`/companies/${companyId}/batches/${batchId}/enrollments/${enrollmentId}`, { headers: authHeaders(token) });
+    return res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not unenroll this employee.");
+  }
+}
+
+// ── Training Sessions (per batch) ────────────────────────────────────────────
+// GET /companies/{company}/batches/{batch}/training-sessions
+export async function getBatchTrainingSessions(companyId, batchId, token) {
+  try {
+    const res = await httpClient.get(`/companies/${companyId}/batches/${batchId}/training-sessions`, { headers: authHeaders(token) });
+    return res.data?.data ?? [];
+  } catch (error) {
+    throw toApiError(error, "Could not load training sessions for this batch.");
+  }
+}
+
+// POST /companies/{company}/batches/{batch}/training-sessions
+export async function createBatchTrainingSession(companyId, batchId, payload, token) {
+  try {
+    const res = await httpClient.post(`/companies/${companyId}/batches/${batchId}/training-sessions`, payload, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not create this training session.");
+  }
+}
+
+// PUT /companies/{company}/batches/{batch}/training-sessions/{session}
+export async function updateBatchTrainingSession(companyId, batchId, sessionId, payload, token) {
+  try {
+    const res = await httpClient.put(`/companies/${companyId}/batches/${batchId}/training-sessions/${sessionId}`, payload, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not update this training session.");
+  }
+}
+
+// PATCH /companies/{company}/batches/{batch}/training-sessions/{session}/status
+export async function updateBatchTrainingSessionStatus(companyId, batchId, sessionId, session_status, token) {
+  try {
+    const res = await httpClient.patch(`/companies/${companyId}/batches/${batchId}/training-sessions/${sessionId}/status`, { session_status }, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not update this session's status.");
+  }
+}
+
+// DELETE /companies/{company}/batches/{batch}/training-sessions/{session}
+export async function deleteBatchTrainingSession(companyId, batchId, sessionId, token) {
+  try {
+    await httpClient.delete(`/companies/${companyId}/batches/${batchId}/training-sessions/${sessionId}`, { headers: authHeaders(token) });
+  } catch (error) {
+    throw toApiError(error, "Could not delete this training session.");
+  }
+}
+
+// ── Employee Progress (built on course_assignments.status) ──────────────────
+// GET /companies/{company}/employee-progress?search=&course_id=&per_page=&page=
+export async function getEmployeeProgress(companyId, params, token) {
+  try {
+    const res = await httpClient.get(`/companies/${companyId}/employee-progress`, { headers: authHeaders(token), params });
+    const body = res.data?.data ?? res.data;
+    return {
+      items: body?.data ?? [],
+      pagination: { total: 0, per_page: 25, current_page: 1, last_page: 1, from: 0, to: 0, ...body?.pagination },
+    };
+  } catch (error) {
+    throw toApiError(error, "Could not load employee progress.");
+  }
+}
+
+// GET /companies/{company}/employee-progress/{employee}
+export async function getEmployeeProgressDetail(companyId, employeeId, token) {
+  try {
+    const res = await httpClient.get(`/companies/${companyId}/employee-progress/${employeeId}`, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not load this employee's progress.");
+  }
+}
+
+// PATCH /companies/{company}/course-assignments/{assignment}/status
+export async function updateCourseAssignmentStatus(companyId, assignmentId, status, token) {
+  try {
+    const res = await httpClient.patch(`/companies/${companyId}/course-assignments/${assignmentId}/status`, { status }, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not update this assignment's status.");
+  }
+}
+
+// GET /companies/{company}/course-assignments?search=&course_id=&status=&per_page=&page=
+// Response shape: { success, message, data: { data: [...assignments], pagination: {...} } }
+export async function getCourseAssignments(companyId, params, token) {
+  try {
+    const res = await httpClient.get(`/companies/${companyId}/course-assignments`, { headers: authHeaders(token), params });
+    const body = res.data?.data ?? res.data;
+    return {
+      items: body?.data ?? [],
+      pagination: { ...DEFAULT_PAGINATION, ...body?.pagination },
+    };
+  } catch (error) {
+    throw toApiError(error, "Could not load course assignments.");
+  }
+}
+
+// POST /companies/{company}/batches/{batch}/course-assignments — assigns the
+// course to every currently-enrolled member of the batch in one call.
+export async function assignCourseToBatch(companyId, batchId, payload, token) {
+  try {
+    const res = await httpClient.post(`/companies/${companyId}/batches/${batchId}/course-assignments`, payload, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not assign this course to the batch.");
+  }
+}
+
+// POST /companies/{company}/course-assignments
+export async function createCourseAssignment(companyId, payload, token) {
+  try {
+    const res = await httpClient.post(`/companies/${companyId}/course-assignments`, payload, { headers: authHeaders(token) });
+    return res.data?.data ?? res.data;
+  } catch (error) {
+    throw toApiError(error, "Could not assign this course.");
+  }
+}

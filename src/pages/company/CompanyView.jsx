@@ -6,18 +6,121 @@ import Badge from "../../components/Badge.jsx";
 import Avatar from "../../components/Avatar.jsx";
 import StatCard from "../../components/StatCard.jsx";
 import Skeleton from "../../components/Skeleton.jsx";
+import Modal from "../../components/Modal.jsx";
+import FormField from "../../components/FormField.jsx";
+import ConfirmDialog from "../../components/ConfirmDialog.jsx";
+import Toast from "../../components/Toast.jsx";
+import DataTable from "../../components/DataTable.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { getCompanyById, getCompanyProfile, ApiError } from "../../services/api/companyApi.js";
+import {
+  renewSubscription,
+  extendSubscription,
+  updateSubscriptionPaymentStatus,
+  cancelSubscription,
+  getCompanySubscriptions,
+  getSubscriptionPlans,
+} from "../../services/subscriptionService.js";
+import {
+  getRenewalRequests,
+  createRenewalRequest,
+  cancelRenewalRequest,
+} from "../../services/renewalRequestService.js";
 import { resolveApiAssetUrl } from "../../utils/apiAssetUrl.js";
-import { ROUTES, companyEditPath } from "../../router/routePaths.js";
-import { PAYMENT_TONE, formatDate, formatStorage, formatCurrency, formatWeeklyOff, DetailField } from "./companyDisplay.jsx";
+import { ROUTES, companyEditPath, renewalRequestViewPath } from "../../router/routePaths.js";
+import BuySubscriptionModal from "../../components/payment/BuySubscriptionModal.jsx";
+import SeatIncreaseModal from "../../components/payment/SeatIncreaseModal.jsx";
+import PaymentHistoryModal from "../../components/payment/PaymentHistoryModal.jsx";
+import InvoicesModal from "../../components/payment/InvoicesModal.jsx";
+import {
+  PAYMENT_TONE,
+  SUBSCRIPTION_STATUS_TONE,
+  formatDate,
+  formatStorage,
+  formatCurrency,
+  formatWeeklyOff,
+  formatDaysRemaining,
+  DetailField,
+} from "./companyDisplay.jsx";
 import "./CompanyView.css";
+
+const PAYMENT_STATUS_OPTIONS = ["Pending", "Paid", "Expired"];
+const REQUEST_STATUS_TONE = { Pending: "orange", Approved: "blue", Completed: "green", Rejected: "red", Cancelled: "gray" };
+
+function RENEWAL_REQUEST_COLUMNS(onProcess, onCancel) {
+  return [
+    { key: "request_number", header: "Request Number" },
+    { key: "requested_at", header: "Requested On", render: (r) => formatDate(r.requested_at) },
+    { key: "current_end_date", header: "Previous End Date", render: (r) => formatDate(r.subscription?.end_date) },
+    {
+      key: "status",
+      header: "Status",
+      render: (r) => <Badge tone={REQUEST_STATUS_TONE[r.status] ?? "gray"}>{r.status}</Badge>,
+    },
+    {
+      key: "actions",
+      header: "",
+      render: (r) => (
+        <div style={{ display: "flex", gap: 6 }}>
+          {onProcess && (
+            <button type="button" className="dash-icon-btn" title="Process" aria-label={`Process ${r.request_number}`} onClick={() => onProcess(r)}>
+              <Icon name="eye" size={15} />
+            </button>
+          )}
+          {onCancel && r.status === "Pending" && (
+            <button type="button" className="dash-icon-btn" title="Cancel request" aria-label={`Cancel ${r.request_number}`} onClick={() => onCancel(r)}>
+              <Icon name="close" size={15} />
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
+}
+
+// Subscription History table columns — Subscription No / Plan / Billing
+// Cycle / Employee Count / Price Per Employee / Total Amount / Start /
+// End / Payment Status / Subscription Status / Created By / Created Date /
+// View, exactly as requested.
+function HISTORY_COLUMNS(onView) {
+  return [
+    { key: "subscription_no", header: "Subscription No." },
+    { key: "plan", header: "Plan", render: (r) => r.plan?.plan_name ?? "—" },
+    { key: "billing_cycle", header: "Billing Cycle" },
+    { key: "employee_count", header: "Employees", render: (r) => <span className="cl-numeric">{r.employee_count ?? "—"}</span> },
+    { key: "price_per_employee", header: "Price/Employee", render: (r) => formatCurrency(r.price_per_employee) },
+    { key: "total_amount", header: "Total Amount", render: (r) => formatCurrency(r.total_amount) },
+    { key: "start_date", header: "Start Date", render: (r) => formatDate(r.start_date) },
+    { key: "end_date", header: "End Date", render: (r) => formatDate(r.end_date) },
+    {
+      key: "payment_status",
+      header: "Payment",
+      render: (r) => <Badge tone={PAYMENT_TONE[r.payment_status] ?? "gray"}>{r.payment_status}</Badge>,
+    },
+    {
+      key: "effective_status",
+      header: "Status",
+      render: (r) => <Badge tone={SUBSCRIPTION_STATUS_TONE[r.effective_status] ?? "gray"}>{r.effective_status}</Badge>,
+    },
+    { key: "created_by", header: "Created By", render: (r) => r.created_by?.name ?? "—" },
+    { key: "created_at", header: "Created Date", render: (r) => formatDate(r.created_at) },
+    {
+      key: "actions",
+      header: "",
+      render: (r) => (
+        <button type="button" className="dash-icon-btn" aria-label={`View ${r.subscription_no}`} onClick={() => onView(r)}>
+          <Icon name="eye" size={15} />
+        </button>
+      ),
+    },
+  ];
+}
 
 export default function CompanyView() {
   const { id: routeId } = useParams();
   const { toggleCollapsed } = useOutletContext();
   const navigate = useNavigate();
-  const { token, user } = useAuth();
+  const { token, user, roleName } = useAuth();
 
   // No :id in the URL means this is a Company Admin viewing their own
   // company (/company/profile) rather than Super Admin browsing a company
@@ -31,6 +134,210 @@ export default function CompanyView() {
   const [company, setCompany] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [retryKey, setRetryKey] = useState(0);
+
+  const isSuperAdmin = roleName === "Super Admin";
+  const isCompanyAdminRole = roleName === "Company Admin";
+  // Razorpay self-service (Subscribe/Increase Seats/Payment History/
+  // Invoices) is reachable by a Company Admin managing their own company,
+  // or a Super Admin managing any company — unlike the admin-manual
+  // Renew/Upgrade/Extend/Payment Status/Cancel actions below, which stay
+  // Super-Admin-only exactly as before (their backend routes never changed).
+  const canManagePayments = isSuperAdmin || isOwnProfile;
+  const [buySubOpen, setBuySubOpen] = useState(false);
+  const [seatIncreaseOpen, setSeatIncreaseOpen] = useState(false);
+  const [paymentHistoryOpen, setPaymentHistoryOpen] = useState(false);
+  const [invoicesOpen, setInvoicesOpen] = useState(false);
+
+  const [renewOpen, setRenewOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentValue, setPaymentValue] = useState("Pending");
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [subActionLoading, setSubActionLoading] = useState(false);
+  const [subToast, setSubToast] = useState(null);
+
+  // Upgrade — reuses renewSubscription() with a plan_id; the backend
+  // classifies Upgrade vs Downgrade automatically (see subscription.todo.md).
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradePlanId, setUpgradePlanId] = useState("");
+  const [plans, setPlans] = useState([]);
+  const [plansLoading, setPlansLoading] = useState(false);
+
+  // Extend
+  const [extendOpen, setExtendOpen] = useState(false);
+  const [extendMonths, setExtendMonths] = useState(3);
+
+  // View History
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyItems, setHistoryItems] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const [historyDetail, setHistoryDetail] = useState(null);
+
+  // Renewal Requests — visible on a Company Admin's own profile (they can
+  // submit/cancel) and to a Super Admin browsing any company (read-only
+  // list here; processing a request happens on the dedicated Masters >
+  // Renewal Requests > Process page, not inline in this panel).
+  const [renewalRequests, setRenewalRequests] = useState([]);
+  const [renewalRequestsLoading, setRenewalRequestsLoading] = useState(false);
+  const [requestRenewalOpen, setRequestRenewalOpen] = useState(false);
+  const [requestMessage, setRequestMessage] = useState("");
+  const [cancelRequestTarget, setCancelRequestTarget] = useState(null);
+
+  function loadRenewalRequests() {
+    if (!id) return;
+    setRenewalRequestsLoading(true);
+    getRenewalRequests(id, token)
+      .then((res) => setRenewalRequests(res.data?.data ?? []))
+      .catch(() => setRenewalRequests([]))
+      .finally(() => setRenewalRequestsLoading(false));
+  }
+
+  async function handleSubmitRenewalRequest() {
+    setSubActionLoading(true);
+    try {
+      await createRenewalRequest(id, { message: requestMessage.trim() || undefined }, token);
+      setRequestRenewalOpen(false);
+      setRequestMessage("");
+      loadRenewalRequests();
+      setSubToast({ tone: "success", message: "Renewal request submitted successfully." });
+    } catch (err) {
+      setSubToast({ tone: "error", message: err?.response?.data?.message ?? "Could not submit renewal request." });
+    } finally {
+      setSubActionLoading(false);
+    }
+  }
+
+  async function handleCancelRenewalRequest() {
+    if (!cancelRequestTarget) return;
+    setSubActionLoading(true);
+    try {
+      await cancelRenewalRequest(id, cancelRequestTarget.id, token);
+      setCancelRequestTarget(null);
+      loadRenewalRequests();
+      setSubToast({ tone: "success", message: "Renewal request cancelled." });
+    } catch (err) {
+      setSubToast({ tone: "error", message: err?.response?.data?.message ?? "Could not cancel renewal request." });
+    } finally {
+      setSubActionLoading(false);
+    }
+  }
+
+  function refreshCompany() {
+    setRetryKey((k) => k + 1);
+  }
+
+  async function handleRenew() {
+    setSubActionLoading(true);
+    try {
+      await renewSubscription(id, company.active_subscription.id, {}, token);
+      setRenewOpen(false);
+      refreshCompany();
+      setSubToast({ tone: "success", message: "Subscription renewed." });
+    } catch (err) {
+      setSubToast({ tone: "error", message: err?.response?.data?.message ?? "Could not renew subscription." });
+    } finally {
+      setSubActionLoading(false);
+    }
+  }
+
+  async function openUpgrade() {
+    setUpgradePlanId("");
+    setUpgradeOpen(true);
+    setPlansLoading(true);
+    try {
+      const res = await getSubscriptionPlans({ status: "Active", per_page: 100 }, token);
+      const list = res.data?.data?.data ?? res.data?.data ?? [];
+      // The company's current plan isn't a valid "upgrade" target.
+      setPlans(list.filter((p) => p.id !== company.active_subscription?.plan?.id));
+    } catch {
+      setPlans([]);
+    } finally {
+      setPlansLoading(false);
+    }
+  }
+
+  async function handleUpgrade() {
+    if (!upgradePlanId) return;
+    setSubActionLoading(true);
+    try {
+      await renewSubscription(id, company.active_subscription.id, { plan_id: upgradePlanId }, token);
+      setUpgradeOpen(false);
+      refreshCompany();
+      setSubToast({ tone: "success", message: "Subscription plan changed." });
+    } catch (err) {
+      setSubToast({ tone: "error", message: err?.response?.data?.message ?? "Could not change plan." });
+    } finally {
+      setSubActionLoading(false);
+    }
+  }
+
+  async function handleExtend() {
+    const months = Number(extendMonths);
+    if (!months || months < 1) return;
+    setSubActionLoading(true);
+    try {
+      await extendSubscription(id, company.active_subscription.id, { extension_months: months }, token);
+      setExtendOpen(false);
+      refreshCompany();
+      setSubToast({ tone: "success", message: `Subscription extended by ${months} month(s).` });
+    } catch (err) {
+      setSubToast({ tone: "error", message: err?.response?.data?.message ?? "Could not extend subscription." });
+    } finally {
+      setSubActionLoading(false);
+    }
+  }
+
+  async function openHistory() {
+    setHistoryOpen(true);
+    setHistoryLoading(true);
+    setHistoryError("");
+    try {
+      const res = await getCompanySubscriptions(id, token);
+      setHistoryItems(res.data?.data ?? []);
+    } catch (err) {
+      setHistoryError(err?.response?.data?.message ?? "Could not load subscription history.");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  async function handlePaymentStatus() {
+    setSubActionLoading(true);
+    try {
+      await updateSubscriptionPaymentStatus(id, company.active_subscription.id, paymentValue, token);
+      setPaymentOpen(false);
+      refreshCompany();
+      setSubToast({ tone: "success", message: "Payment status updated." });
+    } catch (err) {
+      setSubToast({ tone: "error", message: err?.response?.data?.message ?? "Could not update payment status." });
+    } finally {
+      setSubActionLoading(false);
+    }
+  }
+
+  async function handleCancelSubscription() {
+    setSubActionLoading(true);
+    try {
+      await cancelSubscription(id, company.active_subscription.id, "", token);
+      setCancelOpen(false);
+      refreshCompany();
+      setSubToast({ tone: "success", message: "Subscription cancelled." });
+    } catch (err) {
+      setSubToast({ tone: "error", message: err?.response?.data?.message ?? "Could not cancel subscription." });
+    } finally {
+      setSubActionLoading(false);
+    }
+  }
+
+  // Seat usage (Employees Used/Available). `company.active_subscription`
+  // comes straight from CompanyController's plain relation load, which —
+  // unlike SubscriptionController's index/show/renew endpoints — doesn't
+  // run formatSubscription() and so has no `usage` field. Rather than
+  // duplicating that Active-employee-count query on the frontend (and
+  // risking it drifting from the count checkEmployeeLimit() actually
+  // enforces), this re-fetches through the same formatted endpoint the
+  // History modal already uses and picks out the matching subscription.
+  const [subscriptionUsage, setSubscriptionUsage] = useState(null);
 
   useEffect(() => {
     if (!id) return undefined;
@@ -59,6 +366,28 @@ export default function CompanyView() {
       cancelled = true;
     };
   }, [id, token, retryKey, isOwnProfile]);
+
+  useEffect(() => {
+    const activeId = company?.active_subscription?.id;
+    if (!id || !activeId) {
+      setSubscriptionUsage(null);
+      return undefined;
+    }
+    let cancelled = false;
+    getCompanySubscriptions(id, token)
+      .then((res) => {
+        if (cancelled) return;
+        const list = res.data?.data ?? [];
+        const match = list.find((s) => s.id === activeId);
+        setSubscriptionUsage(match?.usage ?? null);
+      })
+      .catch(() => !cancelled && setSubscriptionUsage(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [id, token, company?.active_subscription?.id]);
+
+  useEffect(loadRenewalRequests, [id, token, retryKey]);
 
   const backTarget = isOwnProfile ? ROUTES.DASHBOARD : ROUTES.COMPANY_COMPANIES;
   const editTarget = isOwnProfile ? ROUTES.COMPANY_PROFILE_EDIT : companyEditPath(id);
@@ -190,25 +519,87 @@ export default function CompanyView() {
                 </section>
 
                 <section className="panel cv-section">
-                  <h3 className="cv-section-title">Subscription Details</h3>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                    <h3 className="cv-section-title" style={{ marginBottom: 0 }}>Current Subscription</h3>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <button type="button" className="cl-btn" onClick={openHistory}>
+                        View History
+                      </button>
+                      {canManagePayments && (
+                        <>
+                          <button type="button" className="cl-btn" onClick={() => setPaymentHistoryOpen(true)}>
+                            Payment History
+                          </button>
+                          <button type="button" className="cl-btn" onClick={() => setInvoicesOpen(true)}>
+                            Invoices
+                          </button>
+                        </>
+                      )}
+                      {isSuperAdmin && company.active_subscription && (
+                        <>
+                          <button
+                            type="button"
+                            className="cl-btn"
+                            onClick={() => {
+                              setPaymentValue(company.active_subscription.payment_status ?? "Pending");
+                              setPaymentOpen(true);
+                            }}
+                          >
+                            Payment Status
+                          </button>
+                          <button type="button" className="cl-btn" onClick={() => setRenewOpen(true)}>
+                            Renew
+                          </button>
+                          <button type="button" className="cl-btn" onClick={openUpgrade}>
+                            Upgrade
+                          </button>
+                          <button type="button" className="cl-btn" onClick={() => setExtendOpen(true)}>
+                            Extend
+                          </button>
+                          {company.active_subscription.effective_status === "Active" && (
+                            <button type="button" className="cl-btn tp-deactivate-btn" onClick={() => setCancelOpen(true)}>
+                              Cancel
+                            </button>
+                          )}
+                        </>
+                      )}
+                      {canManagePayments && company.active_subscription && company.active_subscription.employee_limit !== null && (
+                        <button type="button" className="cl-btn" onClick={() => setSeatIncreaseOpen(true)}>
+                          Increase Employee Seats
+                        </button>
+                      )}
+                      {canManagePayments && !company.active_subscription && (
+                        <button type="button" className="dash-primary-btn cl-add-btn" onClick={() => setBuySubOpen(true)}>
+                          Subscribe Now
+                        </button>
+                      )}
+                    </div>
+                  </div>
                   {company.active_subscription ? (
                     <div className="detail-grid">
-                      <DetailField label="Plan Name">{company.active_subscription.plan?.plan_name}</DetailField>
+                      <DetailField label="Plan">{company.active_subscription.plan?.plan_name}</DetailField>
                       <DetailField label="Subscription Number">{company.active_subscription.subscription_no}</DetailField>
+                      <DetailField label="Billing Cycle">{company.active_subscription.billing_cycle}</DetailField>
+                      <DetailField label="Employee Limit">{company.active_subscription.employee_limit ?? "Unlimited"}</DetailField>
+                      <DetailField label="Employees Used">{subscriptionUsage?.employees_used ?? "—"}</DetailField>
+                      <DetailField label="Employees Available">
+                        {company.active_subscription.employee_limit === null ? "Unlimited" : subscriptionUsage?.employees_left ?? "—"}
+                      </DetailField>
+                      <DetailField label="Price Per Employee">{formatCurrency(company.active_subscription.price_per_employee)}</DetailField>
                       <DetailField label="Start Date">{formatDate(company.active_subscription.start_date)}</DetailField>
                       <DetailField label="End Date">{formatDate(company.active_subscription.end_date)}</DetailField>
-                      <DetailField label="Employee Limit">{company.active_subscription.employee_limit}</DetailField>
+                      <DetailField label="Days Remaining">{formatDaysRemaining(company.active_subscription)}</DetailField>
                       <DetailField label="Trainer Limit">{company.active_subscription.trainer_limit}</DetailField>
                       <DetailField label="Storage Limit">{formatStorage(company.active_subscription.storage_limit)}</DetailField>
-                      <DetailField label="Amount">{formatCurrency(company.active_subscription.amount)}</DetailField>
+                      <DetailField label="Total Amount">{formatCurrency(company.active_subscription.total_amount)}</DetailField>
                       <DetailField label="Payment Status">
                         <Badge tone={PAYMENT_TONE[company.active_subscription.payment_status] ?? "gray"}>
                           {company.active_subscription.payment_status ?? "—"}
                         </Badge>
                       </DetailField>
                       <DetailField label="Subscription Status">
-                        <Badge tone={company.active_subscription.status === "Active" ? "green" : "gray"}>
-                          {company.active_subscription.status ?? "—"}
+                        <Badge tone={SUBSCRIPTION_STATUS_TONE[company.active_subscription.effective_status] ?? "gray"}>
+                          {company.active_subscription.effective_status ?? "—"}
                         </Badge>
                       </DetailField>
                     </div>
@@ -218,6 +609,34 @@ export default function CompanyView() {
                       <p>No Subscription Available</p>
                     </div>
                   )}
+                </section>
+
+                <section className="panel cv-section">
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                    <h3 className="cv-section-title" style={{ marginBottom: 0 }}>Subscription Renewal Requests</h3>
+                    {isOwnProfile && isCompanyAdminRole && (!company.active_subscription || company.active_subscription.effective_status === "Expired") && (
+                      <button
+                        type="button"
+                        className="dash-primary-btn cl-add-btn"
+                        disabled={renewalRequests.some((r) => r.status === "Pending")}
+                        onClick={() => setRequestRenewalOpen(true)}
+                      >
+                        Request Subscription Renewal
+                      </button>
+                    )}
+                  </div>
+                  {renewalRequests.some((r) => r.status === "Pending") && (
+                    <p className="cv-inline-hint">Your subscription renewal request is already pending with the administrator.</p>
+                  )}
+                  <DataTable
+                    columns={RENEWAL_REQUEST_COLUMNS(
+                      isSuperAdmin ? (r) => navigate(renewalRequestViewPath(r.id)) : null,
+                      isOwnProfile ? (r) => setCancelRequestTarget(r) : null
+                    )}
+                    rows={renewalRequests}
+                    isLoading={renewalRequestsLoading}
+                    emptyMessage="No renewal requests yet."
+                  />
                 </section>
               </div>
 
@@ -249,6 +668,240 @@ export default function CompanyView() {
           </>
         )}
       </div>
+
+      {renewOpen && company?.active_subscription && (
+        <ConfirmDialog
+          title="Renew Subscription"
+          message={`Renew "${company.active_subscription.plan?.plan_name ?? "this plan"}" for another ${company.active_subscription.plan?.billing_cycle ?? "billing"} cycle, starting from the current end date?`}
+          confirmLabel={subActionLoading ? "Renewing…" : "Renew"}
+          onCancel={() => setRenewOpen(false)}
+          onConfirm={handleRenew}
+        />
+      )}
+
+      {paymentOpen && company?.active_subscription && (
+        <Modal
+          title="Update Payment Status"
+          onClose={() => setPaymentOpen(false)}
+          footer={
+            <>
+              <button type="button" className="cl-btn" onClick={() => setPaymentOpen(false)}>Cancel</button>
+              <button type="button" className="dash-primary-btn cl-add-btn" disabled={subActionLoading} onClick={handlePaymentStatus}>
+                {subActionLoading ? "Saving…" : "Save"}
+              </button>
+            </>
+          }
+        >
+          <FormField label="Payment Status">
+            <select value={paymentValue} onChange={(e) => setPaymentValue(e.target.value)}>
+              {PAYMENT_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </FormField>
+        </Modal>
+      )}
+
+      {cancelOpen && company?.active_subscription && (
+        <ConfirmDialog
+          title="Cancel Subscription"
+          message="This will cancel the company's active subscription. This cannot be undone from here — a new subscription would need to be created."
+          confirmLabel={subActionLoading ? "Cancelling…" : "Cancel Subscription"}
+          onCancel={() => setCancelOpen(false)}
+          onConfirm={handleCancelSubscription}
+        />
+      )}
+
+      {upgradeOpen && company?.active_subscription && (
+        <Modal
+          title="Upgrade / Change Plan"
+          onClose={() => setUpgradeOpen(false)}
+          footer={
+            <>
+              <button type="button" className="cl-btn" onClick={() => setUpgradeOpen(false)}>Cancel</button>
+              <button
+                type="button"
+                className="dash-primary-btn cl-add-btn"
+                disabled={subActionLoading || !upgradePlanId}
+                onClick={handleUpgrade}
+              >
+                {subActionLoading ? "Saving…" : "Change Plan"}
+              </button>
+            </>
+          }
+        >
+          <p style={{ marginTop: 0, color: "var(--color-muted)", fontSize: 13 }}>
+            Creates a new subscription record on the selected plan, effective from the current subscription&apos;s end
+            date. The current subscription is kept, unchanged, in history.
+          </p>
+          <FormField label="New Plan">
+            {plansLoading ? (
+              <p>Loading plans…</p>
+            ) : (
+              <select value={upgradePlanId} onChange={(e) => setUpgradePlanId(e.target.value)}>
+                <option value="">Select a plan…</option>
+                {plans.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.plan_name} — {formatCurrency(p.price_per_employee)}/employee/{p.billing_cycle}
+                  </option>
+                ))}
+              </select>
+            )}
+          </FormField>
+        </Modal>
+      )}
+
+      {extendOpen && company?.active_subscription && (
+        <Modal
+          title="Extend Subscription"
+          onClose={() => setExtendOpen(false)}
+          footer={
+            <>
+              <button type="button" className="cl-btn" onClick={() => setExtendOpen(false)}>Cancel</button>
+              <button
+                type="button"
+                className="dash-primary-btn cl-add-btn"
+                disabled={subActionLoading || !extendMonths}
+                onClick={handleExtend}
+              >
+                {subActionLoading ? "Saving…" : "Extend"}
+              </button>
+            </>
+          }
+        >
+          <p style={{ marginTop: 0, color: "var(--color-muted)", fontSize: 13 }}>
+            Current end date: <strong>{formatDate(company.active_subscription.end_date)}</strong>. Extending creates a
+            new subscription record for just the added period, on the same plan.
+          </p>
+          <FormField label="Extension (months)">
+            <input
+              type="number"
+              min={1}
+              max={36}
+              value={extendMonths}
+              onChange={(e) => setExtendMonths(e.target.value)}
+            />
+          </FormField>
+        </Modal>
+      )}
+
+      {historyOpen && (
+        <Modal title="Subscription History" onClose={() => setHistoryOpen(false)} size="lg">
+          {historyError && <p className="cl-error">{historyError}</p>}
+          <DataTable
+            columns={HISTORY_COLUMNS(setHistoryDetail)}
+            rows={historyItems}
+            isLoading={historyLoading}
+            emptyMessage="No subscription history yet."
+          />
+        </Modal>
+      )}
+
+      {historyDetail && (
+        <Modal title={`Subscription ${historyDetail.subscription_no}`} onClose={() => setHistoryDetail(null)}>
+          <div className="detail-grid">
+            <DetailField label="Plan">{historyDetail.plan?.plan_name}</DetailField>
+            <DetailField label="Billing Cycle">{historyDetail.billing_cycle}</DetailField>
+            <DetailField label="Employee Count">{historyDetail.employee_count}</DetailField>
+            <DetailField label="Price Per Employee">{formatCurrency(historyDetail.price_per_employee)}</DetailField>
+            <DetailField label="Total Amount">{formatCurrency(historyDetail.total_amount)}</DetailField>
+            <DetailField label="Start Date">{formatDate(historyDetail.start_date)}</DetailField>
+            <DetailField label="End Date">{formatDate(historyDetail.end_date)}</DetailField>
+            <DetailField label="Renewal Type">{historyDetail.renewal_type}</DetailField>
+            <DetailField label="Payment Status">
+              <Badge tone={PAYMENT_TONE[historyDetail.payment_status] ?? "gray"}>{historyDetail.payment_status}</Badge>
+            </DetailField>
+            <DetailField label="Subscription Status">
+              <Badge tone={SUBSCRIPTION_STATUS_TONE[historyDetail.effective_status] ?? "gray"}>{historyDetail.effective_status}</Badge>
+            </DetailField>
+            <DetailField label="Created By">{historyDetail.created_by?.name}</DetailField>
+            <DetailField label="Created Date">{formatDate(historyDetail.created_at)}</DetailField>
+          </div>
+        </Modal>
+      )}
+
+      {requestRenewalOpen && (
+        <Modal
+          title="Request Subscription Renewal"
+          onClose={() => setRequestRenewalOpen(false)}
+          footer={
+            <>
+              <button type="button" className="cl-btn" onClick={() => setRequestRenewalOpen(false)}>Cancel</button>
+              <button type="button" className="dash-primary-btn cl-add-btn" disabled={subActionLoading} onClick={handleSubmitRenewalRequest}>
+                {subActionLoading ? "Submitting…" : "Submit Renewal Request"}
+              </button>
+            </>
+          }
+        >
+          <div className="detail-grid">
+            <DetailField label="Company Name">{company.company_name}</DetailField>
+            <DetailField label="Current Plan">{company.active_subscription?.plan?.plan_name}</DetailField>
+            <DetailField label="Previous Subscription End Date">{formatDate(company.active_subscription?.end_date)}</DetailField>
+          </div>
+          <FormField label="Optional Message">
+            <textarea
+              rows={3}
+              maxLength={1000}
+              placeholder="Anything the administrator should know…"
+              value={requestMessage}
+              onChange={(e) => setRequestMessage(e.target.value)}
+            />
+          </FormField>
+        </Modal>
+      )}
+
+      {cancelRequestTarget && (
+        <ConfirmDialog
+          title="Cancel Renewal Request"
+          message={`Cancel renewal request ${cancelRequestTarget.request_number}? You'll be able to submit a new one afterwards.`}
+          confirmLabel={subActionLoading ? "Cancelling…" : "Cancel Request"}
+          onCancel={() => setCancelRequestTarget(null)}
+          onConfirm={handleCancelRenewalRequest}
+        />
+      )}
+
+      {buySubOpen && (
+        <BuySubscriptionModal
+          company={company}
+          token={token}
+          user={user}
+          onClose={() => setBuySubOpen(false)}
+          onSuccess={(message) => {
+            setBuySubOpen(false);
+            refreshCompany();
+            setSubToast({ tone: "success", message });
+          }}
+        />
+      )}
+
+      {seatIncreaseOpen && company?.active_subscription && (
+        <SeatIncreaseModal
+          company={company}
+          subscription={company.active_subscription}
+          usage={subscriptionUsage}
+          token={token}
+          user={user}
+          onClose={() => setSeatIncreaseOpen(false)}
+          onSuccess={(message) => {
+            setSeatIncreaseOpen(false);
+            refreshCompany();
+            setSubToast({ tone: "success", message });
+          }}
+        />
+      )}
+
+      {paymentHistoryOpen && (
+        <PaymentHistoryModal
+          company={company}
+          token={token}
+          user={user}
+          isSuperAdmin={isSuperAdmin}
+          onClose={() => setPaymentHistoryOpen(false)}
+          onChanged={refreshCompany}
+        />
+      )}
+
+      {invoicesOpen && <InvoicesModal company={company} token={token} onClose={() => setInvoicesOpen(false)} />}
+
+      <Toast tone={subToast?.tone} message={subToast?.message} onDismiss={() => setSubToast(null)} />
     </>
   );
 }

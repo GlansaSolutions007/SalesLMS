@@ -298,6 +298,16 @@
   justify-content: center;
 }
 
+.modules-add-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.modules-add-actions .modules-add-btn {
+  flex: 1;
+}
+
 .module-card {
   display: flex;
   align-items: center;
@@ -500,6 +510,86 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.lesson-assignment {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.lesson-assignment-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #516071;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lesson-assignment-fields {
+  margin-top: 12px;
+}
+
+.assignment-blocks-progress-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -8px 0 16px;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lesson-question-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.lesson-question-row {
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+
+.lesson-question-row-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.lesson-question-row-head span {
+  flex: 1;
+  color: #516071;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lesson-question-row-head select {
+  height: 30px;
+  font-size: 12px;
+}
+
+.lesson-question-row-head button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-muted);
+  flex-shrink: 0;
+}
+
+.lesson-question-row-head button:hover {
+  background: #fdecec;
+  color: var(--color-danger);
 }
 
 /* Assessment: question form */

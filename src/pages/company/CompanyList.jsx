@@ -12,6 +12,7 @@ import CompanyTabs from "./CompanyTabs.jsx";
 import useCompaniesList from "./useCompaniesList.js";
 import { ROUTES, companyViewPath, companyEditPath } from "../../router/routePaths.js";
 import { exportToCsv } from "../../utils/csv.js";
+import { SUBSCRIPTION_STATUS_TONE, formatDaysRemaining } from "./companyDisplay.jsx";
 import "./CompanyList.css";
 
 const STATUS_TONE = { active: "green", inactive: "gray" };
@@ -64,13 +65,40 @@ const COLUMNS = [
   { key: "departments_count", header: "Departments", render: (r) => <span className="cl-numeric">{r.departments_count ?? 0}</span> },
   {
     key: "plan",
-    header: "Plan",
+    header: "Current Plan",
     render: (r) =>
       r.active_subscription?.plan?.plan_name ? (
         <Badge tone="blue">{r.active_subscription.plan.plan_name}</Badge>
       ) : (
         <span style={{ fontSize: 13, color: "var(--color-muted)" }}>No active plan</span>
       ),
+  },
+  {
+    key: "subscription_status",
+    header: "Subscription Status",
+    render: (r) =>
+      r.active_subscription ? (
+        <Badge tone={SUBSCRIPTION_STATUS_TONE[r.active_subscription.effective_status] ?? "gray"}>
+          {r.active_subscription.effective_status}
+        </Badge>
+      ) : (
+        <span style={{ fontSize: 13, color: "var(--color-muted)" }}>—</span>
+      ),
+  },
+  {
+    key: "expiry_date",
+    header: "Expiry Date",
+    render: (r) => (r.active_subscription ? formatDate(r.active_subscription.end_date) : "—"),
+  },
+  {
+    key: "days_remaining",
+    header: "Days Remaining",
+    render: (r) => (r.active_subscription ? formatDaysRemaining(r.active_subscription) : "—"),
+  },
+  {
+    key: "subscriptions_count",
+    header: "Subscription Count",
+    render: (r) => <span className="cl-numeric">{r.subscriptions_count ?? 0}</span>,
   },
   { key: "created_at", header: "Created", render: (r) => formatDate(r.created_at) },
   {

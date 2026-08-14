@@ -143,6 +143,12 @@
   grid-template-columns: 1fr;
 }
 
+.cv-inline-hint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
 .cv-empty-inline {
   display: flex;
   flex-direction: column;

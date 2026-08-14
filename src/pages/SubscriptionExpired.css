@@ -1,0 +1,29 @@
+.se-wrap {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.se-wrap p {
+  max-width: 480px;
+}
+
+.se-detail-panel {
+  width: 100%;
+  text-align: left;
+  margin: 8px 0;
+}
+
+.se-request-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.se-request-status p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-muted);
+  max-width: 420px;
+}

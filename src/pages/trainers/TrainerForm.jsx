@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import Icon from "../../components/Icon.jsx";
 import FormField from "../../components/FormField.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 import Toast from "../../components/Toast.jsx";
 import Breadcrumb from "../../components/Breadcrumb.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { createTrainer, addTrainerSkill, ApiValidationError } from "../../services/api/trainersApi.js";
+import { createTrainer, updateTrainer, getTrainerById, addTrainerSkill, ApiValidationError } from "../../services/api/trainersApi.js";
 import { ROUTES } from "../../router/routePaths.js";
 import { EMAIL_REGEX, MOBILE_REGEX, passwordStrength } from "../../utils/formValidators.js";
 import { SKILL_LEVELS } from "../employees/employeeFormData.js";
@@ -36,7 +36,25 @@ function buildInitialForm() {
   };
 }
 
-function validate(data, createLogin, loginPassword, confirmPassword) {
+function mapTrainerToForm(trainer) {
+  return {
+    trainer_code: trainer.trainer_code ?? "",
+    first_name: trainer.first_name ?? "",
+    last_name: trainer.last_name ?? "",
+    email: trainer.email ?? "",
+    mobile: trainer.mobile ?? "",
+    gender: trainer.gender ?? "",
+    date_of_birth: trainer.date_of_birth ? String(trainer.date_of_birth).slice(0, 10) : "",
+    joining_date: trainer.joining_date ? String(trainer.joining_date).slice(0, 10) : "",
+    qualification: trainer.qualification ?? "",
+    specialization: trainer.specialization ?? "",
+    experience_years: trainer.experience_years != null ? String(trainer.experience_years) : "",
+    bio: trainer.bio ?? "",
+    profile_photo: null,
+  };
+}
+
+function validate(data, isEdit, createLogin, loginPassword, confirmPassword) {
   const errors = {};
   if (!data.first_name.trim()) errors.first_name = "First name is required.";
   if (!data.email.trim()) errors.email = "Email is required.";
@@ -44,7 +62,7 @@ function validate(data, createLogin, loginPassword, confirmPassword) {
   if (data.mobile && !MOBILE_REGEX.test(data.mobile)) errors.mobile = "Enter a valid mobile number.";
   if (data.experience_years !== "" && (isNaN(Number(data.experience_years)) || Number(data.experience_years) < 0))
     errors.experience_years = "Enter a valid number of years.";
-  if (createLogin) {
+  if (!isEdit && createLogin) {
     if (!loginPassword) errors.login_password = "Password is required.";
     else if (passwordStrength(loginPassword).score < 3) errors.login_password = "Password is too weak.";
     if (loginPassword !== confirmPassword) errors.confirm_password = "Passwords do not match.";
@@ -54,7 +72,9 @@ function validate(data, createLogin, loginPassword, confirmPassword) {
 
 export default function TrainerForm() {
   const navigate = useNavigate();
+  const { id: trainerId } = useParams();
   const { token } = useAuth();
+  const isEdit = Boolean(trainerId);
 
   const [formData, setFormData] = useState(buildInitialForm);
   const [errors, setErrors] = useState({});
@@ -62,6 +82,9 @@ export default function TrainerForm() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+
+  const [loading, setLoading] = useState(isEdit);
+  const [loadError, setLoadError] = useState("");
 
   const [createLogin, setCreateLogin] = useState(false);
   const [loginPassword, setLoginPassword] = useState("");
@@ -72,10 +95,34 @@ export default function TrainerForm() {
   const [addSkills, setAddSkills] = useState(false);
   const [skills, setSkills] = useState([]);
 
+  useEffect(() => {
+    if (!isEdit) return undefined;
+    let cancelled = false;
+    setLoading(true);
+    getTrainerById(trainerId, token)
+      .then((trainer) => {
+        if (cancelled) return;
+        setFormData(mapTrainerToForm(trainer));
+      })
+      .catch((err) => {
+        if (!cancelled) setLoadError(err.message ?? "Could not load this trainer.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isEdit, trainerId, token]);
+
   function update(field, value) {
     setDirty(true);
     setFormData((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+    setErrors((prev) => {
+      const n = { ...prev };
+      delete n[field];
+      return n;
+    });
   }
 
   function addSkillRow() {
@@ -91,7 +138,7 @@ export default function TrainerForm() {
   }
 
   async function handleSave() {
-    const errs = validate(formData, createLogin, loginPassword, confirmPassword);
+    const errs = validate(formData, isEdit, createLogin, loginPassword, confirmPassword);
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       setToast({ tone: "error", message: "Please fix the highlighted fields." });
@@ -108,32 +155,36 @@ export default function TrainerForm() {
       }
     });
 
-    if (createLogin) {
+    if (!isEdit && createLogin) {
       fd.append("create_login", "1");
       fd.append("login_password", loginPassword);
     }
 
     try {
-      const result = await createTrainer(fd, token);
-      const trainerId = result?.trainer?.id ?? result?.id;
+      const result = isEdit ? await updateTrainer(trainerId, fd, token) : await createTrainer(fd, token);
+      const savedTrainerId = isEdit ? trainerId : (result?.trainer?.id ?? result?.id);
 
-      if (addSkills && trainerId) {
+      if (!isEdit && addSkills && savedTrainerId) {
         const validSkills = skills.filter((s) => s.skill_name.trim());
         await Promise.all(
           validSkills.map((s) =>
-            addTrainerSkill(trainerId, {
-              skill_name: s.skill_name,
-              skill_level: s.skill_level,
-              ...(s.experience_years !== "" && { experience_years: s.experience_years }),
-              ...(s.certification.trim() && { certification: s.certification }),
-            }, token)
+            addTrainerSkill(
+              savedTrainerId,
+              {
+                skill_name: s.skill_name,
+                skill_level: s.skill_level,
+                ...(s.experience_years !== "" && { experience_years: s.experience_years }),
+                ...(s.certification.trim() && { certification: s.certification }),
+              },
+              token
+            )
           )
         );
       }
 
       setSaving(false);
       setDirty(false);
-      setToast({ tone: "success", message: "Trainer created successfully." });
+      setToast({ tone: "success", message: isEdit ? "Trainer updated successfully." : "Trainer created successfully." });
       setTimeout(() => navigate(ROUTES.TRAINERS), 900);
     } catch (err) {
       setSaving(false);
@@ -158,6 +209,29 @@ export default function TrainerForm() {
   const pwdStrength = passwordStrength(loginPassword);
   const fullName = `${formData.first_name} ${formData.last_name}`.trim();
 
+  if (loading) {
+    return (
+      <div className="cl-body">
+        <p className="ep-empty-note">Loading trainer…</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="cl-body">
+        <div className="panel ep-state-panel">
+          <Icon name="warning" size={28} />
+          <h3>Couldn't load this trainer</h3>
+          <p>{loadError}</p>
+          <button type="button" className="cl-btn" onClick={() => navigate(ROUTES.TRAINERS)}>
+            Back to Trainers
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="cl-body">
@@ -167,8 +241,8 @@ export default function TrainerForm() {
               <Icon name="back" size={15} />
               Back to Trainers
             </button>
-            <h1>Add Trainer</h1>
-            <Breadcrumb current="Add Trainer" />
+            <h1>{isEdit ? "Edit Trainer" : "Add Trainer"}</h1>
+            <Breadcrumb current={isEdit ? "Edit Trainer" : "Add Trainer"} />
           </div>
         </div>
 
@@ -224,6 +298,7 @@ export default function TrainerForm() {
                   value={formData.trainer_code}
                   onChange={(e) => update("trainer_code", e.target.value)}
                   placeholder="Auto-generated if blank"
+                  disabled={isEdit}
                 />
               </FormField>
             </div>
@@ -277,149 +352,155 @@ export default function TrainerForm() {
               />
             </FormField>
 
-            {/* ── Login Account ────────────────────────────────── */}
-            <div className="form-section-divider">
-              <span className="form-section-title">Login Account</span>
-            </div>
-
-            <label className="ef-same-address">
-              <input type="checkbox" checked={createLogin} onChange={(e) => setCreateLogin(e.target.checked)} />
-              <span>Create a login account for this trainer</span>
-            </label>
-
-            {createLogin && (
+            {!isEdit && (
               <>
-                <div className="form-row">
-                  <FormField label="Password *" error={errors.login_password}>
-                    <div className="form-password-input">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={loginPassword}
-                        onChange={(e) => {
-                          setLoginPassword(e.target.value);
-                          setErrors((prev) => { const n = { ...prev }; delete n.login_password; return n; });
-                        }}
-                        placeholder="Minimum 8 characters"
-                      />
-                      <button type="button" onClick={() => setShowPassword((s) => !s)} aria-label="Toggle password visibility">
-                        <Icon name="eye" size={16} />
+                {/* ── Login Account ────────────────────────────────── */}
+                <div className="form-section-divider">
+                  <span className="form-section-title">Login Account</span>
+                </div>
+
+                <label className="ef-same-address">
+                  <input type="checkbox" checked={createLogin} onChange={(e) => setCreateLogin(e.target.checked)} />
+                  <span>Create a login account for this trainer</span>
+                </label>
+
+                {createLogin && (
+                  <div className="form-row">
+                    <FormField label="Password *" error={errors.login_password}>
+                      <div className="form-password-input">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          value={loginPassword}
+                          onChange={(e) => {
+                            setLoginPassword(e.target.value);
+                            setErrors((prev) => { const n = { ...prev }; delete n.login_password; return n; });
+                          }}
+                          placeholder="Minimum 8 characters"
+                        />
+                        <button type="button" onClick={() => setShowPassword((s) => !s)} aria-label="Toggle password visibility">
+                          <Icon name="eye" size={16} />
+                        </button>
+                      </div>
+                      {loginPassword && (
+                        <div className="form-password-strength">
+                          <span className={`form-strength-label tone-${pwdStrength.tone}`}>{pwdStrength.label}</span>
+                        </div>
+                      )}
+                    </FormField>
+
+                    <FormField label="Confirm Password *" error={errors.confirm_password}>
+                      <div className="form-password-input">
+                        <input
+                          type={showConfirm ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(e) => {
+                            setConfirmPassword(e.target.value);
+                            setErrors((prev) => { const n = { ...prev }; delete n.confirm_password; return n; });
+                          }}
+                          placeholder="Re-enter password"
+                        />
+                        <button type="button" onClick={() => setShowConfirm((s) => !s)} aria-label="Toggle password visibility">
+                          <Icon name="eye" size={16} />
+                        </button>
+                      </div>
+                    </FormField>
+                  </div>
+                )}
+
+                {/* ── Skills ───────────────────────────────────────── */}
+                <div className="form-section-divider">
+                  <span className="form-section-title">Skills</span>
+                </div>
+
+                <label className="ef-same-address">
+                  <input type="checkbox" checked={addSkills} onChange={(e) => { setAddSkills(e.target.checked); if (!e.target.checked) setSkills([]); }} />
+                  <span>Add skills for this trainer</span>
+                </label>
+
+                {addSkills && (
+                  <>
+                    <div className="form-doc-table-head">
+                      <p>Add skills and expertise levels.</p>
+                      <button type="button" className="fa-outline-btn form-doc-add-btn" onClick={addSkillRow}>
+                        <Icon name="plus" size={15} />
+                        Add Skill
                       </button>
                     </div>
-                    {loginPassword && (
-                      <div className="form-password-strength">
-                        <span className={`form-strength-label tone-${pwdStrength.tone}`}>{pwdStrength.label}</span>
+
+                    {skills.length === 0 ? (
+                      <div className="dtable-state form-doc-empty">
+                        <Icon name="star" size={22} />
+                        <p>Click "Add Skill" to add the first skill.</p>
+                      </div>
+                    ) : (
+                      <div className="dtable-wrap">
+                        <table className="dtable form-doc-table">
+                          <thead>
+                            <tr>
+                              <th>Skill Name</th>
+                              <th>Level</th>
+                              <th>Exp (Yrs)</th>
+                              <th>Certification</th>
+                              <th />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {skills.map((s) => (
+                              <tr key={s.id}>
+                                <td>
+                                  <input
+                                    type="text"
+                                    className="form-doc-input"
+                                    value={s.skill_name}
+                                    onChange={(e) => changeSkillRow(s.id, "skill_name", e.target.value)}
+                                    placeholder="e.g. Negotiation"
+                                  />
+                                </td>
+                                <td>
+                                  <select
+                                    className="form-doc-select"
+                                    value={s.skill_level}
+                                    onChange={(e) => changeSkillRow(s.id, "skill_level", e.target.value)}
+                                  >
+                                    {SKILL_LEVELS.map((lvl) => <option key={lvl} value={lvl}>{lvl}</option>)}
+                                  </select>
+                                </td>
+                                <td>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    className="form-doc-input"
+                                    value={s.experience_years}
+                                    onChange={(e) => changeSkillRow(s.id, "experience_years", e.target.value)}
+                                  />
+                                </td>
+                                <td>
+                                  <input
+                                    type="text"
+                                    className="form-doc-input"
+                                    value={s.certification}
+                                    onChange={(e) => changeSkillRow(s.id, "certification", e.target.value)}
+                                    placeholder="Optional"
+                                  />
+                                </td>
+                                <td>
+                                  <button type="button" className="dash-icon-btn" aria-label="Remove skill" onClick={() => removeSkillRow(s.id)}>
+                                    <Icon name="trash" size={15} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     )}
-                  </FormField>
-
-                  <FormField label="Confirm Password *" error={errors.confirm_password}>
-                    <div className="form-password-input">
-                      <input
-                        type={showConfirm ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={(e) => {
-                          setConfirmPassword(e.target.value);
-                          setErrors((prev) => { const n = { ...prev }; delete n.confirm_password; return n; });
-                        }}
-                        placeholder="Re-enter password"
-                      />
-                      <button type="button" onClick={() => setShowConfirm((s) => !s)} aria-label="Toggle password visibility">
-                        <Icon name="eye" size={16} />
-                      </button>
-                    </div>
-                  </FormField>
-                </div>
+                  </>
+                )}
               </>
             )}
 
-            {/* ── Skills ───────────────────────────────────────── */}
-            <div className="form-section-divider">
-              <span className="form-section-title">Skills</span>
-            </div>
-
-            <label className="ef-same-address">
-              <input type="checkbox" checked={addSkills} onChange={(e) => { setAddSkills(e.target.checked); if (!e.target.checked) setSkills([]); }} />
-              <span>Add skills for this trainer</span>
-            </label>
-
-            {addSkills && (
-              <>
-                <div className="form-doc-table-head">
-                  <p>Add skills and expertise levels.</p>
-                  <button type="button" className="fa-outline-btn form-doc-add-btn" onClick={addSkillRow}>
-                    <Icon name="plus" size={15} />
-                    Add Skill
-                  </button>
-                </div>
-
-                {skills.length === 0 ? (
-                  <div className="dtable-state form-doc-empty">
-                    <Icon name="star" size={22} />
-                    <p>Click "Add Skill" to add the first skill.</p>
-                  </div>
-                ) : (
-                  <div className="dtable-wrap">
-                    <table className="dtable form-doc-table">
-                      <thead>
-                        <tr>
-                          <th>Skill Name</th>
-                          <th>Level</th>
-                          <th>Exp (Yrs)</th>
-                          <th>Certification</th>
-                          <th />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {skills.map((s) => (
-                          <tr key={s.id}>
-                            <td>
-                              <input
-                                type="text"
-                                className="form-doc-input"
-                                value={s.skill_name}
-                                onChange={(e) => changeSkillRow(s.id, "skill_name", e.target.value)}
-                                placeholder="e.g. Negotiation"
-                              />
-                            </td>
-                            <td>
-                              <select
-                                className="form-doc-select"
-                                value={s.skill_level}
-                                onChange={(e) => changeSkillRow(s.id, "skill_level", e.target.value)}
-                              >
-                                {SKILL_LEVELS.map((lvl) => <option key={lvl} value={lvl}>{lvl}</option>)}
-                              </select>
-                            </td>
-                            <td>
-                              <input
-                                type="number"
-                                min="0"
-                                className="form-doc-input"
-                                value={s.experience_years}
-                                onChange={(e) => changeSkillRow(s.id, "experience_years", e.target.value)}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                className="form-doc-input"
-                                value={s.certification}
-                                onChange={(e) => changeSkillRow(s.id, "certification", e.target.value)}
-                                placeholder="Optional"
-                              />
-                            </td>
-                            <td>
-                              <button type="button" className="dash-icon-btn" aria-label="Remove skill" onClick={() => removeSkillRow(s.id)}>
-                                <Icon name="trash" size={15} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </>
+            {isEdit && (
+              <p className="ep-empty-note">Skills can be managed from this trainer's profile page after saving.</p>
             )}
 
             {/* ── Form Actions ─────────────────────────────────── */}
@@ -432,7 +513,7 @@ export default function TrainerForm() {
               <div className="wizard-step-footer-right">
                 <button type="button" className="dash-primary-btn" onClick={handleSave} disabled={saving}>
                   {saving ? <span className="fa-spinner light" /> : <Icon name="check" size={15} />}
-                  Save Trainer
+                  {isEdit ? "Save Changes" : "Save Trainer"}
                 </button>
               </div>
             </div>

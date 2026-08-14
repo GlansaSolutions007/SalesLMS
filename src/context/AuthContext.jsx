@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import * as authService from "../services/authService.js";
 import { getToken, getStoredUser, setToken, setStoredUser, clearAuthStorage, getRememberPreference } from "../utils/storage.js";
 
@@ -123,14 +123,43 @@ export function AuthProvider({ children }) {
 
   const permissions = user?.permissions ?? [];
   const roleName = user?.role?.name ?? null;
+  const isAuthenticated = Boolean(user && token);
+  const isSuperAdmin = roleName === "Super Admin";
+  // Super Admin and users with no company (shouldn't happen post-login, but
+  // matches the backend's own `$user->company &&` guard in ApiAuthenticate)
+  // are never gated. `subscription_active === false` is an explicit check
+  // (not just falsy) so a user object from before this field existed, still
+  // sitting in localStorage, doesn't get misread as expired.
+  const subscriptionExpired = !isSuperAdmin && user?.company && user.company.subscription_active === false;
+
+  // Keeps `user.company.subscription_active` from going stale while a tab
+  // stays open — e.g. a Super Admin renews a company's subscription while
+  // one of that company's users is already logged in elsewhere. The actual
+  // access control is enforced live on every API call by ApiAuthenticate
+  // regardless of this; this just keeps the banner/route-guard in sync so
+  // access is restored without the "no logout required" ask forcing a
+  // manual refresh.
+  const fetchCurrentUserRef = useRef();
+  fetchCurrentUserRef.current = fetchCurrentUser;
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    const interval = setInterval(() => {
+      fetchCurrentUserRef.current().catch(() => {
+        /* transient failure — next tick retries */
+      });
+    }, 45000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   const value = {
     // Kept as a boolean (not a callable) so every existing `const { isAuthenticated } = useAuth()`
     // consumer in the app keeps working unchanged.
-    isAuthenticated: Boolean(user && token),
+    isAuthenticated,
     user,
     token,
     roleName,
+    isSuperAdmin,
+    subscriptionExpired,
     permissions,
     hasPermission: (perm) => permissions.includes(perm),
     hasAnyPermission: (perms) => perms.some((p) => permissions.includes(p)),

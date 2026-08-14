@@ -8,7 +8,7 @@ import Breadcrumb from "../components/Breadcrumb.jsx";
 import Skeleton from "../components/Skeleton.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import Toast from "../components/Toast.jsx";
-import { ROUTES } from "../router/routePaths.js";
+import { ROUTES, courseViewPath } from "../router/routePaths.js";
 import { listCourses, updateCourseStatus, deleteCourse } from "../services/courseService.js";
 import "./CourseList.css";
 
@@ -202,6 +202,7 @@ export default function CourseList() {
                     <CourseRow
                       key={course.id}
                       course={course}
+                      onView={() => navigate(courseViewPath(course.id))}
                       onStatusChange={handleStatusChange}
                       onDelete={() => setConfirmDelete(course)}
                       disabled={actionLoading}
@@ -238,7 +239,7 @@ export default function CourseList() {
   );
 }
 
-function CourseRow({ course, onStatusChange, onDelete, disabled }) {
+function CourseRow({ course, onView, onStatusChange, onDelete, disabled }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const durationLabel = course.duration_hours
@@ -248,7 +249,7 @@ function CourseRow({ course, onStatusChange, onDelete, disabled }) {
   return (
     <tr>
       <td>
-        <div className="cl-course-cell">
+        <button type="button" className="cl-course-cell" style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: 0 }} onClick={onView}>
           <div className="cl-thumb tone-blue">
             {course.thumbnail ? (
               <img src={course.thumbnail} alt={course.course_name} className="cl-thumb-img" />
@@ -260,7 +261,7 @@ function CourseRow({ course, onStatusChange, onDelete, disabled }) {
             <p className="cl-course-title">{course.course_name}</p>
             <p className="cl-course-desc">{course.course_code}</p>
           </div>
-        </div>
+        </button>
       </td>
       <td>
         {course.category ? (
@@ -282,6 +283,9 @@ function CourseRow({ course, onStatusChange, onDelete, disabled }) {
       </td>
       <td>
         <div className="cl-row-actions" style={{ position: "relative" }}>
+          <button type="button" className="dash-icon-btn" title="View Details" onClick={onView}>
+            <Icon name="eye" size={15} />
+          </button>
           {course.status === "Draft" && (
             <button
               type="button"

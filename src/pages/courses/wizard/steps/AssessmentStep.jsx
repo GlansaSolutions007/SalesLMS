@@ -2,6 +2,7 @@ import FormField from "../../../../components/FormField.jsx";
 import RichTextEditor from "../../../../components/RichTextEditor.jsx";
 import Icon from "../../../../components/Icon.jsx";
 import QuestionCard from "../QuestionCard.jsx";
+import BulkQuestionImport from "../../../../components/BulkQuestionImport.jsx";
 import { ASSESSMENT_TYPES, ASSESSMENT_STATUSES, QUESTION_TYPES } from "../courseWizardData.js";
 
 export default function AssessmentStep({
@@ -12,6 +13,7 @@ export default function AssessmentStep({
   onFieldChange,
   onSelectQuestion,
   onAddQuestion,
+  onBulkImportQuestions,
   onDeleteQuestion,
   onQuestionFieldChange,
   onOptionChange,
@@ -47,7 +49,7 @@ export default function AssessmentStep({
               <input type="text" value={assessment.title} onChange={(e) => onFieldChange("title", e.target.value)} />
             </FormField>
             <FormField label="Assessment Code (Auto Generated)">
-              <input type="text" value={assessment.code} readOnly disabled />
+              <input type="text" value={assessment.code} readOnly disabled placeholder="Assigned automatically when you save" />
             </FormField>
           </div>
 
@@ -76,9 +78,6 @@ export default function AssessmentStep({
           </div>
 
           <div className="form-row">
-            <FormField label="Maximum Attempts" error={errors.fields.maxAttempts}>
-              <input type="number" min="0" value={assessment.maxAttempts} onChange={(e) => onFieldChange("maxAttempts", e.target.value)} />
-            </FormField>
             <FormField label="Status">
               <div className="seg-group">
                 {ASSESSMENT_STATUSES.map((opt) => (
@@ -124,10 +123,13 @@ export default function AssessmentStep({
                 {assessment.questions.length === 0 && <p className="modules-empty-hint">No questions yet.</p>}
               </div>
 
-              <button type="button" className="fa-outline-btn modules-add-btn" onClick={onAddQuestion}>
-                <Icon name="plus" size={15} />
-                Add Question
-              </button>
+              <div className="modules-add-actions">
+                <button type="button" className="fa-outline-btn modules-add-btn" onClick={onAddQuestion}>
+                  <Icon name="plus" size={15} />
+                  Add Question
+                </button>
+                <BulkQuestionImport allowedTypes={QUESTION_TYPES} questionCount={assessment.questions.length} onImport={onBulkImportQuestions} />
+              </div>
             </div>
 
             <div className="modules-detail">
@@ -194,7 +196,7 @@ export default function AssessmentStep({
                     </FormField>
                   )}
 
-                  {selectedQuestion.type === "True / False" && (
+                  {selectedQuestion.type === "True/False" && (
                     <FormField label="Select Correct Answer" error={questionErrors.correctOptionId}>
                       <div className="seg-group">
                         <button

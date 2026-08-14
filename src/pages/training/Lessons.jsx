@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import Icon from "../../components/Icon.jsx";
 import Topbar from "../../components/Topbar.jsx";
 import Breadcrumb from "../../components/Breadcrumb.jsx";
@@ -10,6 +10,9 @@ import FormField from "../../components/FormField.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 import Toast from "../../components/Toast.jsx";
 import TrainingTabs from "../../components/TrainingTabs.jsx";
+import LessonTypeFields from "../../components/LessonTypeFields.jsx";
+import { validateLessonTypeFields } from "../../utils/lessonTypeFields.js";
+import { lessonViewPath } from "../../router/routePaths.js";
 import "./training.css";
 import {
   listAllCourses,
@@ -21,14 +24,37 @@ import {
   toggleLessonStatus,
 } from "../../services/courseService.js";
 
-const LESSON_TYPES = ["Video", "PDF", "PPT", "Audio", "Document", "Quiz"];
-const TYPE_TONE = { Video: "blue", PDF: "purple", PPT: "orange", Audio: "green", Document: "gray", Quiz: "pink" };
+// The type filter (and existing rows) can still be any legacy value, so it
+// keeps the full historical set rather than being limited to the three
+// LessonTypeFields now offers in the create/edit form.
+const LESSON_TYPES = ["Content", "Video", "PDF", "PPT", "Audio", "Document", "Quiz"];
+const TYPE_TONE = { Content: "green", Video: "blue", PDF: "purple", PPT: "orange", Audio: "green", Document: "gray", Quiz: "pink" };
 const STATUS_TONE = { Active: "green", Inactive: "gray" };
 
-const EMPTY_FORM = { lesson_title: "", lesson_description: "", lesson_type: "Video", duration_minutes: "", sequence_no: "", status: "Active" };
+function fileNameFromPath(path) {
+  return path ? path.split("/").pop() : "";
+}
+
+const EMPTY_FORM = {
+  lesson_title: "",
+  lesson_type: "Content",
+  lesson_description: "",
+  video_source: "upload",
+  video_url: "",
+  video_file_path: "",
+  video_file_name: "",
+  video_file_url: "",
+  pdf_file_path: "",
+  pdf_file_name: "",
+  pdf_file_url: "",
+  duration_minutes: "",
+  sequence_no: "",
+  status: "Active",
+};
 
 export default function Lessons() {
   const { toggleCollapsed } = useOutletContext();
+  const navigate = useNavigate();
 
   const [courses, setCourses] = useState([]);
   const [selectedCourseId, setSelectedCourseId] = useState("");
@@ -51,6 +77,10 @@ export default function Lessons() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  // Shown instead of the form right after a successful "Add Lesson" save —
+  // lets a trainer keep adding lessons to the same course/module without
+  // the modal closing and losing the course/section context each time.
+  const [justSaved, setJustSaved] = useState(false);
 
   const [deletingRow, setDeletingRow] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -108,6 +138,7 @@ export default function Lessons() {
   function openAdd() {
     setForm({ ...EMPTY_FORM, sequence_no: String(lessons.length + 1) });
     setFormErrors({});
+    setJustSaved(false);
     setModalMode("add");
   }
 
@@ -115,21 +146,52 @@ export default function Lessons() {
     setEditingRow(row);
     setForm({
       lesson_title: row.lesson_title,
+      lesson_type: row.lesson_type ?? "Content",
       lesson_description: row.lesson_description ?? "",
-      lesson_type: row.lesson_type ?? "Video",
+      video_source: row.video_source ?? "upload",
+      video_url: row.video_url ?? "",
+      video_file_path: row.video_file_path ?? "",
+      video_file_name: fileNameFromPath(row.video_file_path),
+      video_file_url: row.video_file_url ?? "",
+      pdf_file_path: row.pdf_file_path ?? "",
+      pdf_file_name: fileNameFromPath(row.pdf_file_path),
+      pdf_file_url: row.pdf_file_url ?? "",
       duration_minutes: row.duration_minutes != null ? String(row.duration_minutes) : "",
       sequence_no: String(row.sequence_no ?? ""),
       status: row.status,
     });
     setFormErrors({});
+    setJustSaved(false);
     setModalMode("edit");
   }
 
-  function closeModal() { setModalMode(null); setEditingRow(null); }
+  function closeModal() { setModalMode(null); setEditingRow(null); setJustSaved(false); }
+
+  function handleAddAnother() {
+    // Course/module selection lives outside the modal (selectedCourseId /
+    // selectedModuleId), so it's untouched by this — only the form resets.
+    setForm({ ...EMPTY_FORM, sequence_no: String(lessons.length + 1) });
+    setFormErrors({});
+    setJustSaved(false);
+  }
 
   function validate() {
     const errors = {};
     if (!form.lesson_title.trim()) errors.lesson_title = "Lesson title is required.";
+
+    const typeErrors = validateLessonTypeFields({
+      lessonType: form.lesson_type,
+      description: form.lesson_description,
+      videoSource: form.video_source,
+      videoUrl: form.video_url,
+      videoFilePath: form.video_file_path,
+      pdfFilePath: form.pdf_file_path,
+    });
+    if (typeErrors.description) errors.lesson_description = typeErrors.description;
+    if (typeErrors.videoUrl) errors.video_url = typeErrors.videoUrl;
+    if (typeErrors.videoFilePath) errors.video_file_path = typeErrors.videoFilePath;
+    if (typeErrors.pdfFilePath) errors.pdf_file_path = typeErrors.pdfFilePath;
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   }
@@ -141,8 +203,12 @@ export default function Lessons() {
     try {
       const payload = {
         lesson_title: form.lesson_title.trim(),
-        lesson_description: form.lesson_description.trim() || null,
         lesson_type: form.lesson_type,
+        lesson_description: form.lesson_type === "Content" ? form.lesson_description.trim() || null : null,
+        video_source: form.lesson_type === "Video" ? form.video_source : null,
+        video_url: form.lesson_type === "Video" && form.video_source === "external" ? form.video_url.trim() || null : null,
+        video_file_path: form.lesson_type === "Video" && form.video_source === "upload" ? form.video_file_path || null : null,
+        pdf_file_path: form.lesson_type === "PDF" ? form.pdf_file_path || null : null,
         duration_minutes: form.duration_minutes ? Number(form.duration_minutes) : null,
         sequence_no: form.sequence_no ? Number(form.sequence_no) : null,
         status: form.status,
@@ -150,11 +216,12 @@ export default function Lessons() {
       if (modalMode === "add") {
         await createLesson(selectedCourseId, selectedModuleId, payload);
         setToast({ tone: "success", message: "Lesson created." });
+        setJustSaved(true);
       } else {
         await updateLesson(selectedCourseId, selectedModuleId, editingRow.id, payload);
         setToast({ tone: "success", message: "Lesson updated." });
+        closeModal();
       }
-      closeModal();
       loadLessons();
     } catch (err) {
       setToast({ tone: "error", message: err.message ?? "Something went wrong." });
@@ -216,6 +283,9 @@ export default function Lessons() {
       key: "actions", header: "",
       render: (r) => (
         <div className="cl-row-actions">
+          <button type="button" className="dash-icon-btn" title="View" onClick={() => navigate(lessonViewPath(selectedCourseId, selectedModuleId, r.id))}>
+            <Icon name="eye" size={15} />
+          </button>
           <button type="button" className="dash-icon-btn" title="Edit" onClick={() => openEdit(r)}>
             <Icon name="edit" size={15} />
           </button>
@@ -322,7 +392,23 @@ export default function Lessons() {
         </div>
       </div>
 
-      {modalMode && (
+      {modalMode && justSaved ? (
+        <Modal
+          title="Lesson Saved"
+          onClose={closeModal}
+          footer={
+            <>
+              <button type="button" className="cl-btn" onClick={handleAddAnother}>Save &amp; Add Another Lesson</button>
+              <button type="button" className="dash-primary-btn cl-add-btn" onClick={closeModal}>Save &amp; Close</button>
+            </>
+          }
+        >
+          <div className="lessons-saved-note">
+            <Icon name="check" size={28} />
+            <p>Lesson saved successfully.</p>
+          </div>
+        </Modal>
+      ) : modalMode && (
         <Modal
           title={modalMode === "add" ? "Add Lesson" : "Edit Lesson"}
           onClose={closeModal}
@@ -339,30 +425,50 @@ export default function Lessons() {
             <FormField label="Lesson Title *" error={formErrors.lesson_title}>
               <input type="text" value={form.lesson_title} onChange={(e) => setForm((f) => ({ ...f, lesson_title: e.target.value }))} placeholder="e.g. Introduction to Selling" />
             </FormField>
-            <FormField label="Description">
-              <textarea rows={3} value={form.lesson_description} onChange={(e) => setForm((f) => ({ ...f, lesson_description: e.target.value }))} placeholder="Optional description..." />
-            </FormField>
+
+            <LessonTypeFields
+              lessonType={form.lesson_type}
+              onLessonTypeChange={(v) => setForm((f) => ({ ...f, lesson_type: v }))}
+              description={form.lesson_description}
+              onDescriptionChange={(html) => setForm((f) => ({ ...f, lesson_description: html }))}
+              descriptionError={formErrors.lesson_description}
+              videoSource={form.video_source}
+              onVideoSourceChange={(v) => setForm((f) => ({ ...f, video_source: v }))}
+              videoUrl={form.video_url}
+              onVideoUrlChange={(v) => setForm((f) => ({ ...f, video_url: v }))}
+              videoUrlError={formErrors.video_url}
+              videoFileName={form.video_file_name}
+              videoFileUrl={form.video_file_url}
+              videoFileError={formErrors.video_file_path}
+              onVideoFileUploaded={({ path, name, url }) => {
+                setForm((f) => ({ ...f, video_file_path: path, video_file_name: name, video_file_url: url }));
+                setFormErrors((prev) => ({ ...prev, video_file_path: undefined }));
+              }}
+              onVideoFileCleared={() => setForm((f) => ({ ...f, video_file_path: "", video_file_name: "", video_file_url: "" }))}
+              pdfFileName={form.pdf_file_name}
+              pdfFileUrl={form.pdf_file_url}
+              pdfFileError={formErrors.pdf_file_path}
+              onPdfFileUploaded={({ path, name, url }) => {
+                setForm((f) => ({ ...f, pdf_file_path: path, pdf_file_name: name, pdf_file_url: url }));
+                setFormErrors((prev) => ({ ...prev, pdf_file_path: undefined }));
+              }}
+              onPdfFileCleared={() => setForm((f) => ({ ...f, pdf_file_path: "", pdf_file_name: "", pdf_file_url: "" }))}
+            />
+
             <div className="form-row">
-              <FormField label="Lesson Type">
-                <select value={form.lesson_type} onChange={(e) => setForm((f) => ({ ...f, lesson_type: e.target.value }))}>
-                  {LESSON_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </FormField>
               <FormField label="Duration (minutes)">
                 <input type="number" min="1" value={form.duration_minutes} onChange={(e) => setForm((f) => ({ ...f, duration_minutes: e.target.value }))} placeholder="e.g. 15" />
               </FormField>
-            </div>
-            <div className="form-row">
               <FormField label="Sequence No.">
                 <input type="number" min="1" value={form.sequence_no} onChange={(e) => setForm((f) => ({ ...f, sequence_no: e.target.value }))} />
               </FormField>
-              <FormField label="Status">
-                <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </FormField>
             </div>
+            <FormField label="Status">
+              <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </FormField>
           </form>
         </Modal>
       )}

@@ -30,7 +30,7 @@ export default function CourseDetailsStep({ data, errors, categories, onChange, 
           </select>
         </FormField>
         <FormField label="Course Code (Auto Generated)">
-          <input type="text" value={data.code} readOnly disabled />
+          <input type="text" value={data.code} readOnly disabled placeholder="Assigned automatically when you save" />
         </FormField>
       </div>
 

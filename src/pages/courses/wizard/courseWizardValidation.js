@@ -1,3 +1,5 @@
+import { validateLessonTypeFields } from "../../../utils/lessonTypeFields.js";
+
 function req(value, message) {
   return String(value ?? "").trim() ? null : message;
 }
@@ -31,6 +33,30 @@ export function validateModule(module) {
 export function validateLesson(lesson) {
   const errors = {};
   errors.title = req(lesson.title, "Lesson title is required.");
+  Object.assign(errors, validateLessonTypeFields({
+    lessonType: lesson.type,
+    description: lesson.description,
+    videoSource: lesson.videoSource,
+    videoUrl: lesson.videoUrl,
+    videoFilePath: lesson.videoFilePath,
+    pdfFilePath: lesson.pdfFilePath,
+  }));
+  if (lesson.assignmentEnabled) {
+    errors.assignmentTitle = req(lesson.assignmentTitle, "Assignment title is required.");
+  }
+  if (lesson.assessmentEnabled) {
+    errors.assessmentTitle = req(lesson.assessmentTitle, "Assessment title is required.");
+    if (lesson.assessmentQuestions.length === 0) {
+      errors.assessmentGeneral = "Add at least one question.";
+    } else {
+      const questionErrors = {};
+      lesson.assessmentQuestions.forEach((q) => {
+        const qErrors = validateQuestion(q);
+        if (Object.keys(qErrors).length) questionErrors[q.id] = qErrors;
+      });
+      if (Object.keys(questionErrors).length) errors.assessmentQuestions = questionErrors;
+    }
+  }
   return compact(errors);
 }
 
@@ -66,7 +92,7 @@ export function validateQuestion(question) {
     else if (!question.correctOptionId || !filled.some((opt) => opt.id === question.correctOptionId)) {
       errors.correctOptionId = "Select the correct answer.";
     }
-  } else if (question.type === "True / False") {
+  } else if (question.type === "True/False") {
     if (question.correctOptionId !== "true" && question.correctOptionId !== "false") {
       errors.correctOptionId = "Select the correct answer.";
     }
@@ -85,7 +111,6 @@ export function validateAssessmentStep(assessment) {
   fields.passMarks =
     req(assessment.passMarks, "Pass marks are required.") ||
     (Number(assessment.passMarks) > Number(assessment.totalMarks) ? "Pass marks cannot exceed total marks." : null);
-  fields.maxAttempts = req(assessment.maxAttempts, "Maximum attempts is required.");
   compact(fields);
 
   let general = null;

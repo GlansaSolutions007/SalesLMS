@@ -4,9 +4,7 @@ import ImageUploader from "../../../components/ImageUploader.jsx";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import { getCompanyById } from "../../../services/api/companyApi.js";
 import useCompanyBranches from "../../company/useCompanyBranches.js";
-import useCompanyDepartments from "../../company/useCompanyDepartments.js";
 import useCompanyDesignations from "../../company/useCompanyDesignations.js";
-import useCompanyEmployeeOptions from "../useCompanyEmployeeOptions.js";
 
 export default function EmployeeAssignmentFields({
   data,
@@ -16,14 +14,11 @@ export default function EmployeeAssignmentFields({
   companies,
   companiesLoading,
   companiesError,
-  excludeEmployeeId,
   isEdit,
 }) {
   const { token } = useAuth();
   const { branches, isLoading: branchesLoading } = useCompanyBranches(data.companyId);
-  const { departments, isLoading: departmentsLoading } = useCompanyDepartments(data.companyId);
   const { designations, isLoading: designationsLoading } = useCompanyDesignations(data.companyId);
-  const { options: managers, isLoading: managersLoading } = useCompanyEmployeeOptions(data.companyId, excludeEmployeeId);
 
   const [lockedCompanyName, setLockedCompanyName] = useState("");
 
@@ -92,9 +87,7 @@ export default function EmployeeAssignmentFields({
               onChange={(e) => {
                 onChange("companyId", e.target.value ? Number(e.target.value) : "");
                 onChange("branchId", "");
-                onChange("departmentId", "");
                 onChange("designationId", "");
-                onChange("reportingManagerId", "");
               }}
             >
               <option value="">
@@ -123,7 +116,7 @@ export default function EmployeeAssignmentFields({
             onChange={(e) => onChange("branchId", e.target.value)}
             disabled={!data.companyId || branchesLoading}
           >
-            <option value="">{!data.companyId ? "Select company first" : branchesLoading ? "Loading branches…" : "No branch"}</option>
+            <option value="">{!data.companyId ? "Select company first" : branchesLoading ? "Loading branches…" : "Select branch"}</option>
             {branches.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.branch_name} ({b.branch_code})
@@ -131,23 +124,6 @@ export default function EmployeeAssignmentFields({
             ))}
           </select>
         </FormField>
-        <FormField label="Department *" error={errors.departmentId}>
-          <select
-            value={data.departmentId}
-            onChange={(e) => onChange("departmentId", e.target.value)}
-            disabled={!data.companyId || departmentsLoading}
-          >
-            <option value="">{!data.companyId ? "Select company first" : departmentsLoading ? "Loading departments…" : "Select department"}</option>
-            {departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.department_name}
-              </option>
-            ))}
-          </select>
-        </FormField>
-      </div>
-
-      <div className="form-row">
         <FormField label="Designation *" error={errors.designationId}>
           <select
             value={data.designationId}
@@ -158,22 +134,6 @@ export default function EmployeeAssignmentFields({
             {designations.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.designation_name}
-              </option>
-            ))}
-          </select>
-        </FormField>
-        <FormField label="Reporting Manager">
-          <select
-            value={data.reportingManagerId}
-            onChange={(e) => onChange("reportingManagerId", e.target.value)}
-            disabled={!data.companyId || managersLoading}
-          >
-            <option value="">
-              {!data.companyId ? "Select company first" : managersLoading ? "Loading employees…" : managers.length ? "Select reporting manager" : "No employees found for this company"}
-            </option>
-            {managers.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.full_name} — {m.designation?.designation_name ?? "—"}
               </option>
             ))}
           </select>

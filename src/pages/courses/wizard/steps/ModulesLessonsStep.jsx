@@ -2,6 +2,7 @@ import FormField from "../../../../components/FormField.jsx";
 import Icon from "../../../../components/Icon.jsx";
 import ModuleCard from "../ModuleCard.jsx";
 import LessonCard from "../LessonCard.jsx";
+import BulkModuleLessonImport from "../../../../components/BulkModuleLessonImport.jsx";
 
 export default function ModulesLessonsStep({
   modules,
@@ -9,6 +10,7 @@ export default function ModulesLessonsStep({
   errors,
   onSelectModule,
   onAddModule,
+  onBulkImportModules,
   onDeleteModule,
   onModuleFieldChange,
   onAddLesson,
@@ -17,6 +19,12 @@ export default function ModulesLessonsStep({
   onAddResource,
   onResourceChange,
   onResourceRemove,
+  onAddAssessmentQuestion,
+  onBulkImportAssessmentQuestions,
+  onDeleteAssessmentQuestion,
+  onAssessmentQuestionFieldChange,
+  onAssessmentOptionChange,
+  onAssessmentCorrectAnswerChange,
   onPrevious,
   onSaveDraft,
   onNext,
@@ -56,10 +64,13 @@ export default function ModulesLessonsStep({
             {modules.length === 0 && <p className="modules-empty-hint">No modules yet.</p>}
           </div>
 
-          <button type="button" className="fa-outline-btn modules-add-btn" onClick={onAddModule}>
-            <Icon name="plus" size={15} />
-            Add Module
-          </button>
+          <div className="modules-add-actions">
+            <button type="button" className="fa-outline-btn modules-add-btn" onClick={onAddModule}>
+              <Icon name="plus" size={15} />
+              Add Module
+            </button>
+            <BulkModuleLessonImport moduleCount={modules.length} onImport={onBulkImportModules} />
+          </div>
         </div>
 
         <div className="modules-detail">
@@ -127,6 +138,12 @@ export default function ModulesLessonsStep({
                         onAddResource={() => onAddResource(selectedModule.id, lesson.id)}
                         onResourceChange={(resourceId, field, value) => onResourceChange(selectedModule.id, lesson.id, resourceId, field, value)}
                         onResourceRemove={(resourceId) => onResourceRemove(selectedModule.id, lesson.id, resourceId)}
+                        onAddAssessmentQuestion={() => onAddAssessmentQuestion(selectedModule.id, lesson.id)}
+                        onBulkImportAssessmentQuestions={(newQuestions) => onBulkImportAssessmentQuestions(selectedModule.id, lesson.id, newQuestions)}
+                        onDeleteAssessmentQuestion={(questionId) => onDeleteAssessmentQuestion(selectedModule.id, lesson.id, questionId)}
+                        onAssessmentQuestionFieldChange={(questionId, field, value) => onAssessmentQuestionFieldChange(selectedModule.id, lesson.id, questionId, field, value)}
+                        onAssessmentOptionChange={(questionId, optionId, text) => onAssessmentOptionChange(selectedModule.id, lesson.id, questionId, optionId, text)}
+                        onAssessmentCorrectAnswerChange={(questionId, optionId) => onAssessmentCorrectAnswerChange(selectedModule.id, lesson.id, questionId, optionId)}
                       />
                     ))}
                   </div>

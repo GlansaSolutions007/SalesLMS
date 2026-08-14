@@ -63,28 +63,30 @@ export default function DataToolbar({
       )}
 
       {sortOptions.length > 0 && (
-        <select
-          className="dt-select"
-          value={sort.key}
-          onChange={(e) => onSortChange({ ...sort, key: e.target.value })}
-        >
-          {sortOptions.map((opt) => (
-            <option key={opt.key} value={opt.key}>
-              Sort: {opt.label}
-            </option>
-          ))}
-        </select>
-      )}
+        <>
+          <select
+            className="dt-select"
+            value={sort.key}
+            onChange={(e) => onSortChange({ ...sort, key: e.target.value })}
+          >
+            {sortOptions.map((opt) => (
+              <option key={opt.key} value={opt.key}>
+                Sort: {opt.label}
+              </option>
+            ))}
+          </select>
 
-      <button
-        type="button"
-        className="cl-btn"
-        onClick={() => onSortChange({ ...sort, dir: sort.dir === "asc" ? "desc" : "asc" })}
-        title={sort.dir === "asc" ? "Ascending" : "Descending"}
-      >
-        <Icon name="sort" size={16} />
-        {sort.dir === "asc" ? "Asc" : "Desc"}
-      </button>
+          <button
+            type="button"
+            className="cl-btn"
+            onClick={() => onSortChange({ ...sort, dir: sort.dir === "asc" ? "desc" : "asc" })}
+            title={sort.dir === "asc" ? "Ascending" : "Descending"}
+          >
+            <Icon name="sort" size={16} />
+            {sort.dir === "asc" ? "Asc" : "Desc"}
+          </button>
+        </>
+      )}
 
       <div className="dt-spacer" />
 

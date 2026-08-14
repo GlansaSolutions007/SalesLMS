@@ -14,8 +14,6 @@ import PublishStep from "./steps/PublishStep.jsx";
 import {
   DIFFICULTY_LEVELS,
   ASSESSMENT_TYPES,
-  generateCourseCode,
-  generateAssessmentCode,
   emptyModule,
   emptyLesson,
   emptyResource,
@@ -32,13 +30,18 @@ import {
   createLesson,
   updateLesson,
   deleteLesson as deleteLessonApi,
+  createAssignment,
+  updateAssignment,
+  deleteAssignment,
   createAssessment,
   updateAssessment,
+  deleteAssessment,
   createQuestion,
   updateQuestion,
   deleteQuestion as deleteQuestionApi,
 } from "../../../services/courseService.js";
 import { ROUTES } from "../../../router/routePaths.js";
+import { buildQuestionPayload } from "../../../utils/questionPayload.js";
 import "./CourseWizard.css";
 
 const STEPS = [
@@ -54,7 +57,7 @@ function buildInitialState() {
       thumbnail: "",
       thumbnailFile: null,
       category: "",
-      code: generateCourseCode(),
+      code: "",
       name: "",
       description: "",
       difficulty: DIFFICULTY_LEVELS[0],
@@ -67,12 +70,11 @@ function buildInitialState() {
     assessment: {
       enabled: false,
       title: "",
-      code: generateAssessmentCode(),
+      code: "",
       type: ASSESSMENT_TYPES[0],
       durationMinutes: "",
       totalMarks: "",
       passMarks: "",
-      maxAttempts: "",
       status: "Draft",
       questions: [],
     },
@@ -105,7 +107,12 @@ function buildCourseFormData(course, targetStatus) {
   const fd = new FormData();
   fd.append("course_name", course.details.name);
   if (course.details.category) fd.append("category_id", course.details.category);
-  fd.append("course_code", course.details.code);
+  // course_code is never sent — CourseController generates a guaranteed-
+  // unique one server-side when it's absent. It used to be fabricated
+  // client-side (a hardcoded "CRS-129" from a mock EXISTING_COURSE_COUNT
+  // constant that was never wired to real data), so every course after the
+  // very first one collided with that same code and failed uniqueness
+  // validation on save.
   if (course.details.description) fd.append("description", course.details.description);
   if (course.details.difficulty) fd.append("difficulty_level", course.details.difficulty);
 
@@ -133,8 +140,12 @@ function buildModulePayload(module, index) {
 function buildLessonPayload(lesson, index) {
   return {
     lesson_title: lesson.title,
-    lesson_description: lesson.description || null,
     lesson_type: lesson.type || null,
+    lesson_description: lesson.type === "Content" ? lesson.description || null : null,
+    video_source: lesson.type === "Video" ? lesson.videoSource : null,
+    video_url: lesson.type === "Video" && lesson.videoSource === "external" ? lesson.videoUrl || null : null,
+    video_file_path: lesson.type === "Video" && lesson.videoSource === "upload" ? lesson.videoFilePath || null : null,
+    pdf_file_path: lesson.type === "PDF" ? lesson.pdfFilePath || null : null,
     duration_minutes: lesson.duration ? Number(lesson.duration) : null,
     sequence_no: index + 1,
   };
@@ -143,34 +154,29 @@ function buildLessonPayload(lesson, index) {
 function buildAssessmentPayload(assessment, courseId) {
   return {
     assessment_title: assessment.title,
-    assessment_code: assessment.code,
+    // Not sent, same reasoning as course_code above — AssessmentController
+    // generates a guaranteed-unique code server-side when this is absent.
+    // The client-side one was a random 4-digit suffix, not guaranteed
+    // unique, and only regenerated once per wizard session.
     assessment_type: assessment.type,
     course_id: courseId,
     duration_minutes: assessment.durationMinutes ? Number(assessment.durationMinutes) : null,
     pass_marks: assessment.passMarks ? Number(assessment.passMarks) : 0,
-    max_attempts: assessment.maxAttempts ? Number(assessment.maxAttempts) : 1,
     status: assessment.status ?? "Draft",
   };
 }
 
-function buildQuestionPayload(question, index) {
-  const options = [];
-  if (question.type === "MCQ") {
-    question.options.forEach((opt, i) => {
-      if (opt.text.trim()) {
-        options.push({ option_text: opt.text, is_correct: opt.id === question.correctOptionId, sequence_no: i + 1 });
-      }
-    });
-  } else if (question.type === "True / False") {
-    options.push({ option_text: "True", is_correct: question.correctOptionId === "true", sequence_no: 1 });
-    options.push({ option_text: "False", is_correct: question.correctOptionId === "false", sequence_no: 2 });
-  }
+function buildLessonAssessmentPayload(lesson, courseId, lessonApiId) {
   return {
-    question_type: question.type,
-    question: question.question,
-    marks: question.marks ? Number(question.marks) : 1,
-    sequence_no: index + 1,
-    options,
+    assessment_title: lesson.assessmentTitle,
+    // No client-generated code, same reasoning as the whole-course
+    // assessment above — AssessmentController generates one server-side.
+    assessment_type: lesson.assessmentType || "Quiz",
+    course_id: courseId,
+    lesson_id: lessonApiId,
+    duration_minutes: lesson.assessmentDurationMinutes ? Number(lesson.assessmentDurationMinutes) : null,
+    pass_marks: lesson.assessmentPassMarks ? Number(lesson.assessmentPassMarks) : 0,
+    status: lesson.assessmentStatus || "Draft",
   };
 }
 
@@ -200,7 +206,7 @@ export default function CourseWizard() {
   const [publishErrors, setPublishErrors] = useState({ confirmed: null });
 
   // Tracks items deleted from UI that were already persisted to the API
-  const pendingDeletes = useRef({ modules: [], lessons: [], questions: [] });
+  const pendingDeletes = useRef({ modules: [], lessons: [], questions: [], assignments: [], assessments: [] });
   // Mirror of course state for synchronous reads before state updates
   const courseRef = useRef(course);
   useEffect(() => { courseRef.current = course; }, [course]);
@@ -241,6 +247,15 @@ export default function CourseWizard() {
     setSelectedModuleId(module.id);
   }
 
+  function bulkImportModules(newModules) {
+    if (!newModules.length) return;
+    setDirty(true);
+    setCourse((prev) => ({ ...prev, modules: [...prev.modules, ...newModules] }));
+    setSelectedModuleId(newModules[0].id);
+    const lessonCount = newModules.reduce((sum, m) => sum + m.lessons.length, 0);
+    setToast({ tone: "success", message: `${newModules.length} module(s) and ${lessonCount} lesson(s) imported.` });
+  }
+
   function deleteModule(moduleId) {
     setDirty(true);
     const module = courseRef.current.modules.find((m) => m.id === moduleId);
@@ -279,6 +294,15 @@ export default function CourseWizard() {
     const lesson = module?.lessons.find((l) => l.id === lessonId);
     if (lesson?.apiId && module?.apiId) {
       pendingDeletes.current.lessons.push({ moduleApiId: module.apiId, lessonApiId: lesson.apiId });
+    }
+    // Deleting a lesson only nulls lesson_id on its Assignment/Assessment
+    // server-side (nullOnDelete), which would silently turn either into a
+    // whole-course record instead of removing it — delete them outright.
+    if (lesson?.assignmentApiId) {
+      pendingDeletes.current.assignments.push({ assignmentApiId: lesson.assignmentApiId });
+    }
+    if (lesson?.assessmentApiId) {
+      pendingDeletes.current.assessments.push({ assessmentApiId: lesson.assessmentApiId });
     }
     setCourse((prev) => ({
       ...prev,
@@ -330,6 +354,80 @@ export default function CourseWizard() {
     }));
   }
 
+  // ── Lesson-level Assessment questions (mirrors the course-level question
+  // handlers below, scoped to one lesson's assessmentQuestions instead of
+  // the whole-course assessment.questions) ───────────────────────────────
+
+  function addLessonQuestion(moduleId, lessonId) {
+    setDirty(true);
+    setCourse((prev) => ({
+      ...prev,
+      modules: mapModules(prev.modules, moduleId, (m) =>
+        mapLessons(m, lessonId, (l) => ({ ...l, assessmentQuestions: [...l.assessmentQuestions, emptyQuestion(l.assessmentQuestions.length + 1)] }))
+      ),
+    }));
+  }
+
+  function bulkImportLessonQuestions(moduleId, lessonId, newQuestions) {
+    if (!newQuestions.length) return;
+    setDirty(true);
+    setCourse((prev) => ({
+      ...prev,
+      modules: mapModules(prev.modules, moduleId, (m) =>
+        mapLessons(m, lessonId, (l) => ({ ...l, assessmentQuestions: [...l.assessmentQuestions, ...newQuestions] }))
+      ),
+    }));
+    setToast({ tone: "success", message: `${newQuestions.length} question(s) imported.` });
+  }
+
+  function deleteLessonQuestion(moduleId, lessonId, questionId) {
+    setDirty(true);
+    const module = courseRef.current.modules.find((m) => m.id === moduleId);
+    const lesson = module?.lessons.find((l) => l.id === lessonId);
+    const question = lesson?.assessmentQuestions.find((q) => q.id === questionId);
+    if (question?.apiId && lesson?.assessmentApiId) {
+      pendingDeletes.current.questions.push({ assessmentApiId: lesson.assessmentApiId, questionApiId: question.apiId });
+    }
+    setCourse((prev) => ({
+      ...prev,
+      modules: mapModules(prev.modules, moduleId, (m) =>
+        mapLessons(m, lessonId, (l) => ({ ...l, assessmentQuestions: l.assessmentQuestions.filter((q) => q.id !== questionId) }))
+      ),
+    }));
+  }
+
+  function updateLessonQuestionField(moduleId, lessonId, questionId, field, value) {
+    setDirty(true);
+    setCourse((prev) => ({
+      ...prev,
+      modules: mapModules(prev.modules, moduleId, (m) =>
+        mapLessons(m, lessonId, (l) => ({
+          ...l,
+          assessmentQuestions: l.assessmentQuestions.map((q) => (q.id === questionId ? { ...q, [field]: value } : q)),
+        }))
+      ),
+    }));
+  }
+
+  function updateLessonOption(moduleId, lessonId, questionId, optionId, text) {
+    setDirty(true);
+    setCourse((prev) => ({
+      ...prev,
+      modules: mapModules(prev.modules, moduleId, (m) =>
+        mapLessons(m, lessonId, (l) => ({
+          ...l,
+          assessmentQuestions: l.assessmentQuestions.map((q) =>
+            q.id === questionId ? { ...q, options: q.options.map((o) => (o.id === optionId ? { ...o, text } : o)) } : q
+          ),
+        }))
+      ),
+    }));
+  }
+
+  function updateLessonCorrectAnswer(moduleId, lessonId, questionId, optionId) {
+    updateLessonQuestionField(moduleId, lessonId, questionId, "correctOptionId", optionId);
+  }
+
   function toggleAssessmentEnabled(enabled) {
     setDirty(true);
     setCourse((prev) => ({ ...prev, assessment: { ...prev.assessment, enabled } }));
@@ -351,6 +449,14 @@ export default function CourseWizard() {
     const question = emptyQuestion(course.assessment.questions.length + 1);
     setCourse((prev) => ({ ...prev, assessment: { ...prev.assessment, questions: [...prev.assessment.questions, question] } }));
     setSelectedQuestionId(question.id);
+  }
+
+  function bulkImportQuestions(newQuestions) {
+    if (!newQuestions.length) return;
+    setDirty(true);
+    setCourse((prev) => ({ ...prev, assessment: { ...prev.assessment, questions: [...prev.assessment.questions, ...newQuestions] } }));
+    setSelectedQuestionId(newQuestions[0].id);
+    setToast({ tone: "success", message: `${newQuestions.length} question(s) imported.` });
   }
 
   function deleteQuestion(questionId) {
@@ -413,6 +519,17 @@ export default function CourseWizard() {
 
   // ── API persistence ──────────────────────────────────────────────────────────
 
+  // Every newly-created entity's apiId is committed back into `course`
+  // state IMMEDIATELY after its own create call resolves — not batched
+  // into one write at the end of the function. This is the fix for: if
+  // Publish fails partway through (say, lesson 3 of 5 fails validation),
+  // modules/lessons created *before* the failure used to keep apiId=null
+  // in state because the single end-of-function setCourse() never ran, so
+  // retrying re-created them as duplicates. Now a retry always sees the
+  // correct apiId for anything that already succeeded and issues an
+  // update instead of a create, making Publish safe to click again after
+  // a failure (or, on the backend, safe to retry outright — see the
+  // duplicate-guards added to the store() endpoints).
   async function persistAll(targetStatus) {
     setSaving(true);
     try {
@@ -425,6 +542,7 @@ export default function CourseWizard() {
         const created = await createCourse(formData);
         cid = created.id;
         setCourseId(cid);
+        setCourse((prev) => ({ ...prev, details: { ...prev.details, code: created.course_code } }));
       } else {
         await updateCourse(cid, formData);
       }
@@ -435,8 +553,22 @@ export default function CourseWizard() {
       );
       pendingDeletes.current.modules = [];
 
+      // 2b. Process pending lesson-assignment deletes (from deleteLesson()
+      // and from a lesson's own "Add an assignment" toggle being turned
+      // off — see the lesson loop below for the latter).
+      await Promise.allSettled(
+        pendingDeletes.current.assignments.map(({ assignmentApiId }) => deleteAssignment(cid, assignmentApiId))
+      );
+      pendingDeletes.current.assignments = [];
+
+      // 2c. Process pending lesson-assessment deletes (same reasoning as 2b,
+      // for the "Add an assessment to this lesson" toggle).
+      await Promise.allSettled(
+        pendingDeletes.current.assessments.map(({ assessmentApiId }) => deleteAssessment(assessmentApiId))
+      );
+      pendingDeletes.current.assessments = [];
+
       // 3. Sync modules (sequential to preserve order)
-      const updatedModules = [];
       for (let mIdx = 0; mIdx < snap.modules.length; mIdx++) {
         const module = snap.modules[mIdx];
         const modPayload = buildModulePayload(module, mIdx);
@@ -444,6 +576,7 @@ export default function CourseWizard() {
         if (!modApiId) {
           const created = await createModule(cid, modPayload);
           modApiId = created.id;
+          setCourse((prev) => ({ ...prev, modules: mapModules(prev.modules, module.id, (m) => ({ ...m, apiId: modApiId })) }));
         } else {
           await updateModule(cid, modApiId, modPayload);
         }
@@ -454,7 +587,6 @@ export default function CourseWizard() {
         pendingDeletes.current.lessons = pendingDeletes.current.lessons.filter((l) => l.moduleApiId !== modApiId);
 
         // Sync lessons
-        const updatedLessons = [];
         for (let lIdx = 0; lIdx < module.lessons.length; lIdx++) {
           const lesson = module.lessons[lIdx];
           const lesPayload = buildLessonPayload(lesson, lIdx);
@@ -462,17 +594,96 @@ export default function CourseWizard() {
           if (!lesApiId) {
             const created = await createLesson(cid, modApiId, lesPayload);
             lesApiId = created.id;
+            setCourse((prev) => ({
+              ...prev,
+              modules: mapModules(prev.modules, module.id, (m) => mapLessons(m, lesson.id, (l) => ({ ...l, apiId: lesApiId }))),
+            }));
           } else {
             await updateLesson(cid, modApiId, lesApiId, lesPayload);
           }
-          updatedLessons.push({ ...lesson, apiId: lesApiId });
-        }
 
-        updatedModules.push({ ...module, apiId: modApiId, lessons: updatedLessons });
+          // Sync this lesson's optional Assignment (create/update/delete as
+          // the "Add an assignment to this lesson" toggle and its fields
+          // change between saves).
+          let assignmentApiId = lesson.assignmentApiId;
+          if (lesson.assignmentEnabled) {
+            const asmtPayload = {
+              lesson_id: lesApiId,
+              assignment_title: lesson.assignmentTitle,
+              description: lesson.assignmentDescription || null,
+              total_marks: lesson.assignmentTotalMarks ? Number(lesson.assignmentTotalMarks) : null,
+              due_date: lesson.assignmentDueDate || null,
+              blocks_progress: lesson.assignmentBlocksProgress,
+            };
+            if (!assignmentApiId) {
+              const createdAssignment = await createAssignment(cid, asmtPayload);
+              assignmentApiId = createdAssignment.id;
+              setCourse((prev) => ({
+                ...prev,
+                modules: mapModules(prev.modules, module.id, (m) => mapLessons(m, lesson.id, (l) => ({ ...l, assignmentApiId }))),
+              }));
+            } else {
+              await updateAssignment(cid, assignmentApiId, asmtPayload);
+            }
+          } else if (assignmentApiId) {
+            await deleteAssignment(cid, assignmentApiId);
+            setCourse((prev) => ({
+              ...prev,
+              modules: mapModules(prev.modules, module.id, (m) => mapLessons(m, lesson.id, (l) => ({ ...l, assignmentApiId: null }))),
+            }));
+          }
+
+          // Sync this lesson's optional Assessment (quiz) + its questions —
+          // same create/update/delete-on-toggle-off pattern as the
+          // assignment above, plus a nested question sync mirroring the
+          // course-level "Sync assessment" step further down.
+          let assessmentApiId = lesson.assessmentApiId;
+          if (lesson.assessmentEnabled) {
+            const lessonAsmtPayload = buildLessonAssessmentPayload(lesson, cid, lesApiId);
+            if (!assessmentApiId) {
+              const createdAssessment = await createAssessment(lessonAsmtPayload);
+              assessmentApiId = createdAssessment.id;
+              setCourse((prev) => ({
+                ...prev,
+                modules: mapModules(prev.modules, module.id, (m) => mapLessons(m, lesson.id, (l) => ({ ...l, assessmentApiId }))),
+              }));
+            } else {
+              await updateAssessment(assessmentApiId, lessonAsmtPayload);
+            }
+
+            const lessonQuestionDeletes = pendingDeletes.current.questions.filter((q) => q.assessmentApiId === assessmentApiId);
+            await Promise.allSettled(lessonQuestionDeletes.map(({ questionApiId }) => deleteQuestionApi(assessmentApiId, questionApiId)));
+            pendingDeletes.current.questions = pendingDeletes.current.questions.filter((q) => q.assessmentApiId !== assessmentApiId);
+
+            for (let qIdx = 0; qIdx < lesson.assessmentQuestions.length; qIdx++) {
+              const q = lesson.assessmentQuestions[qIdx];
+              const qPayload = buildQuestionPayload(q, qIdx);
+              const targetAssessmentApiId = assessmentApiId;
+              if (!q.apiId) {
+                const createdQuestion = await createQuestion(targetAssessmentApiId, qPayload);
+                const qApiId = createdQuestion.id;
+                setCourse((prev) => ({
+                  ...prev,
+                  modules: mapModules(prev.modules, module.id, (m) => mapLessons(m, lesson.id, (l) => ({
+                    ...l,
+                    assessmentQuestions: l.assessmentQuestions.map((qq) => (qq.id === q.id ? { ...qq, apiId: qApiId } : qq)),
+                  }))),
+                }));
+              } else {
+                await updateQuestion(targetAssessmentApiId, q.apiId, qPayload);
+              }
+            }
+          } else if (assessmentApiId) {
+            await deleteAssessment(assessmentApiId);
+            setCourse((prev) => ({
+              ...prev,
+              modules: mapModules(prev.modules, module.id, (m) => mapLessons(m, lesson.id, (l) => ({ ...l, assessmentApiId: null, assessmentQuestions: [] }))),
+            }));
+          }
+        }
       }
 
-      // 4. Sync assessment
-      let updatedAssessment = snap.assessment;
+      // 4. Sync assessment (course-level)
       let asmId = assessmentId;
       if (snap.assessment.enabled) {
         const asmPayload = buildAssessmentPayload(snap.assessment, cid);
@@ -480,39 +691,37 @@ export default function CourseWizard() {
           const created = await createAssessment(asmPayload);
           asmId = created.id;
           setAssessmentId(asmId);
+          setCourse((prev) => ({ ...prev, assessment: { ...prev.assessment, code: created.assessment_code } }));
         } else {
           await updateAssessment(asmId, asmPayload);
         }
 
-        // Pending question deletes
+        // Pending question deletes for this (course-level) assessment —
+        // filtered by assessmentApiId since pendingDeletes.current.questions
+        // is now shared with lesson-level assessments' question deletes too.
+        const courseQuestionDeletes = pendingDeletes.current.questions.filter((q) => q.assessmentApiId === asmId);
         await Promise.allSettled(
-          pendingDeletes.current.questions.map(({ questionApiId }) => deleteQuestionApi(asmId, questionApiId))
+          courseQuestionDeletes.map(({ questionApiId }) => deleteQuestionApi(asmId, questionApiId))
         );
-        pendingDeletes.current.questions = [];
+        pendingDeletes.current.questions = pendingDeletes.current.questions.filter((q) => q.assessmentApiId !== asmId);
 
         // Sync questions
-        const updatedQuestions = [];
         for (let qIdx = 0; qIdx < snap.assessment.questions.length; qIdx++) {
           const q = snap.assessment.questions[qIdx];
           const qPayload = buildQuestionPayload(q, qIdx);
-          let qApiId = q.apiId;
-          if (!qApiId) {
-            const created = await createQuestion(asmId, qPayload);
-            qApiId = created.id;
+          const targetAsmId = asmId;
+          if (!q.apiId) {
+            const created = await createQuestion(targetAsmId, qPayload);
+            const qApiId = created.id;
+            setCourse((prev) => ({
+              ...prev,
+              assessment: { ...prev.assessment, questions: prev.assessment.questions.map((qq) => (qq.id === q.id ? { ...qq, apiId: qApiId } : qq)) },
+            }));
           } else {
-            await updateQuestion(asmId, qApiId, qPayload);
+            await updateQuestion(targetAsmId, q.apiId, qPayload);
           }
-          updatedQuestions.push({ ...q, apiId: qApiId });
         }
-        updatedAssessment = { ...snap.assessment, questions: updatedQuestions };
       }
-
-      // 5. Commit API IDs back to state
-      setCourse((prev) => ({
-        ...prev,
-        modules: updatedModules,
-        assessment: updatedAssessment,
-      }));
 
       setSaving(false);
       setDirty(false);
@@ -688,6 +897,7 @@ export default function CourseWizard() {
                     errors={moduleStepErrors}
                     onSelectModule={setSelectedModuleId}
                     onAddModule={addModule}
+                    onBulkImportModules={bulkImportModules}
                     onDeleteModule={deleteModule}
                     onModuleFieldChange={updateModuleField}
                     onAddLesson={addLesson}
@@ -696,6 +906,12 @@ export default function CourseWizard() {
                     onAddResource={addResource}
                     onResourceChange={updateResourceField}
                     onResourceRemove={removeResource}
+                    onAddAssessmentQuestion={addLessonQuestion}
+                    onBulkImportAssessmentQuestions={bulkImportLessonQuestions}
+                    onDeleteAssessmentQuestion={deleteLessonQuestion}
+                    onAssessmentQuestionFieldChange={updateLessonQuestionField}
+                    onAssessmentOptionChange={updateLessonOption}
+                    onAssessmentCorrectAnswerChange={updateLessonCorrectAnswer}
                     onPrevious={handlePrevious}
                     onSaveDraft={handleSaveDraft}
                     onNext={handleNext}
@@ -712,6 +928,7 @@ export default function CourseWizard() {
                     onFieldChange={updateAssessmentField}
                     onSelectQuestion={setSelectedQuestionId}
                     onAddQuestion={addQuestion}
+                    onBulkImportQuestions={bulkImportQuestions}
                     onDeleteQuestion={deleteQuestion}
                     onQuestionFieldChange={updateQuestionField}
                     onOptionChange={updateOption}

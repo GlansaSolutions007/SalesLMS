@@ -341,6 +341,69 @@ const icons = {
       <path d="m4 16 8 4.5 8-4.5" />
     </>
   ),
+  undo: (
+    <>
+      <path d="M4 12a8 8 0 1 1 2.3 5.6" />
+      <path d="M4 6.5V12h5.5" />
+    </>
+  ),
+  redo: (
+    <>
+      <path d="M20 12a8 8 0 1 0-2.3 5.6" />
+      <path d="M20 6.5V12h-5.5" />
+    </>
+  ),
+  alignLeft: (
+    <>
+      <path d="M4 6h16M4 12h10M4 18h16" />
+    </>
+  ),
+  alignCenter: (
+    <>
+      <path d="M4 6h16M7 12h10M4 18h16" />
+    </>
+  ),
+  alignRight: (
+    <>
+      <path d="M4 6h16M10 12h10M4 18h16" />
+    </>
+  ),
+  textColor: (
+    <>
+      <path d="M7 15 11 5l4 10M8.3 12h5.4" />
+      <path d="M4 19.5h16" strokeWidth="3" />
+    </>
+  ),
+  highlighter: (
+    <>
+      <path d="m7.5 15.5 4.7-4.7 4 4-4.7 4.7-4-4Z" />
+      <path d="m12.2 10.8 4-4a1.8 1.8 0 0 1 2.5 0l1.5 1.5a1.8 1.8 0 0 1 0 2.5l-4 4" />
+      <path d="M6 17 4 21l4-2-2-2Z" />
+    </>
+  ),
+  table: (
+    <>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="1.5" />
+      <path d="M3.5 9.5h17M3.5 15h17M9.5 4.5v15M15 4.5v15" />
+    </>
+  ),
+  code: (
+    <>
+      <path d="m9 8-4 4 4 4" />
+      <path d="m15 8 4 4-4 4" />
+    </>
+  ),
+  quote: (
+    <>
+      <path d="M7 8.5c-2 0-3.2 1.4-3.2 3.4S5 15.3 7 15.3c-.2 2-1.6 3.3-3.2 3.7" />
+      <path d="M16 8.5c-2 0-3.2 1.4-3.2 3.4s1.2 3.4 3.2 3.4c-.2 2-1.6 3.3-3.2 3.7" />
+    </>
+  ),
+  expand: (
+    <>
+      <path d="M9 4H5a1 1 0 0 0-1 1v4M15 4h4a1 1 0 0 1 1 1v4M9 20H5a1 1 0 0 1-1-1v-4M15 20h4a1 1 0 0 0 1-1v-4" />
+    </>
+  ),
 };
 
 export default function Icon({ name, size = 20, filled = false, style, className }) {

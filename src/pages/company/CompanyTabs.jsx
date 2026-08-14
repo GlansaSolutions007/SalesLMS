@@ -5,8 +5,10 @@ import { ROUTES } from "../../router/routePaths.js";
 const TABS = [
   { key: "companies", label: "Companies", path: ROUTES.COMPANY_COMPANIES },
   { key: "branches", label: "Branches", path: ROUTES.COMPANY_BRANCHES },
-  { key: "departments", label: "Departments", path: ROUTES.COMPANY_DEPARTMENTS },
+  // { key: "departments", label: "Departments", path: ROUTES.COMPANY_DEPARTMENTS },
   { key: "designations", label: "Designations", path: ROUTES.COMPANY_DESIGNATIONS },
+  { key: "admins", label: "Admins", path: ROUTES.COMPANY_ADMINS },
+  { key: "documents", label: "Documents", path: ROUTES.COMPANY_DOCUMENTS },
 ];
 
 export default function CompanyTabs() {

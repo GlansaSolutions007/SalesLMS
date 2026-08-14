@@ -1,0 +1,19 @@
+@import "./DataTable.css";
+
+.bulk-qn-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.bulk-qn-import p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+.bulk-qn-import .dtable th,
+.bulk-qn-import .dtable td {
+  padding: 10px 14px;
+}

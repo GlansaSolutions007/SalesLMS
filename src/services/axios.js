@@ -64,11 +64,32 @@ function forceLogoutRedirect() {
   }
 }
 
+// The Dashboard route is intentionally reachable while a subscription is
+// expired (it shows a warning in place of stats) — only its own data call
+// gets this 403, so that one case is left for useDashboardData.js to
+// display inline instead of bouncing the user away from an allowed page.
+// Every other page's blocked call redirects to the Subscription Expired
+// page, matching ApiAuthenticate's RESTRICTED_PATTERNS on the backend.
+function isDashboardDataCall(url) {
+  return typeof url === "string" && url.includes("/admin/dashboard");
+}
+
+function redirectToSubscriptionExpired() {
+  if (typeof window === "undefined") return;
+  if (window.location.pathname === ROUTES.SUBSCRIPTION_EXPIRED) return;
+  window.location.assign(ROUTES.SUBSCRIPTION_EXPIRED);
+}
+
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
     const status = error.response?.status;
+
+    if (status === 403 && error.response?.data?.subscription_expired && !isDashboardDataCall(originalRequest?.url)) {
+      redirectToSubscriptionExpired();
+      return Promise.reject(error);
+    }
 
     if (status === 401 && originalRequest && !originalRequest._retry && !isAuthExempt(originalRequest.url)) {
       originalRequest._retry = true;

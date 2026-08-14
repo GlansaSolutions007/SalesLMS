@@ -1,14 +1,16 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import Badge from "../../components/Badge.jsx";
 import Icon from "../../components/Icon.jsx";
 import DataToolbar from "../../components/DataToolbar.jsx";
 import DataTable from "../../components/DataTable.jsx";
 import Pagination from "../../components/Pagination.jsx";
 import { exportToCsv } from "../../utils/csv.js";
-import TrainerTabs from "./TrainerTabs.jsx";
+// import TrainerTabs from "./TrainerTabs.jsx";
+import TrainerSectionTabs from "../training/TrainingSectionTabs.jsx";
+import Topbar from "../../components/Topbar.jsx";
 import Breadcrumb from "../../components/Breadcrumb.jsx";
 import useTrainersList from "./useTrainerList.js";
-import { ROUTES } from "../../router/routePaths.js";
+import { ROUTES, trainerEditPath } from "../../router/routePaths.js";
 
 const STATUS_TONE = { Active: "green", Inactive: "gray" };
 
@@ -18,6 +20,7 @@ function initials(name = "") {
 
 export default function TrainerList() {
   const navigate = useNavigate();
+  const { toggleCollapsed } = useOutletContext();
   const table = useTrainersList();
 
   const COLUMNS = [
@@ -47,17 +50,31 @@ export default function TrainerList() {
       key: "actions",
       header: "",
       render: (r) => (
-        <button
-          type="button"
-          className="fa-outline-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(ROUTES.TRAINER_PROFILE, { state: { trainerId: r.id } });
-          }}
-        >
-          <Icon name="eye" size={14} />
-          View
-        </button>
+        <div className="cl-row-actions">
+          <button
+            type="button"
+            className="fa-outline-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(ROUTES.TRAINER_PROFILE, { state: { trainerId: r.id } });
+            }}
+          >
+            <Icon name="eye" size={14} />
+            View
+          </button>
+          <button
+            type="button"
+            className="dash-icon-btn"
+            aria-label={`Edit ${r.full_name}`}
+            title="Edit"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(trainerEditPath(r.id));
+            }}
+          >
+            <Icon name="edit" size={15} />
+          </button>
+        </div>
       ),
     },
   ];
@@ -73,61 +90,65 @@ export default function TrainerList() {
   ];
 
   return (
-    <div className="cl-body">
-      <div className="cl-header">
-        <div>
-          <h1>Trainers</h1>
-          <Breadcrumb current="All Trainers" />
+    <>
+      <Topbar onMenuClick={toggleCollapsed} searchPlaceholder="Search..." notifications={3} messages={5} />
+
+      <div className="cl-body">
+        <div className="cl-header">
+          <div>
+            <h1>Trainers</h1>
+            <Breadcrumb current="All Trainers" />
+          </div>
+        </div>
+
+        <TrainerSectionTabs />
+
+        <div className="panel cl-panel">
+          <DataToolbar
+            search={table.search}
+            onSearchChange={table.setSearch}
+            searchPlaceholder="Search trainers..."
+            statusFilter={table.statusFilter}
+            onStatusFilterChange={table.setStatusFilter}
+            statusOptions={STATUS_OPTIONS}
+            sort={table.sort}
+            onSortChange={table.setSort}
+            sortOptions={SORT_OPTIONS}
+            addLabel="Add Trainer"
+            onAdd={() => navigate(ROUTES.TRAINER_ADD)}
+            onExportCsv={() =>
+              exportToCsv(
+                "trainers.csv",
+                table.items,
+                COLUMNS.filter((c) => c.key !== "actions"),
+              )
+            }
+            onExportPdf={() => window.print()}
+          />
+
+          {table.error && <p className="cl-error">{table.error}</p>}
+
+          <DataTable
+            columns={COLUMNS}
+            rows={table.items}
+            isLoading={table.isLoading}
+            emptyMessage="No trainers match your search."
+          />
+
+          {!table.isLoading && table.total > 0 && (
+            <div className="cl-footer">
+              <p>
+                Showing {table.from}–{table.to} of {table.total} trainers
+              </p>
+              <Pagination
+                page={table.page}
+                totalPages={table.totalPages}
+                onPageChange={table.setPage}
+              />
+            </div>
+          )}
         </div>
       </div>
-
-      <TrainerTabs />
-
-      <div className="panel cl-panel">
-        <DataToolbar
-          search={table.search}
-          onSearchChange={table.setSearch}
-          searchPlaceholder="Search trainers..."
-          statusFilter={table.statusFilter}
-          onStatusFilterChange={table.setStatusFilter}
-          statusOptions={STATUS_OPTIONS}
-          sort={table.sort}
-          onSortChange={table.setSort}
-          sortOptions={SORT_OPTIONS}
-          addLabel="Add Trainer"
-          onAdd={() => navigate(ROUTES.TRAINER_ADD)}
-          onExportCsv={() =>
-            exportToCsv(
-              "trainers.csv",
-              table.items,
-              COLUMNS.filter((c) => c.key !== "actions"),
-            )
-          }
-          onExportPdf={() => window.print()}
-        />
-
-        {table.error && <p className="cl-error">{table.error}</p>}
-
-        <DataTable
-          columns={COLUMNS}
-          rows={table.items}
-          isLoading={table.isLoading}
-          emptyMessage="No trainers match your search."
-        />
-
-        {!table.isLoading && table.total > 0 && (
-          <div className="cl-footer">
-            <p>
-              Showing {table.from}–{table.to} of {table.total} trainers
-            </p>
-            <Pagination
-              page={table.page}
-              totalPages={table.totalPages}
-              onPageChange={table.setPage}
-            />
-          </div>
-        )}
-      </div>
-    </div>
+    </>
   );
 }

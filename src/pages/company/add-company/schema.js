@@ -12,12 +12,24 @@ function optionalNumeric(label) {
     .test("is-numeric", `${label} must be a number.`, (value) => !value || NUMERIC_REGEX.test(value));
 }
 
+// Employee Count drives Total Amount = Employee Count × Price Per Employee
+// (see SubscriptionDetailsStep.jsx), so unlike the other subscription
+// fields it can't stay optional.
+function requiredNumeric(label) {
+  return yup
+    .string()
+    .default("")
+    .required(`${label} is required.`)
+    .test("is-numeric", `${label} must be a number.`, (value) => !value || NUMERIC_REGEX.test(value));
+}
+
 // Field names deliberately mirror the Laravel API's multipart/form-data keys
 // (snake_case) rather than the app's usual camelCase, so FormData
 // construction and 422 validation-error mapping are a straight 1:1 lookup.
-// Only the fields the API marks as required are enforced here — everything
-// else is intentionally optional per the spec, even though the UI shows
-// most of them across all four steps.
+// Subscription plan/start and the full Admin section are required by
+// product decision even though the Laravel API itself still treats them as
+// optional (nullable) — the API happily accepts a company with no plan or
+// admin, this UI just always asks for both.
 export const companySchema = yup.object({
   company_code: yup.string().default(""),
   company_name: yup.string().default("").required("Company name is required."),
@@ -42,74 +54,27 @@ export const companySchema = yup.object({
   country: yup.string().default("").required("Country is required."),
   pincode: yup.string().default("").required("Pincode is required.").matches(PINCODE_REGEX, "Enter a valid pincode."),
 
-  plan_id: yup.string().default(""),
-  subscription_start: yup.string().default(""),
-  employee_limit: optionalNumeric("Employee limit"),
+  plan_id: yup.string().default("").required("Please select a subscription plan."),
+  subscription_start: yup.string().default("").required("Subscription start date is required."),
+  employee_limit: requiredNumeric("Employee count"),
   trainer_limit: optionalNumeric("Trainer limit"),
   storage_limit: optionalNumeric("Storage limit"),
   amount: optionalNumeric("Amount"),
   payment_status: yup.string().oneOf(["Pending", "Paid", "Failed", ""]).default(""),
 
-  admin_name: yup.string().default(""),
-  admin_email: yup
-    .string()
-    .default("")
-    .test("email-if-present", "Enter a valid email address.", (value) => !value || yup.string().email().isValidSync(value)),
-  admin_mobile: yup
-    .string()
-    .default("")
-    .test("mobile-if-present", "Enter a valid mobile number.", (value) => !value || MOBILE_REGEX.test(value)),
-  // Only validate password (strength/confirmation) if the admin chose to set
-  // one — the whole Admin step is optional per spec.
+  admin_name: yup.string().default("").required("Admin name is required."),
+  admin_email: yup.string().default("").required("Admin email is required.").email("Enter a valid email address."),
+  admin_mobile: yup.string().default("").required("Admin mobile number is required.").matches(MOBILE_REGEX, "Enter a valid mobile number."),
   admin_password: yup
     .string()
     .default("")
-    .test("min-length-if-present", "Password must be at least 8 characters.", (value) => !value || value.length >= 8),
+    .required("Password is required.")
+    .min(8, "Password must be at least 8 characters."),
   admin_password_confirmation: yup
     .string()
     .default("")
-    .when("admin_password", {
-      is: (value) => Boolean(value),
-      then: (schema) => schema.required("Please confirm the password.").oneOf([yup.ref("admin_password")], "Passwords do not match."),
-      otherwise: (schema) => schema,
-    }),
+    .required("Please confirm the password.")
+    .oneOf([yup.ref("admin_password")], "Passwords do not match."),
 });
 
 export const defaultCompanyFormValues = companySchema.getDefault();
-
-export const WIZARD_STEPS = [
-  {
-    key: "details",
-    label: "Company Details",
-    fields: [
-      "company_code",
-      "company_name",
-      "legal_name",
-      "registration_number",
-      "gst_number",
-      "pan_number",
-      "industry_type",
-      "website",
-      "email",
-      "mobile",
-      "phone",
-      "logo",
-      "address_line1",
-      "address_line2",
-      "city",
-      "state",
-      "country",
-      "pincode",
-    ],
-  },
-  {
-    key: "subscription",
-    label: "Subscription Details",
-    fields: ["plan_id", "subscription_start", "employee_limit", "trainer_limit", "storage_limit", "amount", "payment_status"],
-  },
-  {
-    key: "admin",
-    label: "Company Admin Details",
-    fields: ["admin_name", "admin_email", "admin_mobile", "admin_password", "admin_password_confirmation"],
-  },
-];
