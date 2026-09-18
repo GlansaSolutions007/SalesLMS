@@ -1,0 +1,273 @@
+/* Shared, hand-rolled chart primitives (no charting library is installed in
+   this project — see GroupedBarChart/HorizontalBarChart/TrendChart/DonutChart).
+   Styled to sit alongside the existing .bar-chart/.bar-track/.bar-fill
+   convention in dashboard.css: same color tokens, same restrained palette. */
+
+.chart-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chart-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.chart-subtitle {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.chart-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.chart-empty {
+  padding: 32px 0;
+  text-align: center;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+/* ── Grouped / plain bar chart ─────────────────────────────────────────── */
+
+.gbar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  min-height: 190px;
+  padding-top: 24px;
+  overflow-x: auto;
+}
+
+.gbar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 56px;
+  flex: 1;
+}
+
+.gbar-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 150px;
+  width: 100%;
+  justify-content: center;
+}
+
+.gbar-bar-wrap {
+  position: relative;
+  width: 18px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  background: var(--color-surface);
+  border-radius: 6px 6px 0 0;
+}
+
+.gbar-bar {
+  width: 100%;
+  border-radius: 6px 6px 0 0;
+  min-height: 2px;
+  transition: height 0.2s ease;
+}
+
+.gbar-value {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, calc(-100% - 4px));
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.gbar-label {
+  font-size: 11px;
+  color: var(--color-muted);
+  text-align: center;
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Horizontal bar chart (achievement %, ranking) ─────────────────────── */
+
+.hbar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hbar-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 56px;
+  align-items: center;
+  gap: 10px;
+}
+
+.hbar-row-rank {
+  grid-template-columns: 24px 96px 1fr 56px;
+}
+
+.hbar-rank {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+
+.hbar-name {
+  font-size: 13px;
+  color: var(--color-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hbar-track {
+  position: relative;
+  height: 10px;
+  border-radius: 6px;
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.hbar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 6px;
+  transition: width 0.2s ease;
+}
+
+.hbar-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-heading);
+  text-align: right;
+}
+
+/* ── Line / area trend chart ────────────────────────────────────────────── */
+
+.trend-chart-wrap {
+  width: 100%;
+}
+
+.trend-chart-plot {
+  position: relative;
+}
+
+.trend-chart-svg {
+  width: 100%;
+  height: 190px;
+  overflow: visible;
+}
+
+.trend-value-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.trend-value-label {
+  position: absolute;
+  transform: translate(-50%, -150%);
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: white;
+  box-shadow: var(--shadow-sm);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.trend-chart-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding: 0 2px;
+}
+
+.trend-chart-labels span {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+/* ── Donut chart ────────────────────────────────────────────────────────── */
+
+.donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.donut-svg {
+  flex-shrink: 0;
+}
+
+.donut-center-value {
+  font-size: 20px;
+  font-weight: 800;
+  fill: var(--color-heading);
+}
+
+.donut-center-label {
+  font-size: 10px;
+  fill: var(--color-muted);
+}
+
+.donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 160px;
+}
+
+.donut-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-heading);
+}
+
+.donut-legend-count {
+  margin-left: auto;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .hbar-row {
+    grid-template-columns: 90px 1fr 44px;
+  }
+  .hbar-row-rank {
+    grid-template-columns: 20px 72px 1fr 44px;
+  }
+}

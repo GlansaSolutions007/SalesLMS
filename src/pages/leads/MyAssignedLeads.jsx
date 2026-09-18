@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import Topbar from "../../components/Topbar.jsx";
 import Breadcrumb from "../../components/Breadcrumb.jsx";
@@ -6,9 +6,14 @@ import DataTable from "../../components/DataTable.jsx";
 import Badge from "../../components/Badge.jsx";
 import Icon from "../../components/Icon.jsx";
 import DateFilterField from "../../components/DateFilterField.jsx";
-import { useAuth } from "../../context/AuthContext.jsx";
-import { getMyLeads } from "../../services/api/leadsApi.js";
 import { myLeadViewPath } from "../../router/routePaths.js";
+
+// Design-only data — see LeadPool.jsx's note on this module's UI-only scope.
+const DUMMY_MY_LEADS = [
+  { id: 1, lead_code: "LD-2001", full_name: "Karan Mehta", company_name: "Mehta Textiles", mobile: "9876543210", lead_source: "Manual Entry", priority: "High", next_follow_up_date: "2026-09-20", next_follow_up_time: "11:00:00", status: "New" },
+  { id: 2, lead_code: "LD-2002", full_name: "Sneha Rao", company_name: "Rao Enterprises", mobile: "9876543211", lead_source: "Excel Import", priority: "Medium", next_follow_up_date: "2026-09-22", next_follow_up_time: "15:30:00", status: "Contacted" },
+  { id: 3, lead_code: "LD-2003", full_name: "Rahul Nair", company_name: "Nair Logistics", mobile: "9876543214", lead_source: "Manual Entry", priority: "Medium", next_follow_up_date: null, next_follow_up_time: null, status: "Converted" },
+];
 
 const STATUS_TONE = {
   new: "blue",
@@ -25,28 +30,20 @@ const STATUSES = ["New", "Assigned", "Contacted", "Follow-up", "Interested", "Co
 export default function MyAssignedLeads() {
   const { toggleCollapsed } = useOutletContext();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const companyId = user?.company?.id;
 
-  const [leads, setLeads] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [followUpDate, setFollowUpDate] = useState("");
 
-  useEffect(() => {
-    if (!companyId) return;
-    setIsLoading(true);
-    getMyLeads(companyId, {
-      status: statusFilter !== "All" ? statusFilter : undefined,
-      search: search.trim() || undefined,
-      follow_up_date: followUpDate || undefined,
-      per_page: 50,
-    })
-      .then((res) => setLeads(res.items))
-      .catch(() => setLeads([]))
-      .finally(() => setIsLoading(false));
-  }, [companyId, statusFilter, search, followUpDate]);
+  const leads = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return DUMMY_MY_LEADS.filter((l) => {
+      if (statusFilter !== "All" && l.status !== statusFilter) return false;
+      if (term && !`${l.lead_code} ${l.full_name} ${l.company_name} ${l.mobile}`.toLowerCase().includes(term)) return false;
+      if (followUpDate && l.next_follow_up_date !== followUpDate) return false;
+      return true;
+    });
+  }, [statusFilter, search, followUpDate]);
 
   const columns = [
     { key: "lead_code", header: "Lead Number", render: (r) => r.lead_code || "—" },
@@ -109,7 +106,7 @@ export default function MyAssignedLeads() {
             <DateFilterField value={followUpDate} onChange={setFollowUpDate} title="Next Follow-up Date" />
           </div>
 
-          <DataTable columns={columns} rows={leads} isLoading={isLoading} emptyMessage="No leads assigned to you yet." />
+          <DataTable columns={columns} rows={leads} isLoading={false} emptyMessage="No leads assigned to you yet." />
         </div>
       </div>
     </>

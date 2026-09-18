@@ -10,8 +10,8 @@ export default function CompanyAdminDashboard({ data }) {
 
   const statCards = [
     { label: "Employees", value: String(stats.employees ?? 0), icon: "users" },
-    { label: "Active Trainers", value: String(stats.trainers ?? 0), icon: "presentation" },
-    { label: "Published Courses", value: String(stats.active_courses ?? 0), icon: "book" },
+    // { label: "Active Trainers", value: String(stats.trainers ?? 0), icon: "presentation" },
+    // { label: "Published Courses", value: String(stats.active_courses ?? 0), icon: "book" },
     { label: "Course Assignments", value: String(stats.assignments ?? 0), icon: "cap" },
   ];
 

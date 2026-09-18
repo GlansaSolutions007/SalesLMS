@@ -1,54 +1,50 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import Topbar from "../../components/Topbar.jsx";
 import Breadcrumb from "../../components/Breadcrumb.jsx";
 import DataTable from "../../components/DataTable.jsx";
 import Badge from "../../components/Badge.jsx";
 import Toast from "../../components/Toast.jsx";
-import useCompanyOptions from "../company/useCompanyOptions.js";
-import { getCompanyIncentives, updateIncentiveStatus } from "../../services/api/incentivesApi.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 const STATUS_TONE = { pending: "orange", approved: "blue", paid: "green" };
 const STATUSES = ["Pending", "Approved", "Paid"];
 
+// Design-only data — see LeadPool.jsx's note on this module's UI-only scope.
+const DUMMY_COMPANIES = [
+  { id: 1, company_name: "Acme Sales Pvt Ltd" },
+  { id: 2, company_name: "Northwind Traders" },
+];
+
+const DUMMY_INCENTIVES = [
+  { id: 1, employee: { full_name: "Arjun Kumar" }, period_month: "2026-09-01", verified_conversions_count: 27, verified_revenue: 1140000, calculated_amount: 57000, status: "Pending" },
+  { id: 2, employee: { full_name: "Priya Singh" }, period_month: "2026-09-01", verified_conversions_count: 31, verified_revenue: 1120000, calculated_amount: 56000, status: "Approved" },
+  { id: 3, employee: { full_name: "Ravi Verma" }, period_month: "2026-08-01", verified_conversions_count: 22, verified_revenue: 880000, calculated_amount: 44000, status: "Paid" },
+];
+
 export default function IncentiveList() {
   const { toggleCollapsed } = useOutletContext();
   const { roleName, user } = useAuth();
   const isSuperAdmin = roleName === "Super Admin";
-  const { options: companies } = useCompanyOptions(isSuperAdmin);
+  const companies = DUMMY_COMPANIES;
   const [companyId, setCompanyId] = useState(() => (isSuperAdmin ? "" : String(user?.company?.id ?? "")));
 
   useEffect(() => {
     if (isSuperAdmin && !companyId && companies.length > 0) setCompanyId(String(companies[0].id));
   }, [isSuperAdmin, companies, companyId]);
 
-  const [incentives, setIncentives] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [allIncentives, setAllIncentives] = useState(DUMMY_INCENTIVES);
   const [statusFilter, setStatusFilter] = useState("All");
   const [toast, setToast] = useState(null);
-  const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    if (!companyId) {
-      setIncentives([]);
-      return;
-    }
-    setIsLoading(true);
-    getCompanyIncentives(companyId, { status: statusFilter !== "All" ? statusFilter : undefined })
-      .then((res) => setIncentives(res.items))
-      .catch(() => setIncentives([]))
-      .finally(() => setIsLoading(false));
-  }, [companyId, statusFilter, refreshKey]);
+  const incentives = useMemo(() => {
+    if (!companyId) return [];
+    return allIncentives.filter((i) => statusFilter === "All" || i.status === statusFilter);
+  }, [allIncentives, companyId, statusFilter]);
 
-  async function handleStatusChange(row, status) {
-    try {
-      await updateIncentiveStatus(companyId, row.id, status);
-      setToast({ tone: "success", message: `Incentive marked ${status}.` });
-      setRefreshKey((k) => k + 1);
-    } catch (err) {
-      setToast({ tone: "error", message: err.message ?? "Could not update status." });
-    }
+  function handleStatusChange(row, status) {
+    setAllIncentives((prev) => prev.map((i) => (i.id === row.id ? { ...i, status } : i)));
+    setToast({ tone: "success", message: `Incentive marked ${status}.` });
   }
 
   const columns = [
@@ -106,7 +102,7 @@ export default function IncentiveList() {
             </select>
           </div>
 
-          <DataTable columns={columns} rows={incentives} isLoading={isLoading} emptyMessage="No incentives recorded yet." />
+          <DataTable columns={columns} rows={incentives} isLoading={false} emptyMessage="No incentives recorded yet." />
         </div>
       </div>
     </>

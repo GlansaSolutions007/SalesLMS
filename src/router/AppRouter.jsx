@@ -70,6 +70,7 @@ const FollowupsPage = lazy(() => import("../pages/leads/FollowupsPage.jsx"));
 const TargetsPage = lazy(() => import("../pages/targets/TargetsPage.jsx"));
 const TargetForm = lazy(() => import("../pages/targets/TargetForm.jsx"));
 const IncentivesPage = lazy(() => import("../pages/incentives/IncentivesPage.jsx"));
+const EmployeeTargetPerformance = lazy(() => import("../pages/salesPerformance/EmployeeTargetPerformance.jsx"));
 
 const SubscriptionPlanList = lazy(() => import("../pages/masters/SubscriptionPlanList.jsx"));
 const AllSubscriptions = lazy(() => import("../pages/masters/AllSubscriptions.jsx"));
@@ -141,6 +142,7 @@ const PAGE_COMPONENTS = {
   followups: FollowupsPage,
   targets: TargetsPage,
   rewards: IncentivesPage,
+  "employee-target-performance": EmployeeTargetPerformance,
 };
 
 const flatMenu = flattenMenu();

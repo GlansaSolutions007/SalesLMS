@@ -6,6 +6,13 @@ export const GST_REGEX = /^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i;
 export const PAN_REGEX = /^[A-Z]{5}\d{4}[A-Z]{1}$/i;
 export const WEBSITE_REGEX = /^(https?:\/\/)?([\w-]+\.)+[a-z]{2,}([/?#]\S*)?$/i;
 
+// Mirrors the backend's password rule exactly (ResetPasswordRequest /
+// ChangePasswordRequest: min:8 + this regex) so the reset-password form can
+// reject a non-compliant password before it round-trips to the API as a 422.
+export const PASSWORD_COMPLEXITY_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/;
+export const PASSWORD_COMPLEXITY_MESSAGE =
+  "Password must contain at least one uppercase letter, one number, and one special character (@$!%*?&).";
+
 export function req(value, message) {
   return String(value ?? "").trim() ? null : message;
 }

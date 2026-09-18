@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import Topbar from "../../components/Topbar.jsx";
 import Breadcrumb from "../../components/Breadcrumb.jsx";
@@ -9,16 +9,16 @@ import ProgressBar from "../../components/ProgressBar.jsx";
 import StatCard from "../../components/StatCard.jsx";
 import useCompanyOptions from "../company/useCompanyOptions.js";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { getCourseReport, getEmployeeReport, getCompletionReport } from "../../services/reportsService.js";
-import {
-  getEmployeePerformanceReport,
-  getLeadConversionReport,
-  getTargetAchievementReport,
-  getIncentiveReport,
-  getRevenueReport,
-} from "../../services/api/salesReportsApi.js";
 import { exportToCsv } from "../../utils/csv.js";
+import { getTargetStatus } from "../../utils/targetStatus.js";
 import "../company/CompanyList.css";
+
+// This page is intentionally disconnected from the backend report APIs
+// (reportsService.js / services/api/salesReportsApi.js) and shows static
+// placeholder data instead — every tab below is seeded from the DUMMY_*
+// constants, never fetched. Those service files are left untouched since
+// EmployeeDetailModal.jsx and EmployeeTargetPerformance.jsx still call them
+// for real data elsewhere.
 
 const TABS = [
   { key: "courses", label: "Course Report" },
@@ -37,6 +37,109 @@ function initials(name = "") {
   return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 }
 
+// ── Dummy datasets (one per tab) ─────────────────────────────────────────
+
+const DUMMY_COURSE_ROWS = [
+  { course_name: "Sales Negotiation Mastery", category: "Sales Skills", assigned_count: 42, completed_count: 31, completion_rate: 74, average_score: 82, certificates_issued: 29 },
+  { course_name: "Product Knowledge Bootcamp", category: "Product", assigned_count: 58, completed_count: 40, completion_rate: 69, average_score: 76, certificates_issued: 38 },
+  { course_name: "Customer Objection Handling", category: "Sales Skills", assigned_count: 35, completed_count: 22, completion_rate: 63, average_score: 71, certificates_issued: 20 },
+  { course_name: "CRM Essentials", category: "Tools", assigned_count: 50, completed_count: 45, completion_rate: 90, average_score: 88, certificates_issued: 45 },
+];
+
+const DUMMY_EMPLOYEE_ROWS = [
+  { full_name: "Rahul Sharma", employee_code: "EMP-1001", assigned_count: 6, completed_count: 5, completion_rate: 83, certificates_count: 5 },
+  { full_name: "Priya Menon", employee_code: "EMP-1002", assigned_count: 5, completed_count: 5, completion_rate: 100, certificates_count: 5 },
+  { full_name: "Arjun Verma", employee_code: "EMP-1003", assigned_count: 7, completed_count: 3, completion_rate: 43, certificates_count: 3 },
+  { full_name: "Sneha Iyer", employee_code: "EMP-1004", assigned_count: 4, completed_count: 4, completion_rate: 100, certificates_count: 4 },
+];
+
+const DUMMY_COMPLETION = {
+  overall: { total_enrolled: 160, total_completed: 118, completion_rate: 74 },
+  by_batch: [
+    { batch_name: "Batch A – Onboarding", course: "Sales Negotiation Mastery", status: "Ongoing", enrolled_count: 30, completed_count: 21, completion_rate: 70 },
+    { batch_name: "Batch B – Q3 Refresher", course: "Product Knowledge Bootcamp", status: "Completed", enrolled_count: 28, completed_count: 28, completion_rate: 100 },
+    { batch_name: "Batch C – New Hires", course: "CRM Essentials", status: "Upcoming", enrolled_count: 20, completed_count: 0, completion_rate: 0 },
+  ],
+};
+
+const DUMMY_SALES_PERFORMANCE = {
+  overall: { total_employees: 24, total_verified_conversions: 96, total_verified_revenue: 4820000 },
+  by_employee: [
+    { full_name: "Rahul Sharma", assigned_leads: 120, verified_leads: 64, verified_sales: 22, verified_revenue: 980000 },
+    { full_name: "Priya Menon", assigned_leads: 98, verified_leads: 58, verified_sales: 19, verified_revenue: 860000 },
+    { full_name: "Arjun Verma", assigned_leads: 110, verified_leads: 41, verified_sales: 14, verified_revenue: 610000 },
+  ],
+};
+
+const DUMMY_SALES_CONVERSION = {
+  overall: { total_leads: 540, total_assigned: 480, total_verified: 210, conversion_rate: 39 },
+  by_status: [
+    { status: "New", count: 60 },
+    { status: "Contacted", count: 120 },
+    { status: "Interested", count: 90 },
+    { status: "Converted", count: 240 },
+    { status: "Verified", count: 210 },
+    { status: "Closed Lost", count: 30 },
+  ],
+};
+
+const DUMMY_SALES_TARGET_RAW = {
+  overall: { employees_with_target: 24, avg_lead_achievement_pct: 68, avg_revenue_achievement_pct: 72 },
+  by_employee: [
+    {
+      full_name: "Rahul Sharma", start_date: "2026-09-01", end_date: "2026-09-30",
+      lead_target: 80, previous_leads: 10, platform_leads: 54, verified_leads: 64, lead_achievement_pct: 80,
+      sales_target: 25, previous_sales: 3, platform_sales: 19, verified_sales: 22, sales_achievement_pct: 88,
+      revenue_target: 1000000, previous_revenue: 120000, platform_revenue: 860000, verified_revenue: 980000,
+    },
+    {
+      full_name: "Priya Menon", start_date: "2026-09-01", end_date: "2026-09-30",
+      lead_target: 90, previous_leads: 8, platform_leads: 50, verified_leads: 58, lead_achievement_pct: 64,
+      sales_target: 25, previous_sales: 2, platform_sales: 17, verified_sales: 19, sales_achievement_pct: 76,
+      revenue_target: 1000000, previous_revenue: 90000, platform_revenue: 770000, verified_revenue: 860000,
+    },
+    {
+      full_name: "Arjun Verma", start_date: "2026-09-01", end_date: "2026-09-30",
+      lead_target: 70, previous_leads: 5, platform_leads: 36, verified_leads: 41, lead_achievement_pct: 59,
+      sales_target: 20, previous_sales: 1, platform_sales: 13, verified_sales: 14, sales_achievement_pct: 70,
+      revenue_target: 800000, previous_revenue: 40000, platform_revenue: 570000, verified_revenue: 610000,
+    },
+  ],
+};
+
+const DUMMY_SALES_INCENTIVE = {
+  overall: { total_pending: 45000, total_approved: 120000, total_paid: 310000 },
+  by_employee: [
+    { full_name: "Rahul Sharma", period_month: "Sep 2026", verified_conversions_count: 22, verified_revenue: 980000, calculated_amount: 49000, status: "Paid" },
+    { full_name: "Priya Menon", period_month: "Sep 2026", verified_conversions_count: 19, verified_revenue: 860000, calculated_amount: 43000, status: "Approved" },
+    { full_name: "Arjun Verma", period_month: "Sep 2026", verified_conversions_count: 14, verified_revenue: 610000, calculated_amount: 30500, status: "Pending" },
+  ],
+};
+
+const DUMMY_SALES_REVENUE = {
+  overall: { total_verified_revenue: 2450000, total_verified_conversions: 55, avg_deal_size: 44545 },
+  by_employee: [
+    { full_name: "Rahul Sharma", verified_conversions: 22, verified_revenue: 980000 },
+    { full_name: "Priya Menon", verified_conversions: 19, verified_revenue: 860000 },
+    { full_name: "Arjun Verma", verified_conversions: 14, verified_revenue: 610000 },
+  ],
+};
+
+function formatPeriod(row) {
+  if (!row.start_date || !row.end_date) return "—";
+  return `${row.start_date} – ${row.end_date}`;
+}
+
+// Same shape the live Target Achievement report used to compute after
+// fetching — derived once from the dummy rows above instead.
+const DUMMY_SALES_TARGET = {
+  ...DUMMY_SALES_TARGET_RAW,
+  by_employee: DUMMY_SALES_TARGET_RAW.by_employee.map((r) => {
+    const status = getTargetStatus(r.lead_achievement_pct);
+    return { ...r, period: formatPeriod(r), status_label: status.label, status_tone: status.tone };
+  }),
+};
+
 export default function Reports() {
   const { toggleCollapsed } = useOutletContext();
   const { roleName, user } = useAuth();
@@ -51,35 +154,16 @@ export default function Reports() {
 
   const [activeTab, setActiveTab] = useState("courses");
 
-  const [courseRows, setCourseRows] = useState([]);
-  const [employeeRows, setEmployeeRows] = useState([]);
-  const [completion, setCompletion] = useState({ overall: {}, by_batch: [] });
-  const [salesPerformance, setSalesPerformance] = useState({ overall: {}, by_employee: [] });
-  const [salesConversion, setSalesConversion] = useState({ overall: {}, by_status: [] });
-  const [salesTarget, setSalesTarget] = useState({ overall: {}, by_employee: [] });
-  const [salesIncentive, setSalesIncentive] = useState({ overall: {}, by_employee: [] });
-  const [salesRevenue, setSalesRevenue] = useState({ overall: {}, by_employee: [] });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const load = useCallback(() => {
-    if (!companyId) return;
-    setLoading(true);
-    setError("");
-    const request =
-      activeTab === "courses" ? getCourseReport(companyId).then(setCourseRows) :
-      activeTab === "employees" ? getEmployeeReport(companyId).then(setEmployeeRows) :
-      activeTab === "completion" ? getCompletionReport(companyId).then(setCompletion) :
-      activeTab === "sales-performance" ? getEmployeePerformanceReport(companyId).then(setSalesPerformance) :
-      activeTab === "sales-conversion" ? getLeadConversionReport(companyId).then(setSalesConversion) :
-      activeTab === "sales-target" ? getTargetAchievementReport(companyId).then(setSalesTarget) :
-      activeTab === "sales-incentive" ? getIncentiveReport(companyId).then(setSalesIncentive) :
-      getRevenueReport(companyId).then(setSalesRevenue);
-
-    request.catch((err) => setError(err.message ?? "Could not load this report.")).finally(() => setLoading(false));
-  }, [companyId, activeTab]);
-
-  useEffect(() => { load(); }, [load]);
+  // Static placeholder data — never fetched, so there's nothing to load per
+  // company/tab; switching either just changes which of these is displayed.
+  const courseRows = DUMMY_COURSE_ROWS;
+  const employeeRows = DUMMY_EMPLOYEE_ROWS;
+  const completion = DUMMY_COMPLETION;
+  const salesPerformance = DUMMY_SALES_PERFORMANCE;
+  const salesConversion = DUMMY_SALES_CONVERSION;
+  const salesTarget = DUMMY_SALES_TARGET;
+  const salesIncentive = DUMMY_SALES_INCENTIVE;
+  const salesRevenue = DUMMY_SALES_REVENUE;
 
   const courseColumns = [
     { key: "course_name", header: "Course", render: (r) => <strong>{r.course_name}</strong> },
@@ -135,14 +219,22 @@ export default function Reports() {
 
   const salesTargetColumns = [
     { key: "full_name", header: "Employee" },
+    { key: "period", header: "Period" },
     { key: "lead_target", header: "Lead Target" },
-    { key: "verified_leads", header: "Verified Leads" },
+    { key: "previous_leads", header: "Previous Leads" },
+    { key: "platform_leads", header: "Platform Leads" },
+    { key: "verified_leads", header: "Total Leads" },
     { key: "lead_achievement_pct", header: "Lead %", render: (r) => <ProgressBar value={Math.min(r.lead_achievement_pct, 100)} /> },
     { key: "sales_target", header: "Sales Target" },
-    { key: "verified_sales", header: "Verified Sales" },
+    { key: "previous_sales", header: "Previous Sales" },
+    { key: "platform_sales", header: "Platform Sales" },
+    { key: "verified_sales", header: "Total Sales" },
     { key: "sales_achievement_pct", header: "Sales %", render: (r) => <ProgressBar value={Math.min(r.sales_achievement_pct, 100)} tone="success" /> },
     { key: "revenue_target", header: "Revenue Target", render: (r) => `₹${Number(r.revenue_target).toLocaleString()}` },
-    { key: "verified_revenue", header: "Verified Revenue", render: (r) => `₹${Number(r.verified_revenue).toLocaleString()}` },
+    { key: "previous_revenue", header: "Previous Revenue", render: (r) => `₹${Number(r.previous_revenue).toLocaleString()}` },
+    { key: "platform_revenue", header: "Platform Revenue", render: (r) => `₹${Number(r.platform_revenue).toLocaleString()}` },
+    { key: "verified_revenue", header: "Total Revenue", render: (r) => `₹${Number(r.verified_revenue).toLocaleString()}` },
+    { key: "status_label", header: "Status", render: (r) => <Badge tone={r.status_tone}>{r.status_label}</Badge> },
   ];
 
   const salesIncentiveColumns = [
@@ -213,13 +305,13 @@ export default function Reports() {
               ))}
             </div>
 
-            <button type="button" className="cl-btn" style={{ marginLeft: "auto" }} onClick={handleExport} disabled={!companyId || loading}>
+            <button type="button" className="cl-btn" style={{ marginLeft: "auto" }} onClick={handleExport} disabled={!companyId}>
               <Icon name="download" size={15} />
               Export CSV
             </button>
           </div>
 
-          {(error || companiesError) && <p className="cl-error">{error || companiesError}</p>}
+          {companiesError && <p className="cl-error">{companiesError}</p>}
 
           {!companyId ? (
             <p className="ep-empty-note">Select a company to view reports.</p>
@@ -230,12 +322,12 @@ export default function Reports() {
                 <StatCard icon="check" label="Total Completed" value={completion.overall?.total_completed ?? 0} tone="green" />
                 <StatCard icon="pieChart" label="Overall Completion" value={`${completion.overall?.completion_rate ?? 0}%`} tone="purple" />
               </div>
-              <DataTable columns={batchColumns} rows={completion.by_batch ?? []} isLoading={loading} emptyMessage="No batches found for this company." />
+              <DataTable columns={batchColumns} rows={completion.by_batch ?? []} isLoading={false} emptyMessage="No batches found for this company." />
             </>
           ) : activeTab === "courses" ? (
-            <DataTable columns={courseColumns} rows={courseRows} isLoading={loading} emptyMessage="No course assignments recorded for this company yet." />
+            <DataTable columns={courseColumns} rows={courseRows} isLoading={false} emptyMessage="No course assignments recorded for this company yet." />
           ) : activeTab === "employees" ? (
-            <DataTable columns={employeeColumns} rows={employeeRows} isLoading={loading} emptyMessage="No employees found for this company." />
+            <DataTable columns={employeeColumns} rows={employeeRows} isLoading={false} emptyMessage="No employees found for this company." />
           ) : activeTab === "sales-performance" ? (
             <>
               <div className="cv-stats-grid" style={{ marginBottom: 16 }}>
@@ -243,7 +335,7 @@ export default function Reports() {
                 <StatCard icon="check" label="Verified Conversions" value={salesPerformance.overall?.total_verified_conversions ?? 0} tone="green" />
                 <StatCard icon="coin" label="Verified Revenue" value={`₹${Number(salesPerformance.overall?.total_verified_revenue ?? 0).toLocaleString()}`} tone="purple" />
               </div>
-              <DataTable columns={salesPerformanceColumns} rows={salesPerformance.by_employee ?? []} isLoading={loading} emptyMessage="No employees found for this company." />
+              <DataTable columns={salesPerformanceColumns} rows={salesPerformance.by_employee ?? []} isLoading={false} emptyMessage="No employees found for this company." />
             </>
           ) : activeTab === "sales-conversion" ? (
             <>
@@ -253,7 +345,7 @@ export default function Reports() {
                 <StatCard icon="check" label="Verified" value={salesConversion.overall?.total_verified ?? 0} tone="green" />
                 <StatCard icon="pieChart" label="Conversion Rate" value={`${salesConversion.overall?.conversion_rate ?? 0}%`} tone="orange" />
               </div>
-              <DataTable columns={salesConversionColumns} rows={salesConversion.by_status ?? []} isLoading={loading} emptyMessage="No leads found for this company." />
+              <DataTable columns={salesConversionColumns} rows={salesConversion.by_status ?? []} isLoading={false} emptyMessage="No leads found for this company." />
             </>
           ) : activeTab === "sales-target" ? (
             <>
@@ -262,7 +354,7 @@ export default function Reports() {
                 <StatCard icon="flag" label="Avg. Lead Achievement" value={`${salesTarget.overall?.avg_lead_achievement_pct ?? 0}%`} tone="green" />
                 <StatCard icon="coin" label="Avg. Revenue Achievement" value={`${salesTarget.overall?.avg_revenue_achievement_pct ?? 0}%`} tone="purple" />
               </div>
-              <DataTable columns={salesTargetColumns} rows={salesTarget.by_employee ?? []} isLoading={loading} emptyMessage="No monthly targets set for this company." />
+              <DataTable columns={salesTargetColumns} rows={salesTarget.by_employee ?? []} isLoading={false} emptyMessage="No monthly targets set for this company." />
             </>
           ) : activeTab === "sales-incentive" ? (
             <>
@@ -271,7 +363,7 @@ export default function Reports() {
                 <StatCard icon="check" label="Approved" value={`₹${Number(salesIncentive.overall?.total_approved ?? 0).toLocaleString()}`} tone="blue" />
                 <StatCard icon="coin" label="Paid" value={`₹${Number(salesIncentive.overall?.total_paid ?? 0).toLocaleString()}`} tone="green" />
               </div>
-              <DataTable columns={salesIncentiveColumns} rows={salesIncentive.by_employee ?? []} isLoading={loading} emptyMessage="No incentive records for this company." />
+              <DataTable columns={salesIncentiveColumns} rows={salesIncentive.by_employee ?? []} isLoading={false} emptyMessage="No incentive records for this company." />
             </>
           ) : (
             <>
@@ -280,7 +372,7 @@ export default function Reports() {
                 <StatCard icon="check" label="Verified Conversions" value={salesRevenue.overall?.total_verified_conversions ?? 0} tone="blue" />
                 <StatCard icon="pieChart" label="Avg. Deal Size" value={`₹${Number(salesRevenue.overall?.avg_deal_size ?? 0).toLocaleString()}`} tone="purple" />
               </div>
-              <DataTable columns={salesRevenueColumns} rows={salesRevenue.by_employee ?? []} isLoading={loading} emptyMessage="No verified revenue for this company yet." />
+              <DataTable columns={salesRevenueColumns} rows={salesRevenue.by_employee ?? []} isLoading={false} emptyMessage="No verified revenue for this company yet." />
             </>
           )}
         </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import Topbar from "../../components/Topbar.jsx";
 import Breadcrumb from "../../components/Breadcrumb.jsx";
@@ -7,11 +7,26 @@ import Badge from "../../components/Badge.jsx";
 import Icon from "../../components/Icon.jsx";
 import DateFilterField from "../../components/DateFilterField.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { getCompanyFollowups, getMyFollowups, updateMyFollowup } from "../../services/api/leadsApi.js";
-import useCompanyOptions from "../company/useCompanyOptions.js";
-import useCompanyEmployeeOptions from "../employees/useCompanyEmployeeOptions.js";
 
 const STATUS_TONE = { pending: "orange", completed: "green", missed: "red", cancelled: "gray" };
+
+// Design-only data — see LeadPool.jsx's note on this module's UI-only scope.
+const DUMMY_COMPANIES = [
+  { id: 1, company_name: "Acme Sales Pvt Ltd" },
+  { id: 2, company_name: "Northwind Traders" },
+];
+
+const DUMMY_EMPLOYEES = [
+  { id: 101, full_name: "Arjun Kumar" },
+  { id: 102, full_name: "Priya Singh" },
+  { id: 103, full_name: "Ravi Verma" },
+];
+
+const DUMMY_FOLLOWUPS = [
+  { id: 1, lead: { lead_code: "LD-1001", full_name: "Karan Mehta" }, employee: { full_name: "Arjun Kumar" }, followup_type: "Call", followup_date: "2026-09-15T00:00:00.000000Z", followup_time: "11:00:00", next_followup_date: "2026-09-20T00:00:00.000000Z", status: "Pending", notes: "Discuss pricing." },
+  { id: 2, lead: { lead_code: "LD-1002", full_name: "Sneha Rao" }, employee: { full_name: "Priya Singh" }, followup_type: "Email", followup_date: "2026-09-12T00:00:00.000000Z", followup_time: "15:30:00", next_followup_date: "2026-09-22T00:00:00.000000Z", status: "Completed", notes: "Sent proposal." },
+  { id: 3, lead: { lead_code: "LD-1004", full_name: "Anita Desai" }, employee: { full_name: "Ravi Verma" }, followup_type: "Meeting", followup_date: "2026-09-10T00:00:00.000000Z", followup_time: "10:00:00", next_followup_date: "2026-09-18T00:00:00.000000Z", status: "Missed", notes: "" },
+];
 
 // Date-cast fields (followup_date, next_followup_date) come back as full ISO
 // timestamps ("2026-08-11T00:00:00.000000Z") even though only the calendar
@@ -29,9 +44,9 @@ function AdminFollowupsView() {
   const { toggleCollapsed } = useOutletContext();
   const { roleName, user } = useAuth();
   const isSuperAdmin = roleName === "Super Admin";
-  const { options: companies } = useCompanyOptions(isSuperAdmin);
+  const companies = DUMMY_COMPANIES;
   const [companyId, setCompanyId] = useState(() => (isSuperAdmin ? "" : String(user?.company?.id ?? "")));
-  const { options: employees } = useCompanyEmployeeOptions(companyId);
+  const employees = DUMMY_EMPLOYEES;
 
   useEffect(() => {
     if (isSuperAdmin && !companyId && companies.length > 0) setCompanyId(String(companies[0].id));
@@ -39,24 +54,15 @@ function AdminFollowupsView() {
 
   const [statusFilter, setStatusFilter] = useState("All");
   const [employeeFilter, setEmployeeFilter] = useState("All");
-  const [followups, setFollowups] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (!companyId) {
-      setFollowups([]);
-      return;
-    }
-    setIsLoading(true);
-    getCompanyFollowups(companyId, {
-      status: statusFilter !== "All" ? statusFilter : undefined,
-      employee_id: employeeFilter !== "All" ? employeeFilter : undefined,
-      per_page: 50,
-    })
-      .then((res) => setFollowups(res.items))
-      .catch(() => setFollowups([]))
-      .finally(() => setIsLoading(false));
-  }, [companyId, statusFilter, employeeFilter]);
+  const followups = useMemo(() => {
+    if (!companyId) return [];
+    return DUMMY_FOLLOWUPS.filter((f) => {
+      if (statusFilter !== "All" && f.status !== statusFilter) return false;
+      if (employeeFilter !== "All" && f.employee?.full_name !== employees.find((e) => String(e.id) === String(employeeFilter))?.full_name) return false;
+      return true;
+    });
+  }, [companyId, statusFilter, employeeFilter, employees]);
 
   const columns = [
     { key: "lead", header: "Lead", render: (r) => r.lead ? `${r.lead.lead_code || ""} — ${r.lead.full_name}` : "—" },
@@ -107,7 +113,7 @@ function AdminFollowupsView() {
             </select>
           </div>
 
-          <DataTable columns={columns} rows={followups} isLoading={isLoading} emptyMessage={companyId ? "No follow-ups found." : "Select a company."} />
+          <DataTable columns={columns} rows={followups} isLoading={false} emptyMessage={companyId ? "No follow-ups found." : "Select a company."} />
         </div>
       </div>
     </>
@@ -116,36 +122,24 @@ function AdminFollowupsView() {
 
 function MyFollowupsView() {
   const { toggleCollapsed } = useOutletContext();
-  const { user } = useAuth();
-  const companyId = user?.company?.id;
 
+  const [allFollowups, setAllFollowups] = useState(DUMMY_FOLLOWUPS.map(({ employee: _employee, ...rest }) => rest));
   const [statusFilter, setStatusFilter] = useState("Pending");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("");
-  const [followups, setFollowups] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    if (!companyId) return;
-    setIsLoading(true);
-    getMyFollowups(companyId, {
-      status: statusFilter !== "All" ? statusFilter : undefined,
-      search: search.trim() || undefined,
-      date: dateFilter || undefined,
-    })
-      .then(setFollowups)
-      .catch(() => setFollowups([]))
-      .finally(() => setIsLoading(false));
-  }, [companyId, statusFilter, search, dateFilter, refreshKey]);
+  const followups = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return allFollowups.filter((f) => {
+      if (statusFilter !== "All" && f.status !== statusFilter) return false;
+      if (term && !`${f.lead?.lead_code ?? ""} ${f.lead?.full_name ?? ""} ${f.notes ?? ""}`.toLowerCase().includes(term)) return false;
+      if (dateFilter && formatDateOnly(f.next_followup_date) !== dateFilter) return false;
+      return true;
+    });
+  }, [allFollowups, statusFilter, search, dateFilter]);
 
-  async function handleComplete(followup, newStatus) {
-    try {
-      await updateMyFollowup(companyId, followup.id, { status: newStatus });
-      setRefreshKey((k) => k + 1);
-    } catch {
-      // surfaced implicitly via the row staying unchanged; keep this view simple.
-    }
+  function handleComplete(followup, newStatus) {
+    setAllFollowups((prev) => prev.map((f) => (f.id === followup.id ? { ...f, status: newStatus } : f)));
   }
 
   const columns = [
@@ -206,7 +200,7 @@ function MyFollowupsView() {
             <DateFilterField value={dateFilter} onChange={setDateFilter} title="Next Follow-up Date" />
           </div>
 
-          <DataTable columns={columns} rows={followups} isLoading={isLoading} emptyMessage="No follow-ups found." />
+          <DataTable columns={columns} rows={followups} isLoading={false} emptyMessage="No follow-ups found." />
         </div>
       </div>
     </>

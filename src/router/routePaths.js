@@ -86,6 +86,7 @@ export const ROUTES = {
   TARGETS: "/targets",
   TARGETS_ADD: "/targets/add",
   TARGETS_EDIT: "/targets/edit/:companyId/:targetId",
+  EMPLOYEE_TARGET_PERFORMANCE: "/sales-performance/employee-target-performance",
   REWARDS: "/rewards",
   NOTIFICATIONS: "/notifications",
   MASTERS: "/masters",

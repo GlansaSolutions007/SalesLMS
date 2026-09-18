@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DataToolbar from "../../components/DataToolbar.jsx";
 import DataTable from "../../components/DataTable.jsx";
@@ -7,12 +7,34 @@ import Badge from "../../components/Badge.jsx";
 import Toast from "../../components/Toast.jsx";
 import ImportLeadsModal from "./components/ImportLeadsModal.jsx";
 import AssignLeadsModal from "./components/AssignLeadsModal.jsx";
-import useCompanyOptions from "../company/useCompanyOptions.js";
-import useCompanyEmployeeOptions from "../employees/useCompanyEmployeeOptions.js";
-import useCompanyLeads from "./useCompanyLeads.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { ROUTES, leadViewPath } from "../../router/routePaths.js";
-import { exportLeads, downloadLeadImportTemplate } from "../../services/api/leadsApi.js";
+import { exportToCsv } from "../../utils/csv.js";
+
+// Design-only data — the Sales Performance module renders from this fixed
+// set instead of the real leads API, per the "UI design only" scope for
+// this project (see EmployeeTargetPerformance.jsx's own note for the same
+// reasoning). Shape matches exactly what the backend previously returned,
+// so every column/filter below is unmodified from the live version.
+const DUMMY_COMPANIES = [
+  { id: 1, company_name: "Acme Sales Pvt Ltd" },
+  { id: 2, company_name: "Northwind Traders" },
+];
+
+const DUMMY_EMPLOYEES = [
+  { id: 101, full_name: "Arjun Kumar" },
+  { id: 102, full_name: "Priya Singh" },
+  { id: 103, full_name: "Ravi Verma" },
+];
+
+const DUMMY_LEADS = [
+  { id: 1, lead_code: "LD-1001", full_name: "Karan Mehta", company_name: "Mehta Textiles", mobile: "9876543210", lead_source: "Manual Entry", priority: "High", assigned_employee: { full_name: "Arjun Kumar" }, status: "New", next_follow_up_date: "2026-09-20", verification_status: "Pending", created_at: "2026-09-10T10:00:00Z" },
+  { id: 2, lead_code: "LD-1002", full_name: "Sneha Rao", company_name: "Rao Enterprises", mobile: "9876543211", lead_source: "Excel Import", priority: "Medium", assigned_employee: { full_name: "Priya Singh" }, status: "Contacted", next_follow_up_date: "2026-09-22", verification_status: "Pending", created_at: "2026-09-11T10:00:00Z" },
+  { id: 3, lead_code: "LD-1003", full_name: "Vikram Joshi", company_name: "Joshi & Sons", mobile: "9876543212", lead_source: "CSV Import", priority: "Low", assigned_employee: null, status: "Assigned", next_follow_up_date: "2026-09-18", verification_status: "Pending", created_at: "2026-09-09T10:00:00Z" },
+  { id: 4, lead_code: "LD-1004", full_name: "Anita Desai", company_name: "Desai Motors", mobile: "9876543213", lead_source: "Manual Entry", priority: "High", assigned_employee: { full_name: "Ravi Verma" }, status: "Interested", next_follow_up_date: "2026-09-25", verification_status: "Approved", created_at: "2026-09-08T10:00:00Z" },
+  { id: 5, lead_code: "LD-1005", full_name: "Rahul Nair", company_name: "Nair Logistics", mobile: "9876543214", lead_source: "Manual Entry", priority: "Medium", assigned_employee: { full_name: "Arjun Kumar" }, status: "Converted", next_follow_up_date: "—", verification_status: "Approved", created_at: "2026-09-05T10:00:00Z" },
+  { id: 6, lead_code: "LD-1006", full_name: "Meera Iyer", company_name: "Iyer Consulting", mobile: "9876543215", lead_source: "Excel Import", priority: "Low", assigned_employee: null, status: "Closed Lost", next_follow_up_date: "—", verification_status: "Rejected", created_at: "2026-09-03T10:00:00Z" },
+];
 
 const STATUS_TONE = {
   new: "blue",
@@ -29,6 +51,7 @@ const SOURCE_OPTIONS = ["All", "Manual Entry", "Excel Import", "CSV Import"];
 const PRIORITY_OPTIONS = ["All", "Low", "Medium", "High"];
 const VERIFICATION_OPTIONS = ["All", "Pending", "More Information Required", "Approved", "Rejected"];
 const PRIORITY_TONE = { high: "red", medium: "orange", low: "gray" };
+const PER_PAGE = 25;
 
 function downloadBlob(blob, filename) {
   const url = window.URL.createObjectURL(blob);
@@ -75,14 +98,15 @@ export default function LeadPool() {
   const navigate = useNavigate();
   const { roleName, user } = useAuth();
   const isSuperAdmin = roleName === "Super Admin";
-  const { options: companies, isLoading: companiesLoading } = useCompanyOptions(isSuperAdmin);
+  const companies = DUMMY_COMPANIES;
   const [companyId, setCompanyId] = useState(() => (isSuperAdmin ? "" : String(user?.company?.id ?? "")));
-  const { options: employees } = useCompanyEmployeeOptions(companyId);
+  const employees = DUMMY_EMPLOYEES;
 
   useEffect(() => {
     if (isSuperAdmin && !companyId && companies.length > 0) setCompanyId(String(companies[0].id));
   }, [isSuperAdmin, companies, companyId]);
 
+  const [allLeads, setAllLeads] = useState(DUMMY_LEADS);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [sourceFilter, setSourceFilter] = useState("All");
@@ -104,20 +128,38 @@ export default function LeadPool() {
     setSelectedIds(new Set());
   }, [companyId, search, statusFilter, sourceFilter, priorityFilter, employeeFilter, verificationFilter, dateFrom, dateTo]);
 
-  const { leads, pagination, isLoading, error, refetch } = useCompanyLeads(companyId, {
-    search: search.trim() || undefined,
-    status: statusFilter !== "All" ? statusFilter : undefined,
-    source: sourceFilter !== "All" ? sourceFilter : undefined,
-    priority: priorityFilter !== "All" ? priorityFilter : undefined,
-    employee_id: employeeFilter !== "All" ? employeeFilter : undefined,
-    verification_status: verificationFilter !== "All" ? verificationFilter : undefined,
-    date_from: dateFrom || undefined,
-    date_to: dateTo || undefined,
-    sort: sort.key,
-    dir: sort.dir,
-    page,
-    per_page: 25,
-  });
+  const filteredLeads = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const rows = allLeads.filter((l) => {
+      if (term && !`${l.lead_code} ${l.full_name} ${l.company_name} ${l.mobile}`.toLowerCase().includes(term)) return false;
+      if (statusFilter !== "All" && l.status !== statusFilter) return false;
+      if (sourceFilter !== "All" && l.lead_source !== sourceFilter) return false;
+      if (priorityFilter !== "All" && l.priority !== priorityFilter) return false;
+      if (employeeFilter !== "All" && String(l.assigned_employee?.full_name) !== String(employees.find((e) => String(e.id) === String(employeeFilter))?.full_name)) return false;
+      if (verificationFilter !== "All" && l.verification_status !== verificationFilter) return false;
+      if (dateFrom && l.created_at < dateFrom) return false;
+      if (dateTo && l.created_at > `${dateTo}T23:59:59Z`) return false;
+      return true;
+    });
+
+    return [...rows].sort((a, b) => {
+      const dir = sort.dir === "asc" ? 1 : -1;
+      const av = a[sort.key];
+      const bv = b[sort.key];
+      if (typeof av === "string") return av.localeCompare(bv) * dir;
+      return ((av ?? 0) - (bv ?? 0)) * dir;
+    });
+  }, [allLeads, search, statusFilter, sourceFilter, priorityFilter, employeeFilter, verificationFilter, dateFrom, dateTo, sort, employees]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PER_PAGE));
+  const leads = filteredLeads.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const pagination = {
+    from: filteredLeads.length === 0 ? 0 : (page - 1) * PER_PAGE + 1,
+    to: Math.min(page * PER_PAGE, filteredLeads.length),
+    total: filteredLeads.length,
+    current_page: page,
+    last_page: totalPages,
+  };
 
   function toggleSelect(id) {
     setSelectedIds((prev) => {
@@ -135,28 +177,37 @@ export default function LeadPool() {
     setSelectedIds((prev) => (prev.size === leads.length ? new Set() : new Set(leads.map((l) => l.id))));
   }
 
-  async function handleExport() {
-    try {
-      const blob = await exportLeads(companyId, {
-        status: statusFilter !== "All" ? statusFilter : undefined,
-        source: sourceFilter !== "All" ? sourceFilter : undefined,
-        priority: priorityFilter !== "All" ? priorityFilter : undefined,
-        employee_id: employeeFilter !== "All" ? employeeFilter : undefined,
-        verification_status: verificationFilter !== "All" ? verificationFilter : undefined,
-      });
-      downloadBlob(blob, "leads.xlsx");
-    } catch (err) {
-      setToast({ tone: "error", message: err.message ?? "Could not export leads." });
-    }
+  function handleExport() {
+    exportToCsv(
+      "leads.csv",
+      filteredLeads.map((l) => ({
+        lead_code: l.lead_code,
+        full_name: l.full_name,
+        company_name: l.company_name ?? "",
+        mobile: l.mobile,
+        lead_source: l.lead_source,
+        priority: l.priority,
+        assigned_employee: l.assigned_employee?.full_name ?? "Unassigned",
+        status: l.status,
+        verification_status: l.verification_status ?? "",
+      })),
+      [
+        { key: "lead_code", header: "Lead Number" },
+        { key: "full_name", header: "Customer Name" },
+        { key: "company_name", header: "Company Name" },
+        { key: "mobile", header: "Mobile" },
+        { key: "lead_source", header: "Source" },
+        { key: "priority", header: "Priority" },
+        { key: "assigned_employee", header: "Assigned Employee" },
+        { key: "status", header: "Status" },
+        { key: "verification_status", header: "Verification" },
+      ]
+    );
   }
 
-  async function handleDownloadTemplate() {
-    try {
-      const blob = await downloadLeadImportTemplate(companyId);
-      downloadBlob(blob, "lead-import-template.xlsx");
-    } catch (err) {
-      setToast({ tone: "error", message: err.message ?? "Could not download template." });
-    }
+  function handleDownloadTemplate() {
+    const header = "Customer Name,Company Name,Email,Mobile,Alternate Mobile,Address,City,State,Product / Service,Priority,Notes";
+    downloadBlob(new Blob([header], { type: "text/csv;charset=utf-8;" }), "lead-import-template.csv");
   }
 
   const columns = [
@@ -183,7 +234,7 @@ export default function LeadPool() {
 
       <div className="dt-toolbar" style={{ paddingBottom: 0, flexWrap: "wrap" }}>
         {isSuperAdmin && (
-          <select className="dt-select" value={companyId} onChange={(e) => setCompanyId(e.target.value)} disabled={companiesLoading}>
+          <select className="dt-select" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
             {companies.length === 0 && <option value="">No companies found</option>}
             {companies.map((c) => (
               <option key={c.id} value={c.id}>
@@ -264,7 +315,7 @@ export default function LeadPool() {
       <DataTable
         columns={columns}
         rows={leads}
-        isLoading={isLoading || companiesLoading}
+        isLoading={false}
         selectable
         selectedIds={selectedIds}
         onToggleSelect={toggleSelect}
@@ -272,9 +323,7 @@ export default function LeadPool() {
         emptyMessage={companyId ? "No leads found." : "Select a company to view its leads."}
       />
 
-      {error && <p className="form-field-error">{error}</p>}
-
-      {!isLoading && companyId && (
+      {companyId && (
         <div className="cl-footer">
           <p>
             Showing {pagination.from ?? 0}–{pagination.to ?? 0} of {pagination.total} lead{pagination.total === 1 ? "" : "s"}
@@ -288,7 +337,6 @@ export default function LeadPool() {
           companyId={companyId}
           onClose={() => setShowImport(false)}
           onImported={() => {
-            refetch();
             setToast({ tone: "success", message: "Leads imported." });
           }}
         />
@@ -299,8 +347,8 @@ export default function LeadPool() {
           companyId={companyId}
           leadIds={[...selectedIds]}
           onClose={() => setShowAssign(false)}
-          onAssigned={() => {
-            refetch();
+          onAssigned={(assignedEmployee) => {
+            setAllLeads((prev) => prev.map((l) => (selectedIds.has(l.id) ? { ...l, assigned_employee: assignedEmployee, status: l.status === "New" ? "Assigned" : l.status } : l)));
             setSelectedIds(new Set());
             setToast({ tone: "success", message: "Leads assigned." });
           }}
@@ -312,8 +360,8 @@ export default function LeadPool() {
           companyId={companyId}
           leadIds={[reassignLeadId]}
           onClose={() => setReassignLeadId(null)}
-          onAssigned={() => {
-            refetch();
+          onAssigned={(assignedEmployee) => {
+            setAllLeads((prev) => prev.map((l) => (l.id === reassignLeadId ? { ...l, assigned_employee: assignedEmployee } : l)));
             setToast({ tone: "success", message: "Lead reassigned." });
           }}
         />

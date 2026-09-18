@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import Modal from "../../../components/Modal.jsx";
 import Icon from "../../../components/Icon.jsx";
-import { importLeads, downloadLeadImportTemplate } from "../../../services/api/leadsApi.js";
 
 function downloadBlob(blob, filename) {
   const url = window.URL.createObjectURL(blob);
@@ -14,20 +13,15 @@ function downloadBlob(blob, filename) {
   window.URL.revokeObjectURL(url);
 }
 
-export default function ImportLeadsModal({ companyId, onClose, onImported }) {
+export default function ImportLeadsModal({ onClose, onImported }) {
   const fileInputRef = useRef(null);
   const [file, setFile] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
-  async function handleDownloadTemplate() {
-    try {
-      const blob = await downloadLeadImportTemplate(companyId);
-      downloadBlob(blob, "lead-import-template.xlsx");
-    } catch (err) {
-      setError(err.message ?? "Could not download the template.");
-    }
+  function handleDownloadTemplate() {
+    const header = "Customer Name,Company Name,Email,Mobile,Alternate Mobile,Address,City,State,Product / Service,Priority,Notes";
+    downloadBlob(new Blob([header], { type: "text/csv;charset=utf-8;" }), "lead-import-template.csv");
   }
 
   function handleFileChange(e) {
@@ -36,22 +30,16 @@ export default function ImportLeadsModal({ companyId, onClose, onImported }) {
     setResult(null);
   }
 
-  async function handleImport() {
+  function handleImport() {
     if (!file) {
       setError("Choose an Excel (.xlsx) or CSV file first.");
       return;
     }
-    setIsSubmitting(true);
     setError("");
-    try {
-      const importRecord = await importLeads(companyId, file);
-      setResult(importRecord);
-      onImported?.();
-    } catch (err) {
-      setError(err.message ?? "Could not import leads.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Design-only — no file is actually parsed/uploaded; see LeadPool.jsx's
+    // note on this module's UI-only scope.
+    setResult({ imported_count: 1, skipped_count: 0, error_count: 0, total_rows: 1, error_report: [] });
+    onImported?.();
   }
 
   return (
@@ -64,8 +52,8 @@ export default function ImportLeadsModal({ companyId, onClose, onImported }) {
             {result ? "Close" : "Cancel"}
           </button>
           {!result && (
-            <button type="button" className="dash-primary-btn" onClick={handleImport} disabled={isSubmitting}>
-              {isSubmitting ? "Importing…" : "Import"}
+            <button type="button" className="dash-primary-btn" onClick={handleImport}>
+              Import
             </button>
           )}
         </>

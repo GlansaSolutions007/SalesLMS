@@ -59,3 +59,10 @@
   color: var(--color-muted);
   font-weight: 600;
 }
+
+.stat-card-lite-sub {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--color-muted);
+  font-weight: 600;
+}

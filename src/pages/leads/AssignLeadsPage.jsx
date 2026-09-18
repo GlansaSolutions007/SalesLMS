@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import Topbar from "../../components/Topbar.jsx";
 import Breadcrumb from "../../components/Breadcrumb.jsx";
@@ -7,9 +7,6 @@ import Pagination from "../../components/Pagination.jsx";
 import Badge from "../../components/Badge.jsx";
 import Toast from "../../components/Toast.jsx";
 import AssignLeadsModal from "./components/AssignLeadsModal.jsx";
-import useCompanyOptions from "../company/useCompanyOptions.js";
-import useCompanyEmployeeOptions from "../employees/useCompanyEmployeeOptions.js";
-import useCompanyLeads from "./useCompanyLeads.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 // Company Admin / Super Admin only — assigns leads (uploaded via Excel/CSV
@@ -30,19 +27,39 @@ const STATUS_TONE = {
   verified: "green",
   "closed lost": "red",
 };
+const PER_PAGE = 25;
+
+// Design-only data — see LeadPool.jsx's note on this module's UI-only scope.
+const DUMMY_COMPANIES = [
+  { id: 1, company_name: "Acme Sales Pvt Ltd" },
+  { id: 2, company_name: "Northwind Traders" },
+];
+
+const DUMMY_EMPLOYEES = [
+  { id: 101, full_name: "Arjun Kumar" },
+  { id: 102, full_name: "Priya Singh" },
+  { id: 103, full_name: "Ravi Verma" },
+];
+
+const DUMMY_LEADS = [
+  { id: 1, lead_code: "LD-3001", full_name: "Vikram Joshi", company_name: "Joshi & Sons", mobile: "9876543212", lead_source: "CSV Import", priority: "Low", status: "Assigned", assigned_employee: null, created_at: "2026-09-09T10:00:00Z" },
+  { id: 2, lead_code: "LD-3002", full_name: "Meera Iyer", company_name: "Iyer Consulting", mobile: "9876543215", lead_source: "Excel Import", priority: "Low", status: "New", assigned_employee: null, created_at: "2026-09-03T10:00:00Z" },
+  { id: 3, lead_code: "LD-3003", full_name: "Karan Mehta", company_name: "Mehta Textiles", mobile: "9876543210", lead_source: "Manual Entry", priority: "High", status: "New", assigned_employee: { full_name: "Arjun Kumar" }, created_at: "2026-09-10T10:00:00Z" },
+];
 
 export default function AssignLeadsPage() {
   const { toggleCollapsed } = useOutletContext();
   const { roleName, user } = useAuth();
   const isSuperAdmin = roleName === "Super Admin";
-  const { options: companies, isLoading: companiesLoading } = useCompanyOptions(isSuperAdmin);
+  const companies = DUMMY_COMPANIES;
   const [companyId, setCompanyId] = useState(() => (isSuperAdmin ? "" : String(user?.company?.id ?? "")));
-  const { options: employees } = useCompanyEmployeeOptions(companyId);
+  const employees = DUMMY_EMPLOYEES;
 
   useEffect(() => {
     if (isSuperAdmin && !companyId && companies.length > 0) setCompanyId(String(companies[0].id));
   }, [isSuperAdmin, companies, companyId]);
 
+  const [allLeads, setAllLeads] = useState(DUMMY_LEADS);
   const [assignmentFilter, setAssignmentFilter] = useState("unassigned");
   const [sourceFilter, setSourceFilter] = useState("All");
   const [page, setPage] = useState(1);
@@ -56,14 +73,23 @@ export default function AssignLeadsPage() {
     setSelectedIds(new Set());
   }, [companyId, assignmentFilter, sourceFilter]);
 
-  const { leads, pagination, isLoading, error, refetch } = useCompanyLeads(companyId, {
-    assigned: assignmentFilter === "unassigned" ? false : undefined,
-    source: sourceFilter !== "All" ? sourceFilter : undefined,
-    sort: "created_at",
-    dir: "desc",
-    page,
-    per_page: 25,
-  });
+  const filteredLeads = useMemo(() => {
+    return allLeads.filter((l) => {
+      if (assignmentFilter === "unassigned" && l.assigned_employee) return false;
+      if (sourceFilter !== "All" && l.lead_source !== sourceFilter) return false;
+      return true;
+    });
+  }, [allLeads, assignmentFilter, sourceFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PER_PAGE));
+  const leads = filteredLeads.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const pagination = {
+    from: filteredLeads.length === 0 ? 0 : (page - 1) * PER_PAGE + 1,
+    to: Math.min(page * PER_PAGE, filteredLeads.length),
+    total: filteredLeads.length,
+    current_page: page,
+    last_page: totalPages,
+  };
 
   function toggleSelect(id) {
     setSelectedIds((prev) => {
@@ -122,7 +148,7 @@ export default function AssignLeadsPage() {
 
           <div className="dt-toolbar" style={{ paddingBottom: 0, flexWrap: "wrap" }}>
             {isSuperAdmin && (
-              <select className="dt-select" value={companyId} onChange={(e) => setCompanyId(e.target.value)} disabled={companiesLoading}>
+              <select className="dt-select" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
                 {companies.length === 0 && <option value="">No companies found</option>}
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -160,7 +186,7 @@ export default function AssignLeadsPage() {
           <DataTable
             columns={columns}
             rows={leads}
-            isLoading={isLoading || companiesLoading}
+            isLoading={false}
             selectable
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
@@ -174,9 +200,7 @@ export default function AssignLeadsPage() {
             }
           />
 
-          {error && <p className="form-field-error">{error}</p>}
-
-          {!isLoading && companyId && (
+          {companyId && (
             <div className="cl-footer">
               <p>
                 Showing {pagination.from ?? 0}–{pagination.to ?? 0} of {pagination.total} lead{pagination.total === 1 ? "" : "s"}
@@ -189,11 +213,10 @@ export default function AssignLeadsPage() {
 
       {showAssign && (
         <AssignLeadsModal
-          companyId={companyId}
           leadIds={[...selectedIds]}
           onClose={() => setShowAssign(false)}
-          onAssigned={() => {
-            refetch();
+          onAssigned={(assignedEmployee) => {
+            setAllLeads((prev) => prev.map((l) => (selectedIds.has(l.id) ? { ...l, assigned_employee: assignedEmployee, status: l.status === "New" ? "Assigned" : l.status } : l)));
             setSelectedIds(new Set());
             setToast({ tone: "success", message: "Leads assigned." });
           }}
@@ -202,11 +225,10 @@ export default function AssignLeadsPage() {
 
       {reassignLeadId && (
         <AssignLeadsModal
-          companyId={companyId}
           leadIds={[reassignLeadId]}
           onClose={() => setReassignLeadId(null)}
-          onAssigned={() => {
-            refetch();
+          onAssigned={(assignedEmployee) => {
+            setAllLeads((prev) => prev.map((l) => (l.id === reassignLeadId ? { ...l, assigned_employee: assignedEmployee } : l)));
             setToast({ tone: "success", message: "Lead assigned." });
           }}
         />

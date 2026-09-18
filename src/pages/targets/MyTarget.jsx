@@ -1,26 +1,26 @@
-import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import Topbar from "../../components/Topbar.jsx";
 import Breadcrumb from "../../components/Breadcrumb.jsx";
 import ProgressBar from "../../components/ProgressBar.jsx";
-import { useAuth } from "../../context/AuthContext.jsx";
-import { getMyTarget } from "../../services/api/targetsApi.js";
+
+// Design-only data — see LeadPool.jsx's note on this module's UI-only scope.
+const DUMMY_TARGET = {
+  start_date: "2026-09-01",
+  end_date: "2026-09-30",
+  verified_leads: 27,
+  lead_target: 35,
+  lead_achievement_pct: 77,
+  verified_sales: 14,
+  sales_target: 18,
+  sales_achievement_pct: 78,
+  verified_revenue: 840000,
+  revenue_target: 1000000,
+  revenue_achievement_pct: 84,
+};
 
 export default function MyTarget() {
   const { toggleCollapsed } = useOutletContext();
-  const { user } = useAuth();
-  const companyId = user?.company?.id;
-
-  const [target, setTarget] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!companyId) return;
-    getMyTarget(companyId)
-      .then(setTarget)
-      .catch(() => setTarget(null))
-      .finally(() => setIsLoading(false));
-  }, [companyId]);
+  const target = DUMMY_TARGET;
 
   return (
     <>
@@ -33,15 +33,13 @@ export default function MyTarget() {
           </div>
         </div>
 
-        {isLoading && <p>Loading…</p>}
-
-        {!isLoading && !target && (
+        {!target && (
           <div className="panel cl-panel">
             <p>No target has been set for the current period yet.</p>
           </div>
         )}
 
-        {!isLoading && target && (
+        {target && (
           <div className="panel cl-panel">
             <p>
               Period: {target.start_date} to {target.end_date}

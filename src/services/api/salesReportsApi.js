@@ -49,3 +49,29 @@ export async function getRevenueReport(companyId, params = {}) {
     throw toApiError(err, "Could not load the revenue report.");
   }
 }
+
+// GET /companies/{company}/reports/sales/employee-target-performance
+// params: employee_id, sales_team_id, target_type, period, month, quarter,
+// year, date_from, date_to, status — all optional, see
+// EmployeeTargetPerformanceService for exact semantics. The backend is
+// authoritative for every date calculation and aggregation here.
+export async function getEmployeeTargetPerformanceReport(companyId, params = {}) {
+  try {
+    const res = await httpClient.get(`/companies/${companyId}/reports/sales/employee-target-performance`, { params });
+    return res.data?.data ?? { kpis: {}, by_employee: [], monthly_trend: [], distribution: {}, period: {} };
+  } catch (err) {
+    throw toApiError(err, "Could not load the employee target performance report.");
+  }
+}
+
+// GET /companies/{company}/reports/sales/employee-target-performance/export?format=xlsx|csv&...
+// Same filters as the report above, plus `format` — returns a blob for the
+// caller to save (see downloadBlob in EmployeeTargetPerformance.jsx).
+export async function exportEmployeeTargetPerformanceReport(companyId, params = {}) {
+  try {
+    const res = await httpClient.get(`/companies/${companyId}/reports/sales/employee-target-performance/export`, { params, responseType: "blob" });
+    return res.data;
+  } catch (err) {
+    throw toApiError(err, "Could not export the employee target performance report.");
+  }
+}

@@ -6,6 +6,7 @@ import { ROUTES } from "../router/routePaths.js";
 import { consumeSessionExpiredFlag } from "../utils/storage.js";
 import { forgotPassword, resetPassword } from "../services/authService.js";
 import { ApiValidationError } from "../services/axios.js";
+import { PASSWORD_COMPLEXITY_REGEX, PASSWORD_COMPLEXITY_MESSAGE } from "../utils/formValidators.js";
 import "../App.css";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -249,6 +250,7 @@ function AuthCard({ view, setView }) {
     if (!resetToken.trim()) nextErrors.token = "Reset token is required.";
     if (!resetPasswordValue) nextErrors.password = "New password is required.";
     else if (resetPasswordValue.length < 8) nextErrors.password = "Password must be at least 8 characters.";
+    else if (!PASSWORD_COMPLEXITY_REGEX.test(resetPasswordValue)) nextErrors.password = PASSWORD_COMPLEXITY_MESSAGE;
     if (!resetConfirmValue) nextErrors.confirm = "Please confirm your new password.";
     else if (resetConfirmValue !== resetPasswordValue) nextErrors.confirm = "Passwords do not match.";
 
@@ -264,19 +266,30 @@ function AuthCard({ view, setView }) {
         password: resetPasswordValue,
         password_confirmation: resetConfirmValue,
       });
+      // Clear sensitive values now that they've served their purpose.
+      setResetToken("");
+      setResetPasswordValue("");
+      setResetConfirmValue("");
       setView("success");
     } catch (err) {
       if (err instanceof ApiValidationError) {
         const fieldErrors = {};
+        const generalMessages = [];
         Object.entries(err.errors ?? {}).forEach(([field, messages]) => {
           const message = Array.isArray(messages) ? messages[0] : messages;
           if (field === "token") fieldErrors.token = message;
           else if (field === "password" || field === "password_confirmation") fieldErrors.password = message;
-          else if (field === "email") fieldErrors.token = message;
+          else generalMessages.push(message);
         });
         setResetErrors((prev) => ({ ...prev, ...fieldErrors }));
+        // Prefer a concrete field message over the generic "Validation
+        // failed." wrapper — and skip the banner entirely when the field
+        // errors above already say what's wrong, to avoid a redundant
+        // duplicate message.
+        setResetApiError(generalMessages[0] ?? (Object.keys(fieldErrors).length ? "" : err.message));
+      } else {
+        setResetApiError(err.message ?? "Could not reset your password. Please try again.");
       }
-      setResetApiError(err.message ?? "Could not reset your password. Please try again.");
     } finally {
       setResetLoading(false);
     }

@@ -45,14 +45,9 @@ export const menuConfig = [
       // bulk. Never a Team.
       { id: "assign-leads", title: "Assign Employee", path: ROUTES.ASSIGN_LEADS, roles: [SA, CA] },
       { id: "my-leads", title: "My Leads", path: ROUTES.MY_LEADS, roles: ["Employee"] },
-      // Follow-ups/Targets/Incentives paused for now — Sales Performance is
-      // scoped down to just Leads + Assign Employee (Company Admin) and My
-      // Leads (Employee) per the current spec. Pages/routes/APIs are left
-      // intact (see FollowupsPage.jsx, TargetsPage.jsx, IncentivesPage.jsx);
-      // only the menu entries (and, via isMenuItemVisible/GuardedMenuRoute,
-      // direct-URL access) are disabled. Re-enable by uncommenting.
-      // { id: "followups", title: "Follow-ups", path: ROUTES.FOLLOWUPS, roles: [SA, CA, "Employee"] },
-      // { id: "targets", title: "Target", path: ROUTES.TARGETS, roles: [SA, CA, "Employee"] },
+      { id: "followups", title: "Follow-ups", path: ROUTES.FOLLOWUPS, roles: [SA, CA, "Employee"] },
+      { id: "targets", title: "Target", path: ROUTES.TARGETS, roles: [SA, CA, "Employee"] },
+      { id: "employee-target-performance", title: "Employee Target Performance", path: ROUTES.EMPLOYEE_TARGET_PERFORMANCE, roles: [SA, CA] },
       // { id: "rewards", title: "Incentives", path: ROUTES.REWARDS, roles: [SA, CA, "Employee"] },
     ],
   },
@@ -184,7 +179,7 @@ export const menuConfig = [
     ],
   },
   { id: "settings", title: "Settings", icon: "settings", path: ROUTES.SETTINGS, roles: ALL, permissions: ["settings.view"] },
-  { id: "audit", title: "Audit Logs", icon: "clock", path: ROUTES.AUDIT, roles: [SA], permissions: ["audit_logs.view"] },
+  // { id: "audit", title: "Audit Logs", icon: "clock", path: ROUTES.AUDIT, roles: [SA], permissions: ["audit_logs.view"] },
 ];
 
 export function flattenMenu(items = menuConfig) {
