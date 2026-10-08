@@ -1,8 +1,18 @@
+import { Link } from "react-router-dom";
 import Icon from "../Icon.jsx";
+import { ROUTES } from "../../router/routePaths.js";
 
 function formatCurrency(val) {
   const n = Number(val) || 0;
+  if (Math.abs(n) >= 1_000_000) return "$" + (n / 1_000_000).toFixed(1) + "M";
   return "$" + (n / 1000).toFixed(1) + "k";
+}
+
+// Full precision, comma-grouped — used in the tooltip/aria-label where the
+// exact figure matters, as opposed to the compact k/M form on stat cards.
+function formatCurrencyPrecise(val) {
+  const n = Number(val) || 0;
+  return "$" + Math.round(n).toLocaleString("en-US");
 }
 
 function initials(name = "") {
@@ -17,11 +27,11 @@ export default function SuperAdminDashboard({ data }) {
   const maxTrend = Math.max(1, ...revenueTrend.map((r) => r.actual));
 
   const statCards = [
-    { label: "Total Companies", value: String(stats.companies ?? 0), icon: "building" },
-    { label: "Total Employees", value: String(stats.employees ?? 0), icon: "users" },
-    { label: "Active Subscriptions", value: String(stats.active_subscriptions ?? 0), icon: "gift" },
-    { label: "Revenue Collected", value: formatCurrency(stats.revenue), icon: "coin" },
-    { label: "Active Trainers", value: String(stats.trainers ?? 0), icon: "presentation" },
+    { label: "Total Companies", value: String(stats.companies ?? 0), icon: "building", path: ROUTES.COMPANY_COMPANIES },
+    { label: "Total Employees", value: String(stats.employees ?? 0), icon: "users", path: ROUTES.EMPLOYEES },
+    { label: "Active Subscriptions", value: String(stats.active_subscriptions ?? 0), icon: "gift", path: ROUTES.MASTERS_ALL_SUBSCRIPTIONS },
+    { label: "Revenue Collected", value: formatCurrency(stats.revenue), icon: "coin", path: ROUTES.MASTERS_ALL_SUBSCRIPTIONS },
+    { label: "Active Trainers", value: String(stats.trainers ?? 0), icon: "presentation", path: ROUTES.TRAINERS },
   ];
 
   return (
@@ -37,7 +47,7 @@ export default function SuperAdminDashboard({ data }) {
 
       <div className="dash-stats">
         {statCards.map((stat) => (
-          <div className="stat-card" key={stat.label}>
+          <Link to={stat.path} className="stat-card" key={stat.label} aria-label={`${stat.label}: ${stat.value}`}>
             <div className="stat-top">
               <div className="stat-icon">
                 <Icon name={stat.icon} size={18} />
@@ -46,7 +56,7 @@ export default function SuperAdminDashboard({ data }) {
             <p className="stat-label">{stat.label}</p>
             <p className="stat-value">{stat.value}</p>
             <Icon name={stat.icon} size={72} />
-          </div>
+          </Link>
         ))}
       </div>
 
@@ -61,11 +71,21 @@ export default function SuperAdminDashboard({ data }) {
           {revenueTrend.length === 0 ? (
             <p className="ep-empty-note">No paid subscriptions recorded yet.</p>
           ) : (
-            <div className="bar-chart">
+            <div className="bar-chart" role="list">
               {revenueTrend.map((bar) => (
-                <div className="bar-track" style={{ height: "100%" }} key={bar.month}>
-                  <div className="bar-fill" style={{ height: `${(bar.actual / maxTrend) * 100}%` }} />
-                  <span>{bar.month}</span>
+                <div
+                  className="bar-col"
+                  role="listitem"
+                  tabIndex={0}
+                  key={bar.month}
+                  aria-label={`${bar.month}: ${formatCurrencyPrecise(bar.actual)}`}
+                >
+                  <div className="bar-track">
+                    <div className="bar-fill" style={{ height: `${(bar.actual / maxTrend) * 100}%` }}>
+                      <span className="bar-tooltip">{formatCurrencyPrecise(bar.actual)}</span>
+                    </div>
+                  </div>
+                  <span className="bar-month">{bar.month}</span>
                 </div>
               ))}
             </div>
