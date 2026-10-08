@@ -21,13 +21,11 @@ export default function CompanyAdmins() {
   const { toggleCollapsed } = useOutletContext();
   const { token } = useAuth();
   const { options: companies, isLoading: companiesLoading, error: companiesError } = useCompanyOptions(true);
+  // "" is the default and means "All Companies", not "none picked yet".
   const [companyId, setCompanyId] = useState("");
+  const isAllSelected = !companyId;
 
-  useEffect(() => {
-    if (!companyId && companies.length > 0) setCompanyId(String(companies[0].id));
-  }, [companies, companyId]);
-
-  const { admins, isLoading, error, refetch } = useCompanyAdmins(companyId);
+  const { admins, isLoading, error, refetch } = useCompanyAdmins(companyId, isAllSelected ? companies : undefined);
 
   const [formModal, setFormModal] = useState(null); // { mode, admin, adminId } | null
   const [statusTarget, setStatusTarget] = useState(null);
@@ -46,7 +44,7 @@ export default function CompanyAdmins() {
     if (!statusTarget) return;
     setActionLoading(true);
     try {
-      await toggleCompanyAdminStatus(companyId, statusTarget.id, token);
+      await toggleCompanyAdminStatus(statusTarget.company?.id ?? companyId, statusTarget.id, token);
       setStatusTarget(null);
       refetch();
       setToast({ tone: "success", message: "Admin status updated." });
@@ -61,7 +59,7 @@ export default function CompanyAdmins() {
     if (!resetTarget) return;
     setActionLoading(true);
     try {
-      const result = await resetCompanyAdminPassword(companyId, resetTarget.id, {}, token);
+      const result = await resetCompanyAdminPassword(resetTarget.company?.id ?? companyId, resetTarget.id, {}, token);
       setResetTarget(null);
       if (result?.temp_password) setResetPasswordResult(result.temp_password);
       else setToast({ tone: "success", message: "Password reset." });
@@ -83,6 +81,7 @@ export default function CompanyAdmins() {
         </div>
       ),
     },
+    ...(isAllSelected ? [{ key: "company", header: "Company", render: (r) => r.company?.company_name || "—" }] : []),
     { key: "email", header: "Email" },
     { key: "mobile", header: "Mobile", render: (r) => r.mobile || "—" },
     { key: "last_login", header: "Last Login", render: (r) => (r.last_login ? String(r.last_login).slice(0, 16).replace("T", " ") : "Never") },
@@ -92,7 +91,20 @@ export default function CompanyAdmins() {
       header: "",
       render: (r) => (
         <div className="cl-row-actions">
-          <button type="button" className="dash-icon-btn" aria-label={`Edit ${r.name}`} title="Edit" onClick={() => setFormModal({ mode: "edit", adminId: r.id, admin: { name: r.name, username: r.username, email: r.email, mobile: r.mobile ?? "" } })}>
+          <button
+            type="button"
+            className="dash-icon-btn"
+            aria-label={`Edit ${r.name}`}
+            title="Edit"
+            onClick={() =>
+              setFormModal({
+                mode: "edit",
+                companyId: r.company?.id ?? companyId,
+                adminId: r.id,
+                admin: { name: r.name, username: r.username, email: r.email, mobile: r.mobile ?? "" },
+              })
+            }
+          >
             <Icon name="edit" size={15} />
           </button>
           <button type="button" className="dash-icon-btn" aria-label={`Reset password for ${r.name}`} title="Reset Password" onClick={() => setResetTarget(r)}>
@@ -130,6 +142,7 @@ export default function CompanyAdmins() {
               aria-label="Select company"
             >
               {companies.length === 0 && <option value="">No companies found</option>}
+              {companies.length > 0 && <option value="">All Companies</option>}
               {companies.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.company_name}
@@ -140,7 +153,6 @@ export default function CompanyAdmins() {
             <button
               type="button"
               className="dash-primary-btn cl-add-btn"
-              disabled={!companyId}
               onClick={() => setFormModal({ mode: "add", admin: null })}
               style={{ marginLeft: "auto" }}
             >
@@ -153,10 +165,10 @@ export default function CompanyAdmins() {
             columns={columns}
             rows={admins}
             isLoading={isLoading || companiesLoading}
-            emptyMessage={companyId ? "No admins found for this company." : "Select a company to view its admins."}
+            emptyMessage={isAllSelected ? "No admins found." : companyId ? "No admins found for this company." : "Select a company to view its admins."}
           />
 
-          {!isLoading && companyId && (
+          {!isLoading && (companyId || isAllSelected) && (
             <div className="cl-footer">
               <p>Showing {admins.length} admin{admins.length === 1 ? "" : "s"}</p>
             </div>
@@ -167,14 +179,22 @@ export default function CompanyAdmins() {
       {formModal && (
         <AdminFormModal
           mode={formModal.mode}
-          companyId={companyId}
+          companyId={formModal.mode === "edit" ? formModal.companyId : companyId}
+          companies={companies}
           adminId={formModal.adminId}
           initialValues={formModal.admin}
           onClose={() => setFormModal(null)}
-          onSuccess={() => {
+          onSuccess={(data, usedCompanyId) => {
             const wasEdit = formModal?.mode === "edit";
             setFormModal(null);
-            refetch();
+            if (!wasEdit && usedCompanyId && usedCompanyId !== companyId) {
+              // Admin was created under a different company than the page's
+              // current selection — switch to it so the new admin is
+              // visible; useCompanyAdmins refetches on companyId change.
+              setCompanyId(usedCompanyId);
+            } else {
+              refetch();
+            }
             setToast({ tone: "success", message: wasEdit ? "Admin updated successfully." : "Admin created successfully." });
           }}
         />

@@ -49,13 +49,11 @@ const PAYMENT_HISTORY_COLUMNS = [
 ];
 
 // Super Admin's "review + record payment + set new period + activate"
-// screen (spec #10-#16, #20-#21) — the one place where a renewal request
-// actually turns into a real, Active subscription. Payment fields and the
-// new-period fields are staged here via one combined PUT/POST (spec #11/#12
-// deliberately implemented as a single update endpoint — see
-// UpdateRenewalRequestRequest on the backend) and only take effect once
+// screen — the one place where a renewal request actually turns into a
+// real, Active subscription. Payment fields and the new-period fields are
+// staged here via one combined PUT/POST and only take effect once
 // [Activate Subscription] runs, which the backend refuses unless
-// payment_status is already Paid with full details (spec #14).
+// payment_status is already Paid with full details.
 export default function RenewalRequestView() {
   const { id } = useParams();
   const { toggleCollapsed } = useOutletContext();

@@ -21,8 +21,8 @@ import "./CompanyList.css";
 const DOCUMENT_TYPES = ["Registration Certificate", "GST Certificate", "PAN Card", "Address Proof", "Contract", "Other"];
 const VERIFY_TONE = { Pending: "orange", Verified: "green", Rejected: "red" };
 
-function emptyUploadForm() {
-  return { document_type: DOCUMENT_TYPES[0], document_name: "", expiry_date: "", file: null, fileName: "" };
+function emptyUploadForm(companyId) {
+  return { company_id: String(companyId ?? ""), document_type: DOCUMENT_TYPES[0], document_name: "", expiry_date: "", file: null, fileName: "" };
 }
 
 export default function CompanyDocuments() {
@@ -30,13 +30,11 @@ export default function CompanyDocuments() {
   const { token, roleName, user } = useAuth();
   const isSuperAdmin = roleName === "Super Admin";
   const { options: companies, isLoading: companiesLoading, error: companiesError } = useCompanyOptions(isSuperAdmin);
+  // "" is the default for Super Admin and means "All Companies", not "none picked yet".
   const [companyId, setCompanyId] = useState(() => (isSuperAdmin ? "" : String(user?.company?.id ?? "")));
+  const isAllSelected = isSuperAdmin && !companyId;
 
-  useEffect(() => {
-    if (isSuperAdmin && !companyId && companies.length > 0) setCompanyId(String(companies[0].id));
-  }, [isSuperAdmin, companies, companyId]);
-
-  const { documents, isLoading, error, refetch } = useCompanyDocuments(companyId);
+  const { documents, isLoading, error, refetch } = useCompanyDocuments(companyId, isAllSelected ? companies : undefined);
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadForm, setUploadForm] = useState(emptyUploadForm);
@@ -55,7 +53,7 @@ export default function CompanyDocuments() {
   }, [activeError]);
 
   function openUpload() {
-    setUploadForm(emptyUploadForm());
+    setUploadForm(emptyUploadForm(companyId));
     setUploadErrors({});
     setUploadOpen(true);
   }
@@ -63,12 +61,15 @@ export default function CompanyDocuments() {
   async function handleUpload(e) {
     e.preventDefault();
     const errors = {};
+    if (isSuperAdmin && !uploadForm.company_id) errors.company_id = "Company is required.";
     if (!uploadForm.document_name.trim()) errors.document_name = "Document name is required.";
     if (!uploadForm.file) errors.file = "Please attach a file.";
     if (Object.keys(errors).length) {
       setUploadErrors(errors);
       return;
     }
+
+    const targetCompanyId = isSuperAdmin ? uploadForm.company_id : companyId;
 
     const fd = new FormData();
     fd.append("document_type", uploadForm.document_type);
@@ -79,9 +80,16 @@ export default function CompanyDocuments() {
     setUploading(true);
     setUploadErrors({});
     try {
-      await createCompanyDocument(companyId, fd, token);
+      await createCompanyDocument(targetCompanyId, fd, token);
       setUploadOpen(false);
-      refetch();
+      if (targetCompanyId && targetCompanyId !== companyId) {
+        // Document was uploaded under a different company than the page's
+        // current filter — switch to it so the new document is visible;
+        // useCompanyDocuments refetches on companyId change.
+        setCompanyId(String(targetCompanyId));
+      } else {
+        refetch();
+      }
       setToast({ tone: "success", message: "Document uploaded successfully." });
     } catch (err) {
       if (err instanceof ApiValidationError) {
@@ -102,7 +110,7 @@ export default function CompanyDocuments() {
     if (!verifyTarget) return;
     setActionLoading(true);
     try {
-      await verifyCompanyDocument(companyId, verifyTarget.document.id, { verification_status: verifyTarget.decision }, token);
+      await verifyCompanyDocument(verifyTarget.document.company?.id ?? companyId, verifyTarget.document.id, { verification_status: verifyTarget.decision }, token);
       setVerifyTarget(null);
       refetch();
       setToast({ tone: "success", message: `Document marked as ${verifyTarget.decision}.` });
@@ -117,7 +125,7 @@ export default function CompanyDocuments() {
     if (!deleteTarget) return;
     setActionLoading(true);
     try {
-      await deleteCompanyDocument(companyId, deleteTarget.id, token);
+      await deleteCompanyDocument(deleteTarget.company?.id ?? companyId, deleteTarget.id, token);
       setDeleteTarget(null);
       refetch();
       setToast({ tone: "success", message: "Document deleted." });
@@ -130,6 +138,7 @@ export default function CompanyDocuments() {
 
   const columns = [
     { key: "document_name", header: "Document", render: (r) => <b>{r.document_name}</b> },
+    ...(isAllSelected ? [{ key: "company", header: "Company", render: (r) => r.company?.company_name || "—" }] : []),
     { key: "document_type", header: "Type" },
     { key: "expiry_date", header: "Expiry", render: (r) => (r.expiry_date ? String(r.expiry_date).slice(0, 10) : "—") },
     { key: "uploaded_by", header: "Uploaded By", render: (r) => r.uploaded_by?.name ?? "—" },
@@ -189,6 +198,7 @@ export default function CompanyDocuments() {
                 aria-label="Select company"
               >
                 {companies.length === 0 && <option value="">No companies found</option>}
+                {companies.length > 0 && <option value="">All Companies</option>}
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.company_name}
@@ -197,7 +207,7 @@ export default function CompanyDocuments() {
               </select>
             )}
 
-            <button type="button" className="dash-primary-btn cl-add-btn" disabled={!companyId} onClick={openUpload} style={{ marginLeft: "auto" }}>
+            <button type="button" className="dash-primary-btn cl-add-btn" onClick={openUpload} style={{ marginLeft: "auto" }}>
               <Icon name="upload" size={15} />
               Upload Document
             </button>
@@ -207,10 +217,10 @@ export default function CompanyDocuments() {
             columns={columns}
             rows={documents}
             isLoading={isLoading || companiesLoading}
-            emptyMessage={companyId ? "No documents uploaded for this company." : "Select a company to view its documents."}
+            emptyMessage={isAllSelected ? "No documents found." : companyId ? "No documents uploaded for this company." : "Select a company to view its documents."}
           />
 
-          {!isLoading && companyId && (
+          {!isLoading && (companyId || isAllSelected) && (
             <div className="cl-footer">
               <p>Showing {documents.length} document{documents.length === 1 ? "" : "s"}</p>
             </div>
@@ -236,6 +246,19 @@ export default function CompanyDocuments() {
           <form id="doc-upload-form" onSubmit={handleUpload}>
             {uploadErrors._api && <p className="rl-api-error">{uploadErrors._api}</p>}
 
+            {isSuperAdmin && (
+              <FormField label="Company *" error={uploadErrors.company_id}>
+                <select value={uploadForm.company_id} onChange={(e) => setUploadForm((f) => ({ ...f, company_id: e.target.value }))}>
+                  <option value="">Select a company</option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.company_name}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            )}
+
             <FormField label="Document Type">
               <select value={uploadForm.document_type} onChange={(e) => setUploadForm((f) => ({ ...f, document_type: e.target.value }))}>
                 {DOCUMENT_TYPES.map((t) => (
@@ -244,7 +267,7 @@ export default function CompanyDocuments() {
               </select>
             </FormField>
 
-            <FormField label="Document Name" error={uploadErrors.document_name}>
+            <FormField label="Document Name *" error={uploadErrors.document_name}>
               <input
                 type="text"
                 value={uploadForm.document_name}
@@ -257,7 +280,7 @@ export default function CompanyDocuments() {
               <input type="date" value={uploadForm.expiry_date} onChange={(e) => setUploadForm((f) => ({ ...f, expiry_date: e.target.value }))} />
             </FormField>
 
-            <FormField label="File" error={uploadErrors.file}>
+            <FormField label="File *" error={uploadErrors.file}>
               <DocumentUploader
                 fileName={uploadForm.fileName}
                 onSelect={(file) => setUploadForm((f) => ({ ...f, file, fileName: file.name }))}

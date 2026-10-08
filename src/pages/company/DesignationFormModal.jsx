@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import Modal from "../../components/Modal.jsx";
 import FormField from "../../components/FormField.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { createCompanyDesignation, updateCompanyDesignation, getCompanyById, ApiValidationError } from "../../services/api/companyApi.js";
+import {
+  createCompanyDesignation,
+  updateCompanyDesignation,
+  getCompanyById,
+  getCompanyDesignations,
+  ApiValidationError,
+} from "../../services/api/companyApi.js";
 
 const EMPTY_FORM = {
   designation_name: "",
@@ -14,19 +20,54 @@ const EMPTY_FORM = {
 // Shared Add/Edit form — used from both the Designations list (row action /
 // toolbar) and the Designation View page (Edit button). Mirrors
 // DepartmentFormModal/BranchFormModal's shape.
-export default function DesignationFormModal({ mode, companyId, designationId, initialValues, onClose, onSuccess }) {
+export default function DesignationFormModal({ mode, companyId, companies = [], designationId, initialValues, onClose, onSuccess }) {
   const { token, roleName } = useAuth();
   const isSuperAdmin = roleName === "Super Admin";
   const [form, setForm] = useState({ ...EMPTY_FORM, ...initialValues });
   const [formErrors, setFormErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [companyName, setCompanyName] = useState("");
+  const [existingDesignations, setExistingDesignations] = useState([]);
+  const [designationListError, setDesignationListError] = useState("");
 
   const isEdit = mode === "edit";
+  // Editing always targets the row's fixed company. Adding lets a Super
+  // Admin pick which company the new designation belongs to (defaulting to
+  // whatever the page's company filter was already set to, or unselected
+  // when the page is showing "All Companies").
+  const [selectedCompanyId, setSelectedCompanyId] = useState(() => String(companyId ?? ""));
+  const effectiveCompanyId = isEdit ? companyId : selectedCompanyId;
 
   useEffect(() => {
     let cancelled = false;
-    if (!isSuperAdmin || !companyId) return undefined;
+    if (!effectiveCompanyId) {
+      setExistingDesignations([]);
+      setDesignationListError("");
+      return undefined;
+    }
+
+    getCompanyDesignations(effectiveCompanyId, token)
+      .then((designations) => {
+        if (!cancelled) {
+          setExistingDesignations(designations);
+          setDesignationListError("");
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setExistingDesignations([]);
+          setDesignationListError(error.message ?? "Could not check existing designation names.");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveCompanyId, token]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!isSuperAdmin || !isEdit || !companyId) return undefined;
 
     getCompanyById(companyId, token)
       .then((company) => {
@@ -39,7 +80,7 @@ export default function DesignationFormModal({ mode, companyId, designationId, i
     return () => {
       cancelled = true;
     };
-  }, [isSuperAdmin, companyId, token]);
+  }, [isSuperAdmin, isEdit, companyId, token]);
 
   function setField(key, value) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -49,7 +90,17 @@ export default function DesignationFormModal({ mode, companyId, designationId, i
     e.preventDefault();
 
     const errors = {};
+    if (!isEdit && isSuperAdmin && !selectedCompanyId) errors.company_id = "Company is required.";
     if (!form.designation_name.trim()) errors.designation_name = "Designation name is required.";
+    else {
+      const normalizedName = form.designation_name.trim().toLowerCase();
+      const duplicate = existingDesignations.some(
+        (designation) =>
+          String(designation.id) !== String(designationId ?? "") &&
+          String(designation.designation_name ?? "").trim().toLowerCase() === normalizedName
+      );
+      if (duplicate) errors.designation_name = "This designation name already exists for this company.";
+    }
     if (form.hierarchy_level.toString().trim() && Number.isNaN(Number(form.hierarchy_level))) {
       errors.hierarchy_level = "Hierarchy level must be a number.";
     }
@@ -69,9 +120,9 @@ export default function DesignationFormModal({ mode, companyId, designationId, i
     setFormErrors({});
     try {
       const data = isEdit
-        ? await updateCompanyDesignation(companyId, designationId, payload, token)
-        : await createCompanyDesignation(companyId, payload, token);
-      onSuccess(data);
+        ? await updateCompanyDesignation(effectiveCompanyId, designationId, payload, token)
+        : await createCompanyDesignation(effectiveCompanyId, payload, token);
+      onSuccess(data, effectiveCompanyId);
     } catch (err) {
       if (err instanceof ApiValidationError) {
         const fieldErrors = {};
@@ -105,8 +156,9 @@ export default function DesignationFormModal({ mode, companyId, designationId, i
     >
       <form id="designation-form" onSubmit={handleSubmit}>
         {formErrors._api && <p className="rl-api-error">{formErrors._api}</p>}
+        {designationListError && <p className="rl-api-error">{designationListError} The server will still check for duplicate names when saving.</p>}
 
-        {isSuperAdmin && (
+        {isSuperAdmin && isEdit && (
           <FormField label="Company">
             <select value={companyId} disabled>
               <option value={companyId}>{companyName || "Loading…"}</option>
@@ -114,7 +166,20 @@ export default function DesignationFormModal({ mode, companyId, designationId, i
           </FormField>
         )}
 
-        <FormField label="Designation Name" error={formErrors.designation_name}>
+        {isSuperAdmin && !isEdit && (
+          <FormField label="Company *" error={formErrors.company_id}>
+            <select value={selectedCompanyId} onChange={(e) => setSelectedCompanyId(e.target.value)}>
+              <option value="">Select a company</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.company_name}
+                </option>
+              ))}
+            </select>
+          </FormField>
+        )}
+
+        <FormField label="Designation Name *" error={formErrors.designation_name}>
           <input
             type="text"
             value={form.designation_name}

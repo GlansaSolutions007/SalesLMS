@@ -5,6 +5,10 @@ import Modal from "../../components/Modal.jsx";
 import FormField from "../../components/FormField.jsx";
 import Toast from "../../components/Toast.jsx";
 import MultiSelectDropdown from "../../components/MultiSelectDropdown.jsx";
+// Hand-rolled dt-toolbar/dt-select markup needs its own stylesheet import —
+// see TargetList.jsx for why relying on another page to load it first breaks
+// direct/refresh navigation.
+import "../../components/DataToolbar.css";
 import useCompanyOptions from "../company/useCompanyOptions.js";
 import useCompanyEmployeeOptions from "../employees/useCompanyEmployeeOptions.js";
 import { useAuth } from "../../context/AuthContext.jsx";

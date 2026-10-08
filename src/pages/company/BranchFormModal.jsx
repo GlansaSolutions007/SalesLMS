@@ -21,7 +21,7 @@ const EMPTY_FORM = {
 // Shared Add/Edit form — used from both the Branches list (row action /
 // toolbar) and the Branch View page (Edit button), so a save from either
 // place behaves identically.
-export default function BranchFormModal({ mode, companyId, branchId, initialValues, onClose, onSuccess }) {
+export default function BranchFormModal({ mode, companyId, companies = [], branchId, initialValues, onClose, onSuccess }) {
   const { token, roleName } = useAuth();
   const isSuperAdmin = roleName === "Super Admin";
   const [form, setForm] = useState({ ...EMPTY_FORM, ...initialValues });
@@ -29,13 +29,19 @@ export default function BranchFormModal({ mode, companyId, branchId, initialValu
   const [saving, setSaving] = useState(false);
   const [companyName, setCompanyName] = useState("");
 
-  const { options: managers, isLoading: managersLoading } = useCompanyEmployeeOptions(companyId);
-
   const isEdit = mode === "edit";
+  // Editing always targets the row's fixed company. Adding lets a Super
+  // Admin pick which company the new branch belongs to (defaulting to
+  // whatever the page's company filter was already set to, or unselected
+  // when the page is showing "All Companies").
+  const [selectedCompanyId, setSelectedCompanyId] = useState(() => String(companyId ?? ""));
+  const effectiveCompanyId = isEdit ? companyId : selectedCompanyId;
+
+  const { options: managers, isLoading: managersLoading } = useCompanyEmployeeOptions(effectiveCompanyId);
 
   useEffect(() => {
     let cancelled = false;
-    if (!isSuperAdmin || !companyId) return undefined;
+    if (!isSuperAdmin || !isEdit || !companyId) return undefined;
 
     getCompanyById(companyId, token)
       .then((company) => {
@@ -48,7 +54,7 @@ export default function BranchFormModal({ mode, companyId, branchId, initialValu
     return () => {
       cancelled = true;
     };
-  }, [isSuperAdmin, companyId, token]);
+  }, [isSuperAdmin, isEdit, companyId, token]);
 
   function setField(key, value) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -58,6 +64,7 @@ export default function BranchFormModal({ mode, companyId, branchId, initialValu
     e.preventDefault();
 
     const errors = {};
+    if (!isEdit && isSuperAdmin && !selectedCompanyId) errors.company_id = "Company is required.";
     if (!form.branch_name.trim()) errors.branch_name = "Branch name is required.";
     if (!form.branch_code.trim()) errors.branch_code = "Branch code is required.";
     if (Object.keys(errors).length) {
@@ -82,9 +89,9 @@ export default function BranchFormModal({ mode, companyId, branchId, initialValu
     setFormErrors({});
     try {
       const data = isEdit
-        ? await updateCompanyBranch(companyId, branchId, payload, token)
-        : await createCompanyBranch(companyId, payload, token);
-      onSuccess(data);
+        ? await updateCompanyBranch(effectiveCompanyId, branchId, payload, token)
+        : await createCompanyBranch(effectiveCompanyId, payload, token);
+      onSuccess(data, effectiveCompanyId);
     } catch (err) {
       if (err instanceof ApiValidationError) {
         const fieldErrors = {};
@@ -119,7 +126,7 @@ export default function BranchFormModal({ mode, companyId, branchId, initialValu
       <form id="branch-form" onSubmit={handleSubmit}>
         {formErrors._api && <p className="rl-api-error">{formErrors._api}</p>}
 
-        {isSuperAdmin && (
+        {isSuperAdmin && isEdit && (
           <FormField label="Company">
             <select value={companyId} disabled>
               <option value={companyId}>{companyName || "Loading…"}</option>
@@ -127,11 +134,24 @@ export default function BranchFormModal({ mode, companyId, branchId, initialValu
           </FormField>
         )}
 
+        {isSuperAdmin && !isEdit && (
+          <FormField label="Company *" error={formErrors.company_id}>
+            <select value={selectedCompanyId} onChange={(e) => setSelectedCompanyId(e.target.value)}>
+              <option value="">Select a company</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.company_name}
+                </option>
+              ))}
+            </select>
+          </FormField>
+        )}
+
         <div className="form-row">
-          <FormField label="Branch Name" error={formErrors.branch_name}>
+          <FormField label="Branch Name *" error={formErrors.branch_name}>
             <input type="text" value={form.branch_name} onChange={(e) => setField("branch_name", e.target.value)} placeholder="e.g. Hyderabad Branch" />
           </FormField>
-          <FormField label="Branch Code" error={formErrors.branch_code}>
+          <FormField label="Branch Code *" error={formErrors.branch_code}>
             <input type="text" value={form.branch_code} onChange={(e) => setField("branch_code", e.target.value)} placeholder="e.g. HYD001" />
           </FormField>
         </div>

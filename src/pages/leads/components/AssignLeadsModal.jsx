@@ -1,34 +1,42 @@
 import { useState } from "react";
 import Modal from "../../../components/Modal.jsx";
 import FormField from "../../../components/FormField.jsx";
-
-// Design-only employee list — see LeadPool.jsx's note on the same pattern.
-const DUMMY_EMPLOYEES = [
-  { id: 101, full_name: "Arjun Kumar" },
-  { id: 102, full_name: "Priya Singh" },
-  { id: 103, full_name: "Ravi Verma" },
-];
+import { assignLeads } from "../../../services/api/leadsApi.js";
+import useCompanyEmployeeOptions from "../../employees/useCompanyEmployeeOptions.js";
 
 // Leads are assigned ONLY to individual employees — there is no Team
 // option here. The same action covers first-time assignment, reassignment,
 // and bulk assignment; they only differ by how many lead IDs are passed.
-export default function AssignLeadsModal({ leadIds, onClose, onAssigned }) {
+export default function AssignLeadsModal({ companyId, leadIds, onClose, onAssigned }) {
   const [employeeId, setEmployeeId] = useState("");
   const [reason, setReason] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
-  const employees = DUMMY_EMPLOYEES;
+  const { options: employees } = useCompanyEmployeeOptions(companyId);
 
-  function handleAssign() {
+  async function handleAssign() {
     if (!employeeId) {
       setError("Select an employee.");
       return;
     }
+
+    setIsSubmitting(true);
     setError("");
-    const employee = employees.find((e) => String(e.id) === String(employeeId));
-    setResult({ assigned: leadIds.length, skipped: 0 });
-    onAssigned?.({ full_name: employee?.full_name ?? "" });
+    try {
+      const res = await assignLeads(companyId, {
+        lead_ids: leadIds,
+        employee_id: employeeId,
+        reason: reason || undefined,
+      });
+      setResult(res);
+      onAssigned?.();
+    } catch (err) {
+      setError(err.message ?? "Could not assign leads.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -41,8 +49,8 @@ export default function AssignLeadsModal({ leadIds, onClose, onAssigned }) {
             {result ? "Close" : "Cancel"}
           </button>
           {!result && (
-            <button type="button" className="dash-primary-btn" onClick={handleAssign}>
-              Assign
+            <button type="button" className="dash-primary-btn" onClick={handleAssign} disabled={isSubmitting}>
+              {isSubmitting ? "Assigning…" : "Assign"}
             </button>
           )}
         </>

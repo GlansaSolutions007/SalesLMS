@@ -15,6 +15,7 @@ import useCompanyBranches from "../company/useCompanyBranches.js";
 import useCompanyDepartments from "../company/useCompanyDepartments.js";
 import useCompanyEmployees from "./useCompanyEmployees.js";
 import { deactivateCompanyEmployee } from "../../services/api/companyApi.js";
+import BulkUploadEmployeesModal from "./bulkUpload/BulkUploadEmployeesModal.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { ROUTES, employeeEditPath, employeeProfilePath } from "../../router/routePaths.js";
 import { exportToCsv } from "../../utils/csv.js";
@@ -43,7 +44,7 @@ const COLUMNS = [
       </div>
     ),
   },
-  { key: "department", header: "Department", render: (r) => r.department?.department_name || "—" },
+  // { key: "department", header: "Department", render: (r) => r.department?.department_name || "—" },
   { key: "designation", header: "Designation", render: (r) => r.designation?.designation_name || "—" },
   { key: "email", header: "Email" },
   { key: "mobile", header: "Mobile", render: (r) => r.mobile || "—" },
@@ -74,11 +75,9 @@ export default function EmployeeList() {
   const { token, roleName, user } = useAuth();
   const isSuperAdmin = roleName === "Super Admin";
   const { options: companies, isLoading: companiesLoading, error: companiesError } = useCompanyOptions(isSuperAdmin);
+  // "" is the default for Super Admin and means "All Companies", not "none picked yet".
   const [companyId, setCompanyId] = useState(() => (isSuperAdmin ? "" : String(user?.company?.id ?? "")));
-
-  useEffect(() => {
-    if (isSuperAdmin && !companyId && companies.length > 0) setCompanyId(String(companies[0].id));
-  }, [isSuperAdmin, companies, companyId]);
+  const isAllSelected = isSuperAdmin && !companyId;
 
   const { branches } = useCompanyBranches(companyId);
   const { departments } = useCompanyDepartments(companyId);
@@ -94,21 +93,26 @@ export default function EmployeeList() {
     setPage(1);
   }, [companyId, search, statusFilter, branchFilter, departmentFilter, sort.key, sort.dir]);
 
-  const { employees, pagination, isLoading, error, refetch } = useCompanyEmployees(companyId, {
-    search: search.trim() || undefined,
-    status: statusFilter !== "All" ? statusFilter : undefined,
-    branch_id: branchFilter || undefined,
-    department_id: departmentFilter || undefined,
-    sort: sort.key,
-    dir: sort.dir,
-    page,
-    per_page: 25,
-  });
+  const { employees, pagination, isLoading, error, refetch } = useCompanyEmployees(
+    companyId,
+    {
+      search: search.trim() || undefined,
+      status: statusFilter !== "All" ? statusFilter : undefined,
+      branch_id: branchFilter || undefined,
+      department_id: departmentFilter || undefined,
+      sort: sort.key,
+      dir: sort.dir,
+      page,
+      per_page: 25,
+    },
+    isAllSelected ? companies : undefined
+  );
 
   const [toastDismissed, setToastDismissed] = useState(false);
   const [toast, setToast] = useState(null);
   const [deactivateTarget, setDeactivateTarget] = useState(null);
   const [deactivating, setDeactivating] = useState(false);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
 
   const activeError = companiesError || error;
   useEffect(() => {
@@ -119,7 +123,7 @@ export default function EmployeeList() {
     if (!deactivateTarget) return;
     setDeactivating(true);
     try {
-      await deactivateCompanyEmployee(companyId, deactivateTarget.id, token);
+      await deactivateCompanyEmployee(deactivateTarget.company?.id ?? companyId, deactivateTarget.id, token);
       setDeactivateTarget(null);
       refetch();
       setToast({ tone: "success", message: "Employee deactivated successfully." });
@@ -131,31 +135,38 @@ export default function EmployeeList() {
   }
 
   const columns = [
-    ...COLUMNS,
+    ...COLUMNS.slice(0, 1),
+    ...(isAllSelected ? [{ key: "company", header: "Company", render: (r) => r.company?.company_name || "—" }] : []),
+    ...COLUMNS.slice(1),
     {
       key: "actions",
       header: "",
-      render: (r) => (
-        <div className="cl-row-actions">
-          <Link to={employeeProfilePath(companyId, r.id)} className="dash-icon-btn" aria-label={`View ${r.full_name}`}>
-            <Icon name="eye" size={15} />
-          </Link>
-          <Link to={employeeEditPath(companyId, r.id)} className="dash-icon-btn" aria-label={`Edit ${r.full_name}`}>
-            <Icon name="edit" size={15} />
-          </Link>
-          {r.status === "Active" && (
-            <button
-              type="button"
-              className="dash-icon-btn"
-              aria-label={`Deactivate ${r.full_name}`}
-              title="Deactivate"
-              onClick={() => setDeactivateTarget(r)}
-            >
-              <Icon name="trash" size={15} />
-            </button>
-          )}
-        </div>
-      ),
+      render: (r) => {
+        const rowCompanyId = r.company?.id ?? companyId;
+        return (
+          <div className="cl-row-actions">
+            <Link to={employeeProfilePath(rowCompanyId, r.id)} className="dash-icon-btn" aria-label={`View ${r.full_name}`}>
+              <Icon name="eye" size={15} />
+            </Link>
+            <Link to={employeeEditPath(rowCompanyId, r.id)} className="dash-icon-btn" aria-label={`Edit ${r.full_name}`}>
+              <Icon name="edit" size={15} />
+            </Link>
+            {r.status === "Active" && (
+              <button
+                type="button"
+                className="dash-icon-btn"
+                aria-label={`Deactivate ${r.full_name}`}
+                title="Deactivate"
+                onClick={() => setDeactivateTarget(r)}
+              >
+                {/* /deactive icon ban related */}
+                <Icon name="ban" size={15} />
+                {/* <Icon name="trash" size={15} /> */}
+              </button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
@@ -168,6 +179,30 @@ export default function EmployeeList() {
           <div>
             <h1>Employees</h1>
             <Breadcrumb current="All Employees" />
+          </div>
+          <div className="cl-actions">
+            <button
+              type="button"
+              className="dash-primary-btn cl-add-btn"
+              disabled={!companyId && !isAllSelected}
+              onClick={() => navigate(ROUTES.EMPLOYEES_ADD, { state: { companyId: companyId || null } })}
+            >
+              <Icon name="plus" size={16} />
+              Add New Employee
+            </button>
+            <button type="button" className="cl-btn" disabled={!companyId} onClick={() => setBulkUploadOpen(true)}>
+              <Icon name="download" size={15} style={{ transform: "rotate(180deg)" }} />
+              Bulk Upload Employees
+            </button>
+            <button
+              type="button"
+              className="cl-btn"
+              disabled={!companyId && !isAllSelected}
+              onClick={() => exportToCsv("employees.csv", employees, isAllSelected ? [COLUMNS[0], { key: "company", header: "Company", render: (r) => r.company?.company_name || "—" }, ...COLUMNS.slice(1)] : COLUMNS)}
+            >
+              <Icon name="download" size={15} />
+              Export Excel
+            </button>
           </div>
         </div>
 
@@ -184,6 +219,7 @@ export default function EmployeeList() {
                 aria-label="Select company"
               >
                 {companies.length === 0 && <option value="">No companies found</option>}
+                {companies.length > 0 && <option value="">All Companies</option>}
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.company_name}
@@ -207,7 +243,7 @@ export default function EmployeeList() {
               ))}
             </select>
 
-            <select
+            {/* <select
               className="dt-select"
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
@@ -220,7 +256,7 @@ export default function EmployeeList() {
                   {d.department_name}
                 </option>
               ))}
-            </select>
+            </select> */}
           </div>
 
           <DataToolbar
@@ -233,20 +269,16 @@ export default function EmployeeList() {
             sort={sort}
             onSortChange={setSort}
             sortOptions={SORT_OPTIONS}
-            onExportCsv={() => exportToCsv("employees.csv", employees, COLUMNS)}
-            onExportPdf={() => window.print()}
-            addLabel="Add New Employee"
-            onAdd={companyId ? () => navigate(ROUTES.EMPLOYEES_ADD, { state: { companyId } }) : undefined}
           />
 
           <DataTable
             columns={columns}
             rows={employees}
             isLoading={isLoading || companiesLoading}
-            emptyMessage={companyId ? "No employees found for this company." : "Select a company to view its employees."}
+            emptyMessage={isAllSelected ? "No employees found." : companyId ? "No employees found for this company." : "Select a company to view its employees."}
           />
 
-          {!isLoading && companyId && (
+          {!isLoading && (companyId || isAllSelected) && (
             <div className="cl-footer">
               <p>
                 Showing {pagination.from ?? 0}–{pagination.to ?? 0} of {pagination.total} employee{pagination.total === 1 ? "" : "s"}
@@ -264,6 +296,17 @@ export default function EmployeeList() {
           confirmLabel={deactivating ? "Deactivating…" : "Deactivate"}
           onCancel={() => setDeactivateTarget(null)}
           onConfirm={confirmDeactivate}
+        />
+      )}
+
+      {bulkUploadOpen && companyId && (
+        <BulkUploadEmployeesModal
+          companyId={companyId}
+          onClose={() => setBulkUploadOpen(false)}
+          onImported={() => {
+            refetch();
+            setToast({ tone: "success", message: "Bulk upload complete." });
+          }}
         />
       )}
 

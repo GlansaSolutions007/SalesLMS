@@ -4,7 +4,14 @@ import { getCompanyBranches } from "../../services/api/companyApi.js";
 
 // GET /companies/{company}/branches returns the full unpaginated list
 // for that company, so search/status/sort here are client-side only.
-export default function useCompanyBranches(companyId) {
+//
+// `allCompanies` is optional and only used when companyId is falsy (the
+// Branches page's "All Companies" option): it fans out one request per
+// company and merges the results, tagging each branch with its owning
+// company, since the backend has no single all-companies branches endpoint.
+// Every other caller passes just companyId and gets the original
+// single-company behavior unchanged.
+export default function useCompanyBranches(companyId, allCompanies) {
   const { token } = useAuth();
 
   const [branches, setBranches] = useState([]);
@@ -13,12 +20,37 @@ export default function useCompanyBranches(companyId) {
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!companyId) {
-      setBranches([]);
-      return;
+      if (!allCompanies || allCompanies.length === 0) {
+        setBranches([]);
+        return undefined;
+      }
+
+      setIsLoading(true);
+      setError("");
+
+      Promise.all(
+        allCompanies.map((c) =>
+          getCompanyBranches(c.id, token)
+            .then((items) => items.map((b) => ({ ...b, company: { id: c.id, company_name: c.company_name } })))
+            .catch(() => [])
+        )
+      )
+        .then((lists) => {
+          if (cancelled) return;
+          setBranches(lists.flat());
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoading(false);
+        });
+
+      return () => {
+        cancelled = true;
+      };
     }
 
-    let cancelled = false;
     setIsLoading(true);
     setError("");
 
@@ -39,7 +71,7 @@ export default function useCompanyBranches(companyId) {
     return () => {
       cancelled = true;
     };
-  }, [companyId, token, refreshKey]);
+  }, [companyId, allCompanies, token, refreshKey]);
 
   return { branches, isLoading, error, refetch: () => setRefreshKey((k) => k + 1) };
 }

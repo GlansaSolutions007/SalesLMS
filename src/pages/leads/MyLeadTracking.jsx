@@ -21,6 +21,14 @@ const STATUS_TONE = {
   converted: "green",
   verified: "green",
   "closed lost": "red",
+  "dnd/not lifted": "gray",
+};
+
+// Display-only relabeling for the Update Status dropdown — the stored
+// value/API payload is still "Closed Lost" (no backend or data change),
+// this only changes what the employee sees as the option text.
+const STATUS_DISPLAY_LABELS = {
+  "Closed Lost": "Not Interested",
 };
 
 // Mirrors MyLeadController::ALLOWED_TRANSITIONS (spec §22) — used only to
@@ -30,8 +38,11 @@ const ALLOWED_TRANSITIONS = {
   New: ["Contacted", "Closed Lost"],
   Assigned: ["Contacted", "Closed Lost"],
   Contacted: ["Follow-up", "Interested", "Closed Lost"],
-  "Follow-up": ["Interested", "Follow-up", "Closed Lost"],
+  "Follow-up": ["Interested", "Follow-up", "Closed Lost", "DND/Not Lifted"],
   Interested: ["Follow-up", "Converted", "Closed Lost"],
+  // Unreachable-phone outcome — only reachable from Follow-up, and only
+  // moves back to Follow-up once contact is made (not a dead end).
+  "DND/Not Lifted": ["Follow-up"],
 };
 
 const ACTIVITY_STYLE = {
@@ -181,6 +192,16 @@ export default function MyLeadTracking() {
   const pendingFollowups = (lead.followups ?? []).filter((f) => f.status === "Pending");
   const activities = lead.activities ?? [];
 
+  // Derived, read-only label — there is no real "Verification Requested"
+  // lead status. Any existing lead_verification_requests row (created by
+  // Send Verification Request) locks the Status field here; it never
+  // changes lead.status itself or the verification-request flow. The
+  // backend enforces the same rule in updateStatus() regardless of what
+  // this renders.
+  const hasVerificationRequest = Boolean(lead.verification_request);
+  const headerStatusLabel = hasVerificationRequest ? "Verification Requested" : lead.status;
+  const headerStatusTone = hasVerificationRequest ? "orange" : (STATUS_TONE[String(lead.status).toLowerCase()] ?? "gray");
+
   return (
     <>
       <Topbar onMenuClick={toggleCollapsed} searchPlaceholder="Search..." />
@@ -191,7 +212,7 @@ export default function MyLeadTracking() {
             <Breadcrumb current="Track Lead" />
           </div>
           <div className="cl-actions">
-            <Badge tone={STATUS_TONE[String(lead.status).toLowerCase()] ?? "gray"}>{lead.status}</Badge>
+            <Badge tone={headerStatusTone}>{headerStatusLabel}</Badge>
             <button type="button" className="cl-btn" onClick={() => navigate(ROUTES.MY_LEADS)}>
               Back to My Leads
             </button>
@@ -214,66 +235,68 @@ export default function MyLeadTracking() {
               </div>
             </div>
 
-            <div className="panel cl-panel lt-panel">
-              <h3>Update Status</h3>
-              <div className="form-fields-stack">
-                <FormField label="Status">
-                  <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                    {statusOptions.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
-                <FormField label="Remarks">
-                  <textarea rows={3} value={remarks} onChange={(e) => setRemarks(e.target.value)} />
-                </FormField>
+            {!hasVerificationRequest && (
+              <div className="panel cl-panel lt-panel">
+                <h3>Update Status</h3>
+                <div className="form-fields-stack">
+                  <FormField label="Status">
+                    <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                      {statusOptions.map((s) => (
+                        <option key={s} value={s}>
+                          {STATUS_DISPLAY_LABELS[s] ?? s}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
+                  <FormField label="Remarks">
+                    <textarea rows={3} value={remarks} onChange={(e) => setRemarks(e.target.value)} />
+                  </FormField>
 
-                <label className="lt-checkbox">
-                  <input type="checkbox" checked={followupRequired} onChange={(e) => setFollowupRequired(e.target.checked)} />
-                  Follow-up Required
-                </label>
+                  <label className="lt-checkbox">
+                    <input type="checkbox" checked={followupRequired} onChange={(e) => setFollowupRequired(e.target.checked)} />
+                    Follow-up Required
+                  </label>
 
-                {followupRequired && (
-                  <div className="lt-followup-section">
-                    <FormField label="Follow-up Type">
-                      <select value={followupType} onChange={(e) => setFollowupType(e.target.value)}>
-                        {["Call", "Meeting", "WhatsApp", "Email", "Other"].map((t) => (
-                          <option key={t} value={t}>
-                            {t}
-                          </option>
-                        ))}
-                      </select>
-                    </FormField>
-                    <FormField label="Follow-up Notes">
-                      <textarea rows={2} value={followupNotes} onChange={(e) => setFollowupNotes(e.target.value)} />
-                    </FormField>
-                    <div className="form-row">
-                      <FormField label="Next Follow-up Date">
-                        <input type="date" value={nextFollowUpDate} onChange={(e) => setNextFollowUpDate(e.target.value)} />
+                  {followupRequired && (
+                    <div className="lt-followup-section">
+                      <FormField label="Follow-up Type">
+                        <select value={followupType} onChange={(e) => setFollowupType(e.target.value)}>
+                          {["Call", "Meeting", "WhatsApp", "Email", "Other"].map((t) => (
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
+                          ))}
+                        </select>
                       </FormField>
-                      <FormField label="Next Follow-up Time">
-                        <input type="time" value={nextFollowUpTime} onChange={(e) => setNextFollowUpTime(e.target.value)} />
+                      <FormField label="Follow-up Notes">
+                        <textarea rows={2} value={followupNotes} onChange={(e) => setFollowupNotes(e.target.value)} />
                       </FormField>
+                      <div className="form-row">
+                        <FormField label="Next Follow-up Date">
+                          <input type="date" value={nextFollowUpDate} onChange={(e) => setNextFollowUpDate(e.target.value)} />
+                        </FormField>
+                        <FormField label="Next Follow-up Time">
+                          <input type="time" value={nextFollowUpTime} onChange={(e) => setNextFollowUpTime(e.target.value)} />
+                        </FormField>
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                {formError && <p className="form-field-error">{formError}</p>}
-
-                <div className="lt-form-actions">
-                  <button type="button" className="dash-primary-btn" onClick={handleSave} disabled={isSubmitting}>
-                    {isSubmitting ? "Saving…" : "Save"}
-                  </button>
-                  {status === "Converted" && (
-                    <button type="button" className="cl-btn" onClick={() => setConversionOpen(true)}>
-                      Submit Conversion
-                    </button>
                   )}
+
+                  {formError && <p className="form-field-error">{formError}</p>}
+
+                  <div className="lt-form-actions">
+                    <button type="button" className="dash-primary-btn" onClick={handleSave} disabled={isSubmitting}>
+                      {isSubmitting ? "Saving…" : "Save"}
+                    </button>
+                    {status === "Converted" && (
+                      <button type="button" className="cl-btn" onClick={() => setConversionOpen(true)}>
+                        Submit Conversion
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {pendingFollowups.length > 0 && (
               <div className="panel cl-panel lt-panel">

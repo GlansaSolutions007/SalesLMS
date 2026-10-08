@@ -1,22 +1,55 @@
+import { useEffect, useState } from "react";
 import Modal from "../../components/Modal.jsx";
+import Skeleton from "../../components/Skeleton.jsx";
 import Badge from "../../components/Badge.jsx";
 import TrendChart from "../../components/charts/TrendChart.jsx";
 import GroupedBarChart from "../../components/charts/GroupedBarChart.jsx";
+import { getEmployeeTargetPerformanceReport } from "../../services/api/salesReportsApi.js";
 import { statusTone } from "./performanceStatus.js";
 import { formatMetric } from "./formatMetric.js";
-import { DUMMY_REPORT } from "./dummyReport.js";
 
-// Reads from the SAME dummy report object EmployeeTargetPerformance.jsx
-// renders its table/charts from, so the numbers here can never drift from
-// what the page already shows for this employee — see this project's
-// UI-only scope note on EmployeeTargetPerformance.jsx.
-export default function EmployeeDetailModal({ employeeId, targetType, onClose }) {
-  const row = DUMMY_REPORT.by_employee.find((r) => r.employee_id === employeeId);
-  const trend = DUMMY_REPORT.monthly_trend;
+// Re-fetches the SAME report endpoint scoped to one employee (employee_id
+// override, other filters — period/target_type — carried over from the
+// page) rather than a separate detail API, so the numbers here can never
+// drift from what the page's own table/charts already show for this
+// employee.
+export default function EmployeeDetailModal({ companyId, employeeId, targetType, filters, onClose }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+
+    getEmployeeTargetPerformanceReport(companyId, { ...filters, employee_id: employeeId, sales_team_id: undefined, status: "all" })
+      .then((res) => {
+        if (!cancelled) setData(res);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message ?? "Could not load this employee's details.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId, employeeId, JSON.stringify(filters)]);
+
+  const row = data?.by_employee?.[0];
+  const trend = data?.monthly_trend ?? [];
 
   return (
     <Modal title="Employee Performance Details" size="lg" onClose={onClose}>
-      {!row ? (
+      {loading ? (
+        <Skeleton height={280} />
+      ) : error ? (
+        <p className="form-field-error">{error}</p>
+      ) : !row ? (
         <p className="chart-empty">No data found for this employee in the selected period.</p>
       ) : (
         <div className="form-fields-stack">

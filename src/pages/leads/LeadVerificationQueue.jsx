@@ -4,6 +4,10 @@ import Badge from "../../components/Badge.jsx";
 import Toast from "../../components/Toast.jsx";
 import Modal from "../../components/Modal.jsx";
 import FormField from "../../components/FormField.jsx";
+// Hand-rolled dt-toolbar/dt-select markup needs its own stylesheet import —
+// see TargetList.jsx for why relying on another page to load it first breaks
+// direct/refresh navigation.
+import "../../components/DataToolbar.css";
 import useCompanyOptions from "../company/useCompanyOptions.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { getLeadConversions, verifyLeadConversion } from "../../services/api/leadsApi.js";

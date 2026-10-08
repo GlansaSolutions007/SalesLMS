@@ -13,12 +13,13 @@ import GroupedBarChart from "../../components/charts/GroupedBarChart.jsx";
 import HorizontalBarChart from "../../components/charts/HorizontalBarChart.jsx";
 import TrendChart from "../../components/charts/TrendChart.jsx";
 import DonutChart from "../../components/charts/DonutChart.jsx";
+import useCompanyOptions from "../company/useCompanyOptions.js";
+import useCompanyEmployeeOptions from "../employees/useCompanyEmployeeOptions.js";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { exportToCsv } from "../../utils/csv.js";
+import { getEmployeeTargetPerformanceReport, exportEmployeeTargetPerformanceReport } from "../../services/api/salesReportsApi.js";
 import { PERFORMANCE_STATUS_OPTIONS, statusTone, statusColor } from "./performanceStatus.js";
 import { formatMetric } from "./formatMetric.js";
 import EmployeeDetailModal from "./EmployeeDetailModal.jsx";
-import { DUMMY_COMPANIES, DUMMY_EMPLOYEES, DUMMY_REPORT } from "./dummyReport.js";
 import "../company/CompanyList.css";
 import "../company/CompanyView.css";
 import "./EmployeeTargetPerformance.css";
@@ -46,6 +47,17 @@ const QUARTER_OPTIONS = [
 
 const PER_PAGE = 10;
 
+function downloadBlob(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 function defaultFilters() {
   const now = new Date();
   return {
@@ -61,30 +73,56 @@ function defaultFilters() {
   };
 }
 
+const EMPTY_REPORT = { kpis: {}, by_employee: [], monthly_trend: [], distribution: {}, period: {} };
+
 export default function EmployeeTargetPerformance() {
   const { toggleCollapsed } = useOutletContext();
   const { roleName, user } = useAuth();
   const isSuperAdmin = roleName === "Super Admin";
 
-  const companies = DUMMY_COMPANIES;
+  const { options: companies, isLoading: companiesLoading } = useCompanyOptions(isSuperAdmin);
   const [companyId, setCompanyId] = useState(() => (isSuperAdmin ? "" : String(user?.company?.id ?? "")));
 
   useEffect(() => {
     if (isSuperAdmin && !companyId && companies.length > 0) setCompanyId(String(companies[0].id));
   }, [isSuperAdmin, companies, companyId]);
 
-  const employees = DUMMY_EMPLOYEES;
+  const { options: employees } = useCompanyEmployeeOptions(companyId);
 
   // "pending" = what the filter form currently shows; "applied" = what was
-  // last submitted via "Apply Filters". Filters stay interactive but the
-  // report itself is the fixed dummy dataset above — see this file's top
-  // note on the UI-only scope for this module.
+  // last submitted via "Apply Filters" and is actually driving the report.
+  // All graphs/KPIs/table read only from `applied` + the fetched report.
   const [pending, setPending] = useState(defaultFilters);
   const [applied, setApplied] = useState(defaultFilters);
 
-  const report = DUMMY_REPORT;
-  const loading = false;
-  const error = "";
+  const [report, setReport] = useState(EMPTY_REPORT);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!companyId) return undefined;
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+
+    getEmployeeTargetPerformanceReport(companyId, applied)
+      .then((data) => {
+        if (!cancelled) setReport(data);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setReport(EMPTY_REPORT);
+          setError(err.message ?? "Could not load this report.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, applied]);
 
   function updatePending(field, value) {
     setPending((prev) => ({ ...prev, [field]: value }));
@@ -108,7 +146,7 @@ export default function EmployeeTargetPerformance() {
   const [detailEmployeeId, setDetailEmployeeId] = useState(null);
 
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
-  const exporting = false;
+  const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
   const exportMenuRef = useRef(null);
 
@@ -121,41 +159,19 @@ export default function EmployeeTargetPerformance() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [exportMenuOpen]);
 
-  // Design-only — generates the file client-side from the dummy report
-  // instead of calling the backend export endpoint. Both formats produce a
-  // CSV (no Excel-writing library in this project); Excel can still open a
-  // .csv file directly.
-  function handleExport() {
+  async function handleExport(format) {
     if (exporting) return;
     setExportMenuOpen(false);
+    setExporting(true);
     setExportError("");
-    exportToCsv(
-      "employee-target-performance.csv",
-      report.by_employee.map((r) => ({
-        full_name: r.full_name,
-        team_name: r.team_name ?? "",
-        target: r.target,
-        achievement: r.achievement,
-        achievement_pct: r.achievement_pct,
-        leads: r.leads,
-        converted: r.converted,
-        conversion_pct: r.conversion_pct,
-        revenue: r.revenue,
-        status_label: r.status_label,
-      })),
-      [
-        { key: "full_name", header: "Employee" },
-        { key: "team_name", header: "Team" },
-        { key: "target", header: "Target" },
-        { key: "achievement", header: "Achievement" },
-        { key: "achievement_pct", header: "Achievement %" },
-        { key: "leads", header: "Leads" },
-        { key: "converted", header: "Converted" },
-        { key: "conversion_pct", header: "Conversion %" },
-        { key: "revenue", header: "Revenue" },
-        { key: "status_label", header: "Status" },
-      ]
-    );
+    try {
+      const blob = await exportEmployeeTargetPerformanceReport(companyId, { ...applied, format });
+      downloadBlob(blob, `employee-target-performance.${format}`);
+    } catch (err) {
+      setExportError(err.message ?? "Could not export this report.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   useEffect(() => {
@@ -228,7 +244,7 @@ export default function EmployeeTargetPerformance() {
         <div className="panel cl-panel">
           {isSuperAdmin && (
             <div style={{ padding: "18px 22px 0" }}>
-              <select className="dt-select" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+              <select className="dt-select" value={companyId} onChange={(e) => setCompanyId(e.target.value)} disabled={companiesLoading}>
                 {companies.length === 0 && <option value="">No companies found</option>}
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>{c.company_name}</option>

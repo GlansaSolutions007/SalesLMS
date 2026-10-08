@@ -253,6 +253,33 @@ export async function createMyLeadFollowup(companyId, leadId, payload) {
   }
 }
 
+// GET /companies/{company}/my-leads/verification-requests/eligible?search=&per_page=&page=
+// Leads owned by the logged-in employee that are still open for a fresh
+// bulk verification request — the backend already excludes Closed Lost,
+// Verified, and already-requested leads, so nothing extra is filtered here.
+export async function getEligibleVerificationLeads(companyId, params = {}) {
+  try {
+    const res = await httpClient.get(`/companies/${companyId}/my-leads/verification-requests/eligible`, { params });
+    const body = res.data?.data ?? res.data;
+    return { items: body?.data ?? [], pagination: { ...DEFAULT_PAGINATION, ...body?.pagination } };
+  } catch (err) {
+    throw toApiError(err, "Could not load leads eligible for verification.");
+  }
+}
+
+// POST /companies/{company}/my-leads/verification-requests/bulk — { lead_ids }
+// Returns { requested, skipped } — the backend re-validates every id
+// (ownership + eligibility) regardless of what the list showed, so a
+// partial result (some skipped) is a normal, expected outcome, not an error.
+export async function bulkSubmitVerificationRequests(companyId, leadIds) {
+  try {
+    const res = await httpClient.post(`/companies/${companyId}/my-leads/verification-requests/bulk`, { lead_ids: leadIds });
+    return { ...(res.data?.data ?? {}), message: res.data?.message };
+  } catch (err) {
+    throw toApiError(err, "Could not send verification requests.");
+  }
+}
+
 // GET /companies/{company}/my-followups?status=&search=&date=&today=
 export async function getMyFollowups(companyId, params = {}) {
   try {

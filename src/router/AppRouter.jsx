@@ -69,6 +69,7 @@ const AssignLeadsPage = lazy(() => import("../pages/leads/AssignLeadsPage.jsx"))
 const FollowupsPage = lazy(() => import("../pages/leads/FollowupsPage.jsx"));
 const TargetsPage = lazy(() => import("../pages/targets/TargetsPage.jsx"));
 const TargetForm = lazy(() => import("../pages/targets/TargetForm.jsx"));
+const TargetCreateForm = lazy(() => import("../pages/targets/TargetCreateForm.jsx"));
 const IncentivesPage = lazy(() => import("../pages/incentives/IncentivesPage.jsx"));
 const EmployeeTargetPerformance = lazy(() => import("../pages/salesPerformance/EmployeeTargetPerformance.jsx"));
 
@@ -256,7 +257,7 @@ export default function AppRouter() {
             <Route path={ROUTES.LEADS_ADD} element={<LeadForm />} />
             <Route path={ROUTES.LEAD_VIEW} element={<LeadProfile />} />
             <Route path={ROUTES.MY_LEAD_VIEW} element={<MyLeadTracking />} />
-            <Route path={ROUTES.TARGETS_ADD} element={<TargetForm />} />
+            <Route path={ROUTES.TARGETS_ADD} element={<TargetCreateForm />} />
             <Route path={ROUTES.TARGETS_EDIT} element={<TargetForm />} />
 
             <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />

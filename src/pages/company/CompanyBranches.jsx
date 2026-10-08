@@ -84,29 +84,40 @@ const BASE_COLUMNS = [
   },
 ];
 
-function buildColumns(companyId, onEdit, editingRowId) {
+const COMPANY_COLUMN = {
+  key: "company",
+  header: "Company",
+  render: (r) => r.company?.company_name || "—",
+};
+
+function buildColumns(companyId, onEdit, editingRowId, showCompanyColumn) {
   return [
-    ...BASE_COLUMNS,
+    ...BASE_COLUMNS.slice(0, 1),
+    ...(showCompanyColumn ? [COMPANY_COLUMN] : []),
+    ...BASE_COLUMNS.slice(1),
     {
       key: "actions",
       header: "",
-      render: (r) => (
-        <div className="cl-row-actions">
-          <Link to={companyBranchViewPath(companyId, r.id)} className="dash-icon-btn" aria-label={`View ${r.branch_name}`}>
-            <Icon name="eye" size={15} />
-          </Link>
-          <button
-            type="button"
-            className="dash-icon-btn"
-            aria-label={`Edit ${r.branch_name}`}
-            title="Edit"
-            onClick={() => onEdit(r)}
-            disabled={editingRowId === r.id}
-          >
-            <Icon name="edit" size={15} />
-          </button>
-        </div>
-      ),
+      render: (r) => {
+        const rowCompanyId = r.company?.id ?? companyId;
+        return (
+          <div className="cl-row-actions">
+            <Link to={companyBranchViewPath(rowCompanyId, r.id)} className="dash-icon-btn" aria-label={`View ${r.branch_name}`}>
+              <Icon name="eye" size={15} />
+            </Link>
+            <button
+              type="button"
+              className="dash-icon-btn"
+              aria-label={`Edit ${r.branch_name}`}
+              title="Edit"
+              onClick={() => onEdit(r)}
+              disabled={editingRowId === r.id}
+            >
+              <Icon name="edit" size={15} />
+            </button>
+          </div>
+        );
+      },
     },
   ];
 }
@@ -116,13 +127,11 @@ export default function CompanyBranches() {
   const { token, roleName, user } = useAuth();
   const isSuperAdmin = roleName === "Super Admin";
   const { options: companies, isLoading: companiesLoading, error: companiesError } = useCompanyOptions(isSuperAdmin);
+  // "" is the default for Super Admin and means "All Companies", not "none picked yet".
   const [companyId, setCompanyId] = useState(() => (isSuperAdmin ? "" : String(user?.company?.id ?? "")));
+  const isAllSelected = isSuperAdmin && !companyId;
 
-  useEffect(() => {
-    if (isSuperAdmin && !companyId && companies.length > 0) setCompanyId(String(companies[0].id));
-  }, [isSuperAdmin, companies, companyId]);
-
-  const { branches, isLoading, error, refetch } = useCompanyBranches(companyId);
+  const { branches, isLoading, error, refetch } = useCompanyBranches(companyId, isAllSelected ? companies : undefined);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -144,11 +153,13 @@ export default function CompanyBranches() {
 
   const openEdit = useCallback(
     async (row) => {
+      const rowCompanyId = row.company?.id ?? companyId;
       setEditingRowId(row.id);
       try {
-        const full = await getCompanyBranch(companyId, row.id, token);
+        const full = await getCompanyBranch(rowCompanyId, row.id, token);
         setFormModal({
           mode: "edit",
+          companyId: rowCompanyId,
           branchId: row.id,
           branch: {
             branch_name: full.branch_name ?? "",
@@ -176,10 +187,17 @@ export default function CompanyBranches() {
     setFormModal(null);
   }
 
-  function handleFormSuccess() {
+  function handleFormSuccess(data, usedCompanyId) {
     const wasEdit = formModal?.mode === "edit";
     closeFormModal();
-    refetch();
+    if (!wasEdit && usedCompanyId && usedCompanyId !== companyId) {
+      // Branch was created under a different company than the page's
+      // current filter — switch to it so the new branch is visible;
+      // useCompanyBranches refetches on companyId change.
+      setCompanyId(String(usedCompanyId));
+    } else {
+      refetch();
+    }
     setToast({ tone: "success", message: wasEdit ? "Branch updated successfully." : "Branch created successfully." });
   }
 
@@ -207,7 +225,11 @@ export default function CompanyBranches() {
     return list;
   }, [branches, search, statusFilter, sort]);
 
-  const columns = useMemo(() => buildColumns(companyId, openEdit, editingRowId), [companyId, editingRowId, openEdit]);
+  const columns = useMemo(
+    () => buildColumns(companyId, openEdit, editingRowId, isAllSelected),
+    [companyId, editingRowId, openEdit, isAllSelected]
+  );
+  const exportColumns = useMemo(() => (isAllSelected ? [BASE_COLUMNS[0], COMPANY_COLUMN, ...BASE_COLUMNS.slice(1)] : BASE_COLUMNS), [isAllSelected]);
 
   return (
     <>
@@ -234,6 +256,7 @@ export default function CompanyBranches() {
                 aria-label="Select company"
               >
                 {companies.length === 0 && <option value="">No companies found</option>}
+                {companies.length > 0 && <option value="">All Companies</option>}
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.company_name}
@@ -253,20 +276,20 @@ export default function CompanyBranches() {
             sort={sort}
             onSortChange={setSort}
             sortOptions={SORT_OPTIONS}
-            onExportCsv={() => exportToCsv("branches.csv", rows, BASE_COLUMNS)}
+            onExportCsv={() => exportToCsv("branches.csv", rows, exportColumns)}
             onExportPdf={() => window.print()}
             addLabel="Add Branch"
-            onAdd={companyId ? openAdd : undefined}
+            onAdd={openAdd}
           />
 
           <DataTable
             columns={columns}
             rows={rows}
             isLoading={isLoading || companiesLoading}
-            emptyMessage={companyId ? "No branches found for this company." : "Select a company to view its branches."}
+            emptyMessage={isAllSelected ? "No branches found." : companyId ? "No branches found for this company." : "Select a company to view its branches."}
           />
 
-          {!isLoading && companyId && (
+          {!isLoading && (companyId || isAllSelected) && (
             <div className="cl-footer">
               <p>
                 Showing {rows.length} of {branches.length} branch{branches.length === 1 ? "" : "es"}
@@ -279,7 +302,8 @@ export default function CompanyBranches() {
       {formModal && (
         <BranchFormModal
           mode={formModal.mode}
-          companyId={companyId}
+          companyId={formModal.mode === "edit" ? formModal.companyId : companyId}
+          companies={companies}
           branchId={formModal.branchId}
           initialValues={formModal.branch}
           onClose={closeFormModal}

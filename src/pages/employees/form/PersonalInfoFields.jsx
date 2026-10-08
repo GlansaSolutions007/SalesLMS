@@ -1,7 +1,11 @@
 import FormField from "../../../components/FormField.jsx";
 import { GENDERS, EMPLOYMENT_TYPES } from "../employeeFormData.js";
+import { getDateOfBirthLimits, getJoiningDateLimits } from "../employeeFormValidation.js";
 
-export default function PersonalInfoFields({ data, errors, onChange }) {
+export default function PersonalInfoFields({ data, errors, onChange, showJoiningDate = true, showEmploymentType = true }) {
+  const { latestAllowed: dobMax } = getDateOfBirthLimits();
+  const { min: joiningDateMin, max: joiningDateMax } = getJoiningDateLimits(data.dob);
+
   return (
     <div className="form-fields-stack">
       <div className="form-row">
@@ -24,31 +28,43 @@ export default function PersonalInfoFields({ data, errors, onChange }) {
             ))}
           </select>
         </FormField>
-        <FormField label="Date of Birth">
-          <input type="date" value={data.dob} onChange={(e) => onChange("dob", e.target.value)} />
+        <FormField label="Date of Birth" error={errors.dob}>
+          <input type="date" max={dobMax} value={data.dob} onChange={(e) => onChange("dob", e.target.value)} />
         </FormField>
       </div>
 
-      <div className="form-row">
-        <FormField label="Joining Date">
-          <input type="date" value={data.joiningDate} onChange={(e) => onChange("joiningDate", e.target.value)} />
-        </FormField>
+      {(showJoiningDate || showEmploymentType) && (
+        <div className="form-row">
+          {showJoiningDate && (
+            <FormField label="Joining Date" error={errors.joiningDate}>
+              <input
+                type="date"
+                min={joiningDateMin}
+                max={joiningDateMax}
+                value={data.joiningDate}
+                onChange={(e) => onChange("joiningDate", e.target.value)}
+              />
+            </FormField>
+          )}
 
-        <FormField label="Employment Type">
-          <div className="seg-group">
-            {EMPLOYMENT_TYPES.map((opt) => (
-              <button
-                type="button"
-                key={opt}
-                className={`seg-chip${data.employmentType === opt ? " is-active" : ""}`}
-                onClick={() => onChange("employmentType", opt)}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
-        </FormField>
-      </div>
+          {showEmploymentType && (
+            <FormField label="Employment Type">
+              <div className="seg-group">
+                {EMPLOYMENT_TYPES.map((opt) => (
+                  <button
+                    type="button"
+                    key={opt}
+                    className={`seg-chip${data.employmentType === opt ? " is-active" : ""}`}
+                    onClick={() => onChange("employmentType", opt)}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </FormField>
+          )}
+        </div>
+      )}
     </div>
   );
 }

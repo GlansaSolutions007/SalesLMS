@@ -57,29 +57,40 @@ const BASE_COLUMNS = [
   },
 ];
 
-function buildColumns(companyId, onEdit, editingRowId) {
+const COMPANY_COLUMN = {
+  key: "company",
+  header: "Company",
+  render: (r) => r.company?.company_name || "—",
+};
+
+function buildColumns(companyId, onEdit, editingRowId, showCompanyColumn) {
   return [
-    ...BASE_COLUMNS,
+    ...BASE_COLUMNS.slice(0, 1),
+    ...(showCompanyColumn ? [COMPANY_COLUMN] : []),
+    ...BASE_COLUMNS.slice(1),
     {
       key: "actions",
       header: "",
-      render: (r) => (
-        <div className="cl-row-actions">
-          <Link to={companyDesignationViewPath(companyId, r.id)} className="dash-icon-btn" aria-label={`View ${r.designation_name}`}>
-            <Icon name="eye" size={15} />
-          </Link>
-          <button
-            type="button"
-            className="dash-icon-btn"
-            aria-label={`Edit ${r.designation_name}`}
-            title="Edit"
-            onClick={() => onEdit(r)}
-            disabled={editingRowId === r.id}
-          >
-            <Icon name="edit" size={15} />
-          </button>
-        </div>
-      ),
+      render: (r) => {
+        const rowCompanyId = r.company?.id ?? companyId;
+        return (
+          <div className="cl-row-actions">
+            <Link to={companyDesignationViewPath(rowCompanyId, r.id)} className="dash-icon-btn" aria-label={`View ${r.designation_name}`}>
+              <Icon name="eye" size={15} />
+            </Link>
+            <button
+              type="button"
+              className="dash-icon-btn"
+              aria-label={`Edit ${r.designation_name}`}
+              title="Edit"
+              onClick={() => onEdit(r)}
+              disabled={editingRowId === r.id}
+            >
+              <Icon name="edit" size={15} />
+            </button>
+          </div>
+        );
+      },
     },
   ];
 }
@@ -89,13 +100,11 @@ export default function CompanyDesignations() {
   const { token, roleName, user } = useAuth();
   const isSuperAdmin = roleName === "Super Admin";
   const { options: companies, isLoading: companiesLoading, error: companiesError } = useCompanyOptions(isSuperAdmin);
+  // "" is the default for Super Admin and means "All Companies", not "none picked yet".
   const [companyId, setCompanyId] = useState(() => (isSuperAdmin ? "" : String(user?.company?.id ?? "")));
+  const isAllSelected = isSuperAdmin && !companyId;
 
-  useEffect(() => {
-    if (isSuperAdmin && !companyId && companies.length > 0) setCompanyId(String(companies[0].id));
-  }, [isSuperAdmin, companies, companyId]);
-
-  const { designations, isLoading, error, refetch } = useCompanyDesignations(companyId);
+  const { designations, isLoading, error, refetch } = useCompanyDesignations(companyId, isAllSelected ? companies : undefined);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -117,11 +126,13 @@ export default function CompanyDesignations() {
 
   const openEdit = useCallback(
     async (row) => {
+      const rowCompanyId = row.company?.id ?? companyId;
       setEditingRowId(row.id);
       try {
-        const full = await getCompanyDesignation(companyId, row.id, token);
+        const full = await getCompanyDesignation(rowCompanyId, row.id, token);
         setFormModal({
           mode: "edit",
+          companyId: rowCompanyId,
           designationId: row.id,
           designation: {
             designation_name: full.designation_name ?? "",
@@ -143,10 +154,17 @@ export default function CompanyDesignations() {
     setFormModal(null);
   }
 
-  function handleFormSuccess() {
+  function handleFormSuccess(data, usedCompanyId) {
     const wasEdit = formModal?.mode === "edit";
     closeFormModal();
-    refetch();
+    if (!wasEdit && usedCompanyId && usedCompanyId !== companyId) {
+      // Designation was created under a different company than the page's
+      // current filter — switch to it so the new designation is visible;
+      // useCompanyDesignations refetches on companyId change.
+      setCompanyId(String(usedCompanyId));
+    } else {
+      refetch();
+    }
     setToast({ tone: "success", message: wasEdit ? "Designation updated successfully." : "Designation created successfully." });
   }
 
@@ -172,7 +190,11 @@ export default function CompanyDesignations() {
     return list;
   }, [designations, search, statusFilter, sort]);
 
-  const columns = useMemo(() => buildColumns(companyId, openEdit, editingRowId), [companyId, editingRowId, openEdit]);
+  const columns = useMemo(
+    () => buildColumns(companyId, openEdit, editingRowId, isAllSelected),
+    [companyId, editingRowId, openEdit, isAllSelected]
+  );
+  const exportColumns = useMemo(() => (isAllSelected ? [BASE_COLUMNS[0], COMPANY_COLUMN, ...BASE_COLUMNS.slice(1)] : BASE_COLUMNS), [isAllSelected]);
 
   return (
     <>
@@ -199,6 +221,7 @@ export default function CompanyDesignations() {
                 aria-label="Select company"
               >
                 {companies.length === 0 && <option value="">No companies found</option>}
+                {companies.length > 0 && <option value="">All Companies</option>}
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.company_name}
@@ -218,20 +241,20 @@ export default function CompanyDesignations() {
             sort={sort}
             onSortChange={setSort}
             sortOptions={SORT_OPTIONS}
-            onExportCsv={() => exportToCsv("designations.csv", rows, BASE_COLUMNS)}
+            onExportCsv={() => exportToCsv("designations.csv", rows, exportColumns)}
             onExportPdf={() => window.print()}
             addLabel="Add Designation"
-            onAdd={companyId ? openAdd : undefined}
+            onAdd={openAdd}
           />
 
           <DataTable
             columns={columns}
             rows={rows}
             isLoading={isLoading || companiesLoading}
-            emptyMessage={companyId ? "No designations found for this company." : "Select a company to view its designations."}
+            emptyMessage={isAllSelected ? "No designations found." : companyId ? "No designations found for this company." : "Select a company to view its designations."}
           />
 
-          {!isLoading && companyId && (
+          {!isLoading && (companyId || isAllSelected) && (
             <div className="cl-footer">
               <p>
                 Showing {rows.length} of {designations.length} designation{designations.length === 1 ? "" : "s"}
@@ -244,7 +267,8 @@ export default function CompanyDesignations() {
       {formModal && (
         <DesignationFormModal
           mode={formModal.mode}
-          companyId={companyId}
+          companyId={formModal.mode === "edit" ? formModal.companyId : companyId}
+          companies={companies}
           designationId={formModal.designationId}
           initialValues={formModal.designation}
           onClose={closeFormModal}

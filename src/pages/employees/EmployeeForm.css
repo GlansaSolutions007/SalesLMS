@@ -1,3 +1,219 @@
 @import "../../styles/controls.css";
 @import "../../components/FormActions.css";
 @import "../../components/DataTable.css";
+
+.employee-address-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  color: var(--color-heading);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.employee-address-toggle input {
+  margin: 0;
+}
+
+.employee-address-hint {
+  margin: -10px 0 2px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.employee-branch-field {
+  min-width: 0;
+}
+
+.employee-branch-select-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.employee-branch-select-row select {
+  min-width: 0;
+  flex: 1;
+}
+
+.employee-add-branch-btn {
+  display: inline-flex;
+  flex: 0 0 42px;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--color-primary-700);
+  cursor: pointer;
+}
+
+.employee-add-branch-btn:hover:not(:disabled) {
+  border-color: var(--color-primary-600);
+  background: var(--color-surface);
+}
+
+.employee-add-branch-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.employee-wizard-stepper {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.employee-wizard-step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--color-muted);
+}
+
+.employee-wizard-step:not(:last-child)::after {
+  position: absolute;
+  top: 15px;
+  left: 36px;
+  right: -6px;
+  height: 1px;
+  content: "";
+  /* background: var(--color-border); */
+  background: #ffffff00;
+}
+
+.employee-wizard-step-number {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.employee-wizard-step-label {
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+}
+
+.employee-wizard-step.is-current {
+  color: var(--color-primary-600);
+  font-weight: 700;
+}
+
+.employee-wizard-step.is-current .employee-wizard-step-number,
+.employee-wizard-step.is-complete .employee-wizard-step-number {
+  border-color: var(--color-primary-600);
+  background: var(--color-primary-600);
+  color: white;
+}
+
+.employee-wizard-heading {
+  margin-bottom: 24px;
+}
+
+.employee-wizard-heading > span {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.employee-wizard-heading h2 {
+  margin: 5px 0 0;
+  color: var(--color-heading);
+  font-size: 20px;
+}
+
+.employee-review {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.employee-review-section {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.employee-review-section h3 {
+  margin: 0 0 12px;
+  color: var(--color-heading);
+  font-size: 14px;
+}
+
+.employee-review-section dl {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+}
+
+.employee-review-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.8fr) minmax(0, 1.2fr);
+  gap: 12px;
+  font-size: 12px;
+}
+
+.employee-review-row dt {
+  color: var(--color-muted);
+}
+
+.employee-review-row dd {
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: var(--color-heading);
+  font-weight: 600;
+}
+
+.wizard-step-footer-edit {
+  justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+  .employee-wizard-stepper {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 16px;
+  }
+
+  .employee-wizard-step:nth-child(3)::after {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .employee-wizard-stepper {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 8px;
+  }
+
+  .employee-wizard-step::after {
+    display: none;
+  }
+
+  .employee-wizard-step-label {
+    font-size: 10px;
+  }
+
+  .employee-review {
+    grid-template-columns: 1fr;
+  }
+}

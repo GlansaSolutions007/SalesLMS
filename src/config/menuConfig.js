@@ -22,61 +22,17 @@ export const menuConfig = [
   // part of the ROLES/ALL constant above, so it's listed explicitly here.
   { id: "my-learning", title: "My Learning", icon: "cap", path: ROUTES.MY_LEARNING, roles: ["Employee"] },
   { id: "my-certificates", title: "My Certificates", icon: "trophy", path: ROUTES.MY_CERTIFICATES, roles: ["Employee"] },
-  // "Employee" is the real backend role for the learner/sales-rep login (see
-  // note above), so Leads/Target/Incentives use it directly rather than the
-  // frontend-only SM/SE mock constants. Grouped under one accordion section
-  // — ids/paths/roles unchanged from when these were top-level entries, so
-  // routing (AppRouter's flatMenu.map) and PAGE_COMPONENTS lookups still
-  // resolve the same as before.
-  {
-    id: "sales-performance",
-    title: "Sales Performance",
-    icon: "coin",
-    path: ROUTES.SALES_PERFORMANCE,
-    roles: [SA, CA, "Employee"],
-    children: [
-      // "Leads" is the company-wide lead pool + verification queue (Company
-      // Admin only); an Employee gets their own separate "My Leads" entry
-      // below instead, per the Lead Management spec's menu layout.
-      { id: "leads", title: "Leads", path: ROUTES.LEADS, roles: [SA, CA] },
-      // Assign Employee: after manual creation or Excel/CSV import (which no
-      // longer takes an Assigned Employee column), Company Admin/Super
-      // Admin assign leads to an individual employee here — single lead or
-      // bulk. Never a Team.
-      { id: "assign-leads", title: "Assign Employee", path: ROUTES.ASSIGN_LEADS, roles: [SA, CA] },
-      { id: "my-leads", title: "My Leads", path: ROUTES.MY_LEADS, roles: ["Employee"] },
-      { id: "followups", title: "Follow-ups", path: ROUTES.FOLLOWUPS, roles: [SA, CA, "Employee"] },
-      { id: "targets", title: "Target", path: ROUTES.TARGETS, roles: [SA, CA, "Employee"] },
-      { id: "employee-target-performance", title: "Employee Target Performance", path: ROUTES.EMPLOYEE_TARGET_PERFORMANCE, roles: [SA, CA] },
-      // { id: "rewards", title: "Incentives", path: ROUTES.REWARDS, roles: [SA, CA, "Employee"] },
-    ],
-  },
+  // View-only counterpart to the admin/Trainer "Training Sessions" page
+  // (gated by the "training_sessions.view" permission, which Employee
+  // deliberately doesn't hold — see RolePermissionsSeeder). Gated by role
+  // alone, same as My Learning/My Certificates above, so it never collides
+  // with that permission-gated admin entry.
+  { id: "my-training-sessions", title: "Training Sessions", icon: "video", path: ROUTES.MY_TRAINING_SESSIONS, roles: ["Employee"] },
+  
   // { id: "pipeline", title: "Sales Pipeline", icon: "pipeline", path: ROUTES.PIPELINE, roles: [SA, CA, SM] },
   // { id: "activities", title: "Activities", icon: "calendar", path: ROUTES.ACTIVITIES, roles: [SA, CA, TR] },
-  {
-    id: "company",
-    title: "Company Management",
-    icon: "building",
-    path: ROUTES.COMPANY,
-    roles: [SA, CA],
-    permissions: ["companies.view"],
-    children: [
-      // Super Admin only — a Company Admin manages their own single company
-      // via the profile/settings pages, not this cross-company list.
-      { id: "company-companies", title: "Companies", path: ROUTES.COMPANY_COMPANIES, roles: [SA] },
-      // Company Admin only — their own company's profile (view + edit),
-      // resolved from the logged-in user rather than an :id in the URL.
-      { id: "company-profile", title: "Company Profile", path: ROUTES.COMPANY_PROFILE, roles: [CA] },
-      { id: "company-branches", title: "Branches", path: ROUTES.COMPANY_BRANCHES, roles: [SA, CA], permissions: ["branches.view"] },
-      // { id: "company-departments", title: "Departments", path: ROUTES.COMPANY_DEPARTMENTS, roles: [SA, CA], permissions: ["departments.view"] },
-      { id: "company-designations", title: "Designations", path: ROUTES.COMPANY_DESIGNATIONS, roles: [SA, CA], permissions: ["designations.view"] },
-      // Super Admin only — creates/manages the Company Admin login for any company.
-      { id: "company-admins", title: "Admins", path: ROUTES.COMPANY_ADMINS, roles: [SA] },
-      // Compliance documents — Super Admin (any company) or Company Admin (their own).
-      { id: "company-documents", title: "Documents", path: ROUTES.COMPANY_DOCUMENTS, roles: [SA, CA] },
-    ],
-  },
-  { id: "employees", title: "Employees", icon: "users", path: ROUTES.EMPLOYEES, roles: [SA, CA, SM], permissions: ["employees.view"] },
+
+  
   {
     // Company Admin no longer gets this section — courses are managed by
     // Super Admin / Trainers; a Company Admin only assigns/tracks them via
@@ -142,9 +98,67 @@ export const menuConfig = [
       { id: "training-employee-progress", title: "Employee Progress", path: ROUTES.TRAINING_EMPLOYEE_PROGRESS, roles: [SA, CA, TR], permissions: ["training_sessions.view"] },
     ],
   },
+
+    {
+    id: "company",
+    title: "Company Management",
+    icon: "building",
+    path: ROUTES.COMPANY,
+    roles: [SA, CA],
+    permissions: ["companies.view"],
+    children: [
+      // Super Admin only — a Company Admin manages their own single company
+      // via the profile/settings pages, not this cross-company list.
+      { id: "company-companies", title: "Companies", path: ROUTES.COMPANY_COMPANIES, roles: [SA] },
+      // Company Admin only — their own company's profile (view + edit),
+      // resolved from the logged-in user rather than an :id in the URL.
+      { id: "company-profile", title: "Company Profile", path: ROUTES.COMPANY_PROFILE, roles: [CA] },
+      { id: "company-branches", title: "Branches", path: ROUTES.COMPANY_BRANCHES, roles: [SA, CA], permissions: ["branches.view"] },
+      // { id: "company-departments", title: "Departments", path: ROUTES.COMPANY_DEPARTMENTS, roles: [SA, CA], permissions: ["departments.view"] },
+      { id: "company-designations", title: "Designations", path: ROUTES.COMPANY_DESIGNATIONS, roles: [SA, CA], permissions: ["designations.view"] },
+      // Super Admin only — creates/manages the Company Admin login for any company.
+      { id: "company-admins", title: "Admins", path: ROUTES.COMPANY_ADMINS, roles: [SA] },
+      // Compliance documents — Super Admin (any company) or Company Admin (their own).
+      { id: "company-documents", title: "Documents", path: ROUTES.COMPANY_DOCUMENTS, roles: [SA, CA] },
+    ],
+  },
+  { id: "employees", title: "Employees", icon: "users", path: ROUTES.EMPLOYEES, roles: [SA, CA, SM], permissions: ["employees.view"] },
+  // "Employee" is the real backend role for the learner/sales-rep login (see
+  // note above), so Leads/Target/Incentives use it directly rather than the
+  // frontend-only SM/SE mock constants. Grouped under one accordion section
+  // — ids/paths/roles unchanged from when these were top-level entries, so
+  // routing (AppRouter's flatMenu.map) and PAGE_COMPONENTS lookups still
+  // resolve the same as before.
+  {
+    id: "sales-performance",
+    title: "Sales Performance",
+    icon: "coin",
+    path: ROUTES.SALES_PERFORMANCE,
+    roles: [SA, CA, "Employee"],
+    children: [
+      // "Leads" is the company-wide lead pool + verification queue (Company
+      // Admin only); an Employee gets their own separate "My Leads" entry
+      // below instead, per the Lead Management spec's menu layout.
+      { id: "leads", title: "Leads", path: ROUTES.LEADS, roles: [SA, CA] },
+      // Assign Leads: after manual creation or Excel/CSV import (which no
+      // longer takes an Assigned Employee column), Company Admin/Super
+      // Admin assign leads to an individual employee here — single lead or
+      // bulk. Never a Team.
+      { id: "assign-leads", title: "Assign Leads", path: ROUTES.ASSIGN_LEADS, roles: [SA, CA] },
+      { id: "my-leads", title: "My Leads", path: ROUTES.MY_LEADS, roles: ["Employee"] },
+      { id: "send-verification-request", title: "Send Verification Request", path: ROUTES.SEND_VERIFICATION_REQUEST, roles: ["Employee"] },
+      { id: "followups", title: "Follow-ups", path: ROUTES.FOLLOWUPS, roles: [SA, CA, "Employee"] },
+      { id: "targets", title: "Target", path: ROUTES.TARGETS, roles: [SA, CA, "Employee"] },
+      // Company-wide analytics dashboard — same role gate as the underlying
+      // report endpoint (role:Super Admin,Company Admin on the backend), so
+      // it's deliberately absent from Employee's own view.
+      { id: "employee-target-performance", title: "Employee Target Performance", path: ROUTES.EMPLOYEE_TARGET_PERFORMANCE, roles: [SA, CA] },
+      // { id: "rewards", title: "Incentives", path: ROUTES.REWARDS, roles: [SA, CA, "Employee"] },
+    ],
+  },
   // { id: "assessments", title: "Assessments", icon: "clipboard", path: ROUTES.ASSESSMENTS, roles: [SA, CA, TR, SE], permissions: ["assessments.view"] },
   // { id: "assignments", title: "Assignments", icon: "edit", path: ROUTES.ASSIGNMENTS, roles: [SA, CA, TR, SE], permissions: ["assignments.view"] },
-  { id: "certificates", title: "Certificates", icon: "trophy", path: ROUTES.CERTIFICATES, roles: [SA, CA, SE], permissions: ["certificates.view"] },
+  // { id: "certificates", title: "Certificates", icon: "trophy", path: ROUTES.CERTIFICATES, roles: [SA, CA, SE], permissions: ["certificates.view"] },
   // { id: "sales", title: "Sales", icon: "coin", path: ROUTES.SALES, roles: [SA, CA, SM] },
   {
     id: "reports",
@@ -154,8 +168,8 @@ export const menuConfig = [
     roles: [SA, CA, TR, SM],
     permissions: ["reports.training", "reports.assessment", "reports.certification", "reports.attendance", "reports.performance", "reports.trainer"],
   },
-  { id: "analytics", title: "Analytics", icon: "pieChart", path: ROUTES.ANALYTICS, roles: [SA, CA, SM] },
-  { id: "notifications", title: "Notifications", icon: "bell", path: ROUTES.NOTIFICATIONS, roles: ALL, permissions: ["notifications.view"] },
+  // { id: "analytics", title: "Analytics", icon: "pieChart", path: ROUTES.ANALYTICS, roles: [SA, CA, SM] },
+  // { id: "notifications", title: "Notifications", icon: "bell", path: ROUTES.NOTIFICATIONS, roles: ALL, permissions: ["notifications.view"] },
   {
     id: "masters",
     title: "Masters",

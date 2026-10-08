@@ -2,6 +2,38 @@ import { EMAIL_REGEX, MOBILE_REGEX, PINCODE_REGEX, req, passwordStrength } from 
 
 export { passwordStrength };
 
+function formatLocalDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function dateYearsAgo(now, years) {
+  const year = now.getFullYear() - years;
+  const lastValidDay = new Date(year, now.getMonth() + 1, 0).getDate();
+  return formatLocalDate(new Date(year, now.getMonth(), Math.min(now.getDate(), lastValidDay)));
+}
+
+export function getDateOfBirthLimits(now = new Date()) {
+  return {
+    today: formatLocalDate(now),
+    latestAllowed: dateYearsAgo(now, 18),
+  };
+}
+
+export function getJoiningDateLimits(dateOfBirth, now = new Date()) {
+  const today = formatLocalDate(now);
+  const sixtyYearsAgo = dateYearsAgo(now, 60);
+
+  return {
+    min: dateOfBirth && dateOfBirth > sixtyYearsAgo ? dateOfBirth : sixtyYearsAgo,
+    max: today,
+    sixtyYearsAgo,
+    today,
+  };
+}
+
 // Optional numeric field — only complains when something non-numeric was
 // typed, never for being blank (none of these targets are mandatory).
 function optionalNumeric(value, message) {
@@ -11,6 +43,8 @@ function optionalNumeric(value, message) {
 
 export function validateEmployeeDetails(data, { requireCompany }) {
   const errors = {};
+  const { latestAllowed, today: currentDate } = getDateOfBirthLimits();
+  const { sixtyYearsAgo, today } = getJoiningDateLimits(data.dob);
   if (requireCompany) errors.companyId = req(data.companyId, "Company is required.");
   errors.branchId = req(data.branchId, "Branch is required.");
   errors.designationId = req(data.designationId, "Designation is required.");
@@ -21,6 +55,22 @@ export function validateEmployeeDetails(data, { requireCompany }) {
     req(data.email, "Email is required.") || (!EMAIL_REGEX.test(data.email) ? "Enter a valid email address." : null);
 
   errors.mobile = req(data.mobile, "Mobile number is required.") || (!MOBILE_REGEX.test(data.mobile) ? "Enter a valid mobile number." : null);
+
+  if (data.dob && data.dob > currentDate) {
+    errors.dob = "Date of birth cannot be in the future.";
+  } else if (data.dob && data.dob > latestAllowed) {
+    errors.dob = "Employee must be at least 18 years old.";
+  }
+
+  if (data.joiningDate) {
+    if (data.joiningDate > today) {
+      errors.joiningDate = "Joining date cannot be in the future.";
+    } else if (data.dob && data.joiningDate < data.dob) {
+      errors.joiningDate = "Joining date cannot be before date of birth.";
+    } else if (data.joiningDate < sixtyYearsAgo) {
+      errors.joiningDate = "Joining date cannot be more than 60 years before today.";
+    }
+  }
 
   // A portal login is always created for new employees, matching the backend's
   // `login_password` => required_if:create_login,true.
@@ -47,7 +97,9 @@ export function validateEmployeeDetails(data, { requireCompany }) {
   return errors;
 }
 
-export function validateAddressStep(data) {
+export function validateAddressStep(data, { required = true } = {}) {
+  if (!required) return {};
+
   const errors = {};
   errors.line1 = req(data.line1, "Address line 1 is required.");
   errors.country = req(data.country, "Country is required.");

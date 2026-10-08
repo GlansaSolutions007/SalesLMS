@@ -29,6 +29,27 @@ import { resolveApiAssetUrl } from "../../utils/apiAssetUrl.js";
 import { ROUTES } from "../../router/routePaths.js";
 import "./EmployeeForm.css";
 
+const EMPLOYEE_WIZARD_STEPS = [
+  "Personal Information",
+  "Contact Information",
+  "Employment",
+  "Employee Address",
+  "Sales & Marketing Information",
+  "Review & Create",
+];
+
+const WIZARD_DETAIL_FIELDS = {
+  1: ["firstName", "lastName", "dob"],
+  2: ["email", "mobile", "password", "confirmPassword"],
+  3: ["companyId", "branchId", "designationId", "joiningDate"],
+  5: [
+    "monthlyLeadTarget",
+    "monthlySalesTarget",
+    "monthlyRevenueTarget",
+    "commissionPercentage",
+  ],
+};
+
 const DETAIL_FIELD_MAP = {
   employee_code: "employeeCode",
   first_name: "firstName",
@@ -96,6 +117,26 @@ function mapAddressRecord(record) {
     city: record.city ?? "",
     pincode: record.pincode ?? "",
   };
+}
+
+function mapBranchAddress(branch) {
+  return {
+    line1: branch?.address ?? "",
+    line2: "",
+    city: branch?.city ?? "",
+    state: branch?.state ?? "",
+    country: branch?.country ?? "",
+    pincode: branch?.pincode ?? "",
+  };
+}
+
+function branchHasAddress(branch) {
+  return Boolean(
+    branch &&
+      [branch.address, branch.city, branch.state, branch.country, branch.pincode].some(
+        (value) => String(value ?? "").trim() !== ""
+      )
+  );
 }
 
 function mapEmployeeToFormData(employee) {
@@ -173,6 +214,113 @@ function buildEmployeeFormData(details) {
   return fd;
 }
 
+function displayDate(value) {
+  if (!value) return "—";
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
+}
+
+function EmployeeReviewSection({ title, rows }) {
+  return (
+    <section className="employee-review-section">
+      <h3>{title}</h3>
+      <dl>
+        {rows.map(([label, value]) => (
+          <div className="employee-review-row" key={label}>
+            <dt>{label}</dt>
+            <dd>{value || "—"}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function EmployeeReview({ formData, companies, user, companyName: lockedCompanyName, selectedBranch, selectedDesignation }) {
+  const { details, address, skills } = formData;
+  const companyName =
+    companies.find((company) => String(company.id) === String(details.companyId))?.company_name ??
+    lockedCompanyName ??
+    user?.company?.company_name ??
+    details.companyId;
+
+  return (
+    <div className="employee-review">
+      <EmployeeReviewSection
+        title="Personal Information"
+        rows={[
+          ["Profile Photo", details.profilePhoto ? "Uploaded" : "Not provided"],
+          ["First Name", details.firstName],
+          ["Last Name", details.lastName],
+          ["Gender", details.gender],
+          ["Date of Birth", displayDate(details.dob)],
+        ]}
+      />
+      <EmployeeReviewSection
+        title="Contact Information"
+        rows={[
+          ["Email", details.email],
+          ["Mobile", details.mobile],
+          ["Password", details.password ? "••••••••" : "—"],
+          ["Confirm Password", details.confirmPassword ? "••••••••" : "—"],
+        ]}
+      />
+      <EmployeeReviewSection
+        title="Employment"
+        rows={[
+          ["Employee Code", details.employeeCode],
+          ["Company", companyName],
+          ["Branch", selectedBranch?.branch_name ?? details.branchId],
+          ["Designation", selectedDesignation?.designation_name ?? details.designationId],
+          ["DOJ", displayDate(details.joiningDate)],
+          ["Employment Type", details.employmentType],
+        ]}
+      />
+      <EmployeeReviewSection
+        title="Employee Address"
+        rows={[
+          ["Address", address.line1],
+          ["Address Line 2", address.line2],
+          ["City", address.city],
+          ["State", address.state],
+          ["Country", address.country],
+          ["Pincode", address.pincode],
+        ]}
+      />
+      <EmployeeReviewSection
+        title="Sales & Marketing Information"
+        rows={[
+          ["Monthly Lead Target", details.monthlyLeadTarget],
+          ["Monthly Sales Target", details.monthlySalesTarget],
+          ["Monthly Revenue Target", details.monthlyRevenueTarget],
+          ["Commission Type", details.commissionType],
+          ["Commission Percentage", details.commissionPercentage],
+          ["Work Mode", details.workMode],
+          ["Preferred Customer Type", details.preferredCustomerType],
+        ]}
+      />
+      <EmployeeReviewSection
+        title="Skills"
+        rows={skills.length
+          ? skills.map((skill, index) => [
+            `Skill ${index + 1}`,
+            [skill.name, skill.level, skill.experienceYears ? `${skill.experienceYears} years` : ""].filter(Boolean).join(" · "),
+          ])
+          : [["Skills", "No skills added"]]}
+      />
+    </div>
+  );
+}
+
+function getStepForErrors(detailErrors, addressErrors = {}) {
+  if (Object.keys(addressErrors).length) return 4;
+  if (["firstName", "lastName", "dob"].some((field) => detailErrors[field])) return 1;
+  if (["email", "mobile", "password", "confirmPassword"].some((field) => detailErrors[field])) return 2;
+  if (["employeeCode", "companyId", "branchId", "designationId", "joiningDate"].some((field) => detailErrors[field])) return 3;
+  if (["monthlyLeadTarget", "monthlySalesTarget", "monthlyRevenueTarget", "commissionType", "commissionPercentage", "workMode", "preferredCustomerType"].some((field) => detailErrors[field])) return 5;
+  return 1;
+}
+
 export default function EmployeeForm() {
   const { toggleCollapsed } = useOutletContext();
   const navigate = useNavigate();
@@ -197,6 +345,11 @@ export default function EmployeeForm() {
   const [loading, setLoading] = useState(isEdit);
   const [loadError, setLoadError] = useState("");
   const [formData, setFormData] = useState(() => buildInitialFormData(lockedCompanyId));
+  const [selectedBranch, setSelectedBranch] = useState(null);
+  const [selectedDesignation, setSelectedDesignation] = useState(null);
+  const [selectedCompanyName, setSelectedCompanyName] = useState("");
+  const [useBranchAddress, setUseBranchAddress] = useState(() => !isEdit);
+  const [wizardStep, setWizardStep] = useState(1);
   const [errors, setErrors] = useState({});
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -260,13 +413,33 @@ export default function EmployeeForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showCompanyDropdown, token]);
 
+  useEffect(() => {
+    if (!useBranchAddress) return;
+
+    if (selectedBranch && !branchHasAddress(selectedBranch)) {
+      setFormData((prev) => ({ ...prev, address: emptyAddress() }));
+      setUseBranchAddress(false);
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, address: mapBranchAddress(selectedBranch) }));
+    setErrors((prev) => (prev.address ? { ...prev, address: {} } : prev));
+  }, [selectedBranch, useBranchAddress]);
+
+  function handleUseBranchAddressChange(checked) {
+    setDirty(true);
+    setErrors((prev) => (prev.address ? { ...prev, address: {} } : prev));
+    setUseBranchAddress(checked);
+  }
+
   function updateDetails(field, value) {
     setDirty(true);
     setFormData((prev) => ({ ...prev, details: { ...prev.details, [field]: value } }));
     setErrors((prev) => {
-      if (!prev.details?.[field]) return prev;
+      if (!prev.details?.[field] && !(field === "dob" && prev.details?.joiningDate)) return prev;
       const next = { ...prev.details };
       delete next[field];
+      if (field === "dob") delete next.joiningDate;
       return { ...prev, details: next };
     });
   }
@@ -299,9 +472,38 @@ export default function EmployeeForm() {
 
   function validateForm() {
     const detailsErrs = validateEmployeeDetails(formData.details, { requireCompany: showCompanyDropdown });
-    const addressErrs = validateAddressStep(formData.address);
+    const addressErrs = validateAddressStep(formData.address, { required: !useBranchAddress });
     setErrors((prev) => ({ ...prev, details: detailsErrs, address: addressErrs }));
+    if (!isEdit && (hasErrors(detailsErrs) || hasErrors(addressErrs))) {
+      setWizardStep(getStepForErrors(detailsErrs, addressErrs));
+    }
     return !hasErrors(detailsErrs) && !hasErrors(addressErrs);
+  }
+
+  function handleNextStep() {
+    const detailFields = WIZARD_DETAIL_FIELDS[wizardStep] ?? [];
+    const validatedDetails = validateEmployeeDetails(formData.details, { requireCompany: showCompanyDropdown });
+    const detailErrors = Object.fromEntries(
+      detailFields.filter((field) => validatedDetails[field]).map((field) => [field, validatedDetails[field]])
+    );
+    const addressErrors = wizardStep === 4
+      ? validateAddressStep(formData.address, { required: !useBranchAddress })
+      : {};
+
+    setErrors((prev) => {
+      const nextDetails = { ...prev.details };
+      detailFields.forEach((field) => delete nextDetails[field]);
+      Object.assign(nextDetails, detailErrors);
+
+      return {
+        ...prev,
+        details: nextDetails,
+        ...(wizardStep === 4 ? { address: addressErrors } : {}),
+      };
+    });
+
+    if (hasErrors(detailErrors) || hasErrors(addressErrors)) return;
+    setWizardStep((step) => step + 1);
   }
 
   function buildAddressTasks(companyId, employeeId) {
@@ -401,6 +603,7 @@ export default function EmployeeForm() {
           detailErrors[key] = Array.isArray(messages) ? messages[0] : messages;
         });
         setErrors((prev) => ({ ...prev, details: { ...prev.details, ...detailErrors } }));
+        if (!isEdit) setWizardStep(getStepForErrors(detailErrors));
       }
       setToast({ tone: "error", message: err.message ?? "Something went wrong. Please try again." });
     }
@@ -453,58 +656,188 @@ export default function EmployeeForm() {
         ) : (
           <div className="panel wizard-panel">
             <div className="wizard-panel-inner">
-              <div className="form-fields-stack">
-                <EmployeeAssignmentFields
-                  data={formData.details}
-                  errors={errors.details ?? {}}
-                  onChange={updateDetails}
-                  showCompanyDropdown={showCompanyDropdown}
-                  companies={companies}
-                  companiesLoading={companiesLoading}
-                  companiesError={companiesError}
-                  isEdit={isEdit}
-                />
+              {!isEdit && (
+                <nav className="employee-wizard-stepper" aria-label="Employee creation progress">
+                  {EMPLOYEE_WIZARD_STEPS.map((label, index) => {
+                    const stepNumber = index + 1;
+                    return (
+                      <div
+                        className={`employee-wizard-step${wizardStep === stepNumber ? " is-current" : ""}${wizardStep > stepNumber ? " is-complete" : ""}`}
+                        key={label}
+                        aria-current={wizardStep === stepNumber ? "step" : undefined}
+                      >
+                        <span className="employee-wizard-step-number">
+                          {wizardStep > stepNumber ? <Icon name="check" size={13} /> : stepNumber}
+                        </span>
+                        <span className="employee-wizard-step-label">{label}</span>
+                      </div>
+                    );
+                  })}
+                </nav>
+              )}
 
-                <div className="form-section-divider">
-                  <span className="form-section-title">Personal Information</span>
-                </div>
-                <PersonalInfoFields data={formData.details} errors={errors.details ?? {}} onChange={updateDetails} />
+              {isEdit ? (
+                <>
+                  <div className="form-fields-stack">
+                    <EmployeeAssignmentFields
+                      data={formData.details}
+                      errors={errors.details ?? {}}
+                      onChange={updateDetails}
+                      onBranchSelect={setSelectedBranch}
+                      onDesignationSelect={setSelectedDesignation}
+                      onCompanyNameChange={setSelectedCompanyName}
+                      showCompanyDropdown={showCompanyDropdown}
+                      isSuperAdmin={isSuperAdmin}
+                      companies={companies}
+                      companiesLoading={companiesLoading}
+                      companiesError={companiesError}
+                      isEdit={isEdit}
+                      showEmploymentMeta={false}
+                    />
 
-                <div className="form-section-divider">
-                  <span className="form-section-title">Contact Information</span>
-                </div>
-                <ContactInfoFields data={formData.details} errors={errors.details ?? {}} onChange={updateDetails} isEdit={isEdit} />
+                    <div className="form-section-divider">
+                      <span className="form-section-title">Personal Information</span>
+                    </div>
+                    <PersonalInfoFields data={formData.details} errors={errors.details ?? {}} onChange={updateDetails} />
 
-                <div className="form-section-divider">
-                  <span className="form-section-title">Sales &amp; Marketing Information</span>
-                </div>
-                <SalesMarketingFields data={formData.details} errors={errors.details ?? {}} onChange={updateDetails} />
+                    <div className="form-section-divider">
+                      <span className="form-section-title">Contact Information</span>
+                    </div>
+                    <ContactInfoFields data={formData.details} errors={errors.details ?? {}} onChange={updateDetails} isEdit={isEdit} />
 
-                <div className="form-section-divider">
-                  <span className="form-section-title">Address</span>
-                </div>
-                <AddressFields data={formData.address} errors={errors.address ?? {}} onChange={updateAddress} required />
+                    <div className="form-section-divider">
+                      <span className="form-section-title">Sales &amp; Marketing Information</span>
+                    </div>
+                    <SalesMarketingFields data={formData.details} errors={errors.details ?? {}} onChange={updateDetails} />
 
-                <div className="form-section-divider">
-                  <span className="form-section-title">Skills</span>
-                </div>
-                <SkillsSection rows={formData.skills} onAddRow={addSkillRow} onRemoveRow={removeSkillRow} onChangeRow={changeSkillRow} />
-              </div>
+                    <div className="form-section-divider">
+                      <span className="form-section-title">Employee Address</span>
+                    </div>
+                    <AddressFields
+                      data={formData.address}
+                      errors={errors.address ?? {}}
+                      onChange={updateAddress}
+                      required={!useBranchAddress}
+                      useBranchAddress={useBranchAddress}
+                      onUseBranchAddressChange={handleUseBranchAddressChange}
+                      branchName={selectedBranch ? selectedBranch.branch_name || "selected" : ""}
+                      branchHasAddress={branchHasAddress(selectedBranch)}
+                    />
 
-              <div className="wizard-step-footer">
-                <div className="wizard-step-footer-left">
-                  <button type="button" className="cl-btn" onClick={handleCancel} disabled={saving}>
-                    Cancel
-                  </button>
-                </div>
+                    <div className="form-section-divider">
+                      <span className="form-section-title">Skills</span>
+                    </div>
+                    <SkillsSection rows={formData.skills} onAddRow={addSkillRow} onRemoveRow={removeSkillRow} onChangeRow={changeSkillRow} />
+                  </div>
 
-                <div className="wizard-step-footer-right">
-                  <button type="button" className="dash-primary-btn" onClick={handleSaveEmployee} disabled={saving}>
-                    {saving ? <span className="fa-spinner light" /> : <Icon name="check" size={15} />}
-                    {isEdit ? "Save Changes" : "Save Employee"}
-                  </button>
-                </div>
-              </div>
+                  <div className="wizard-step-footer wizard-step-footer-edit">
+                    <button type="button" className="cl-btn" onClick={handleCancel} disabled={saving}>Cancel</button>
+                    <button type="button" className="dash-primary-btn" onClick={handleSaveEmployee} disabled={saving}>
+                      {saving ? <span className="fa-spinner light" /> : <Icon name="check" size={15} />}
+                      Save Changes
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <header className="employee-wizard-heading">
+                    <span>Step {wizardStep} of {EMPLOYEE_WIZARD_STEPS.length}</span>
+                    <h2>{EMPLOYEE_WIZARD_STEPS[wizardStep - 1]}</h2>
+                  </header>
+
+                  <div hidden={wizardStep !== 1 && wizardStep !== 3}>
+                    <EmployeeAssignmentFields
+                      data={formData.details}
+                      errors={errors.details ?? {}}
+                      onChange={updateDetails}
+                      onBranchSelect={setSelectedBranch}
+                      onDesignationSelect={setSelectedDesignation}
+                      onCompanyNameChange={setSelectedCompanyName}
+                      showCompanyDropdown={showCompanyDropdown}
+                      isSuperAdmin={isSuperAdmin}
+                      companies={companies}
+                      companiesLoading={companiesLoading}
+                      companiesError={companiesError}
+                      isEdit={false}
+                      showProfilePhoto={wizardStep === 1}
+                      showEmploymentFields={wizardStep === 3}
+                      showEmploymentMeta={wizardStep === 3}
+                      showAddBranch={wizardStep === 3}
+                      showAddDesignation={wizardStep === 3}
+                      joiningDateLabel="DOJ"
+                    />
+                  </div>
+
+                  {wizardStep === 1 && (
+                    <div className="form-fields-stack">
+                      <PersonalInfoFields
+                        data={formData.details}
+                        errors={errors.details ?? {}}
+                        onChange={updateDetails}
+                        showJoiningDate={false}
+                        showEmploymentType={false}
+                      />
+                    </div>
+                  )}
+
+                  {wizardStep === 2 && (
+                    <ContactInfoFields data={formData.details} errors={errors.details ?? {}} onChange={updateDetails} isEdit={false} />
+                  )}
+
+                  {wizardStep === 4 && (
+                    <AddressFields
+                      data={formData.address}
+                      errors={errors.address ?? {}}
+                      onChange={updateAddress}
+                      required={!useBranchAddress}
+                      useBranchAddress={useBranchAddress}
+                      onUseBranchAddressChange={handleUseBranchAddressChange}
+                      branchName={selectedBranch ? selectedBranch.branch_name || "selected" : ""}
+                      branchHasAddress={branchHasAddress(selectedBranch)}
+                    />
+                  )}
+
+                  {wizardStep === 5 && (
+                    <div className="form-fields-stack">
+                      <SalesMarketingFields data={formData.details} errors={errors.details ?? {}} onChange={updateDetails} />
+                      <div className="form-section-divider">
+                        <span className="form-section-title">Skills</span>
+                      </div>
+                      <SkillsSection rows={formData.skills} onAddRow={addSkillRow} onRemoveRow={removeSkillRow} onChangeRow={changeSkillRow} />
+                    </div>
+                  )}
+
+                  {wizardStep === 6 && (
+                    <EmployeeReview
+                      formData={formData}
+                      companies={companies}
+                      user={user}
+                      companyName={selectedCompanyName}
+                      selectedBranch={selectedBranch}
+                      selectedDesignation={selectedDesignation}
+                    />
+                  )}
+
+                  <div className="wizard-step-footer">
+                    {wizardStep > 1 ? (
+                      <button type="button" className="cl-btn" onClick={() => setWizardStep((step) => step - 1)} disabled={saving}>
+                        Back
+                      </button>
+                    ) : <span />}
+                    {wizardStep < EMPLOYEE_WIZARD_STEPS.length ? (
+                      <button type="button" className="dash-primary-btn" onClick={handleNextStep}>
+                        Next
+                        <Icon name="chevronRight" size={15} />
+                      </button>
+                    ) : (
+                      <button type="button" className="dash-primary-btn" onClick={handleSaveEmployee} disabled={saving}>
+                        {saving ? <span className="fa-spinner light" /> : <Icon name="check" size={15} />}
+                        Save
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

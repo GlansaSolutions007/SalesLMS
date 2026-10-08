@@ -71,6 +71,19 @@ export async function deleteTrainer(id, token) {
   }
 }
 
+export async function getMyTrainerBatches(params, token) {
+  try {
+    const res = await httpClient.get("/trainer/batches", { headers: authHeaders(token), params });
+    const body = res.data?.data ?? res.data;
+    return {
+      items: body?.data ?? [],
+      pagination: { ...DEFAULT_PAGINATION, ...body?.pagination },
+    };
+  } catch (error) {
+    throw toApiError(error, "Could not load your batches.");
+  }
+}
+
 export async function getTrainerSkills(trainerId, token) {
   try {
     const res = await httpClient.get(`/admin/trainers/${trainerId}/skills`, { headers: authHeaders(token) });

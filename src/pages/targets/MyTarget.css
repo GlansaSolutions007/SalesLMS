@@ -1,0 +1,128 @@
+.target-period-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 22px;
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  background: white;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 20px;
+}
+
+.target-period-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  color: var(--color-primary-600);
+  background: #eaf2fc;
+}
+
+.target-period-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.target-period-value {
+  margin: 4px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.target-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.target-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 22px;
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  background: white;
+  box-shadow: var(--shadow-sm);
+  transition: 0.18s ease;
+}
+
+.target-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary-500);
+}
+
+/* Progress bar reused as-is from ProgressBar.jsx, just stretched to fill
+   the card instead of its default fixed 96px track — scoped to this page
+   so the shared component's other usages elsewhere are unaffected. */
+.target-card .progress {
+  width: 100%;
+}
+
+.target-card .progress-track {
+  flex: 1;
+  width: auto;
+}
+
+.target-card-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.target-card-value {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--color-heading);
+}
+
+.target-card-breakdown {
+  display: flex;
+  gap: 14px;
+  margin: -4px 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.target-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.target-card-remaining {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+@media (max-width: 1024px) {
+  .target-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .target-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .target-period-card {
+    flex-wrap: wrap;
+  }
+}

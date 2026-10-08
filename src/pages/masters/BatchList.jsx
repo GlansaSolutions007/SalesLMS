@@ -11,6 +11,7 @@ import Icon from "../../components/Icon.jsx";
 import TrainingSectionTabs from "../training/TrainingSectionTabs.jsx";
 import useCompanyOptions from "../company/useCompanyOptions.js";
 import useCompanyBatches from "./useCompanyBatches.js";
+import useMyTrainerBatches from "../trainers/useMyTrainerBatches.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { ROUTES, batchEditPath } from "../../router/routePaths.js";
 import { exportToCsv } from "../../utils/csv.js";
@@ -32,7 +33,7 @@ function formatDate(value) {
   return value ? String(value).slice(0, 10) : "—";
 }
 
-function buildColumns(companyId, navigate) {
+function buildColumns(companyId, navigate, showCompanyColumn, hideActions) {
   return [
     {
       key: "batch_name",
@@ -44,6 +45,7 @@ function buildColumns(companyId, navigate) {
         </div>
       ),
     },
+    ...(showCompanyColumn ? [{ key: "company", header: "Company", render: (r) => r.company?.company_name || "—" }] : []),
     { key: "trainer", header: "Trainer", render: (r) => r.trainer?.full_name || "Unassigned" },
     { key: "start_date", header: "Start Date", render: (r) => formatDate(r.start_date) },
     { key: "end_date", header: "End Date", render: (r) => formatDate(r.end_date) },
@@ -58,27 +60,35 @@ function buildColumns(companyId, navigate) {
       ),
     },
     { key: "status", header: "Status", render: (r) => <Badge tone={STATUS_TONE[r.status] ?? "gray"}>{r.status}</Badge> },
-    {
-      key: "actions",
-      header: "",
-      render: (r) => {
-        const locked = UNEDITABLE_STATUSES.has(r.status);
-        return (
-          <div className="cl-row-actions">
-            <button
-              type="button"
-              className="dash-icon-btn"
-              aria-label={`Edit ${r.batch_name}`}
-              title={locked ? `A ${r.status} batch cannot be edited.` : "Edit"}
-              disabled={locked}
-              onClick={() => navigate(batchEditPath(companyId, r.id))}
-            >
-              <Icon name="edit" size={15} />
-            </button>
-          </div>
-        );
-      },
-    },
+    // A Trainer's own account has no company_id, so BatchController's
+    // authorizeAccess() would 403 them out of editing any batch here —
+    // hide the action instead of offering a button that can only fail.
+    ...(hideActions
+      ? []
+      : [
+          {
+            key: "actions",
+            header: "",
+            render: (r) => {
+              const locked = UNEDITABLE_STATUSES.has(r.status);
+              const rowCompanyId = r.company?.id ?? companyId;
+              return (
+                <div className="cl-row-actions">
+                  <button
+                    type="button"
+                    className="dash-icon-btn"
+                    aria-label={`Edit ${r.batch_name}`}
+                    title={locked ? `A ${r.status} batch cannot be edited.` : "Edit"}
+                    disabled={locked}
+                    onClick={() => navigate(batchEditPath(rowCompanyId, r.id))}
+                  >
+                    <Icon name="edit" size={15} />
+                  </button>
+                </div>
+              );
+            },
+          },
+        ]),
   ];
 }
 
@@ -90,11 +100,18 @@ const CSV_COLUMNS = [
   { key: "end_date", header: "End Date" },
   { key: "status", header: "Status" },
 ];
+const CSV_COLUMNS_WITH_COMPANY = [
+  CSV_COLUMNS[0],
+  CSV_COLUMNS[1],
+  { key: "companyName", header: "Company" },
+  ...CSV_COLUMNS.slice(2),
+];
 
 function toCsvRow(r) {
   return {
     batch_name: r.batch_name ?? "",
     batch_code: r.batch_code ?? "",
+    companyName: r.company?.company_name ?? "",
     trainerName: r.trainer?.full_name ?? "",
     start_date: formatDate(r.start_date),
     end_date: formatDate(r.end_date),
@@ -107,13 +124,22 @@ export default function BatchList() {
   const navigate = useNavigate();
   const { roleName, user } = useAuth();
   const isSuperAdmin = roleName === "Super Admin";
+  // A Trainer's own user account has no company_id (a Trainer is a global
+  // roster entry that can be assigned to batches in any company — see
+  // useMyTrainerBatches), so they can't use the company-scoped batches
+  // endpoint at all; this page fetches their own batches by trainer_id,
+  // across every company, instead.
+  const isTrainer = roleName === "Trainer";
+  // Creating a batch is Super-Admin-only (spec: Training Management —
+  // Company Admin). Written as "not Company Admin" rather than "is Super
+  // Admin" so it doesn't change what a Trainer sees here — this page is
+  // also reachable by Trainer, whose own access is unrelated to this change.
+  const canManageBatches = roleName !== "Company Admin";
 
   const { options: companies, isLoading: companiesLoading, error: companiesError } = useCompanyOptions(isSuperAdmin);
+  // "" is the default for Super Admin and means "All Companies", not "none picked yet".
   const [companyId, setCompanyId] = useState(() => (isSuperAdmin ? "" : String(user?.company?.id ?? "")));
-
-  useEffect(() => {
-    if (isSuperAdmin && !companyId && companies.length > 0) setCompanyId(String(companies[0].id));
-  }, [isSuperAdmin, companies, companyId]);
+  const isAllSelected = isSuperAdmin && !companyId;
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -124,14 +150,33 @@ export default function BatchList() {
     setPage(1);
   }, [companyId, search, statusFilter, sort.key, sort.dir]);
 
-  const { batches, pagination, isLoading, error } = useCompanyBatches(companyId, {
+  const sharedParams = {
     search: search.trim() || undefined,
     status: statusFilter !== "All" ? statusFilter : undefined,
     sort: sort.key,
     dir: sort.dir,
     page,
     per_page: 25,
-  });
+  };
+
+  const {
+    batches: companyBatches,
+    pagination: companyPagination,
+    isLoading: companyBatchesLoading,
+    error: companyBatchesError,
+  } = useCompanyBatches(companyId, sharedParams, isAllSelected ? companies : undefined);
+
+  const {
+    batches: myBatches,
+    pagination: myPagination,
+    isLoading: myBatchesLoading,
+    error: myBatchesError,
+  } = useMyTrainerBatches(sharedParams, isTrainer);
+
+  const batches = isTrainer ? myBatches : companyBatches;
+  const pagination = isTrainer ? myPagination : companyPagination;
+  const isLoading = isTrainer ? myBatchesLoading : companyBatchesLoading;
+  const error = isTrainer ? myBatchesError : companyBatchesError;
 
   const [toastDismissed, setToastDismissed] = useState(false);
   const activeError = companiesError || error;
@@ -139,7 +184,8 @@ export default function BatchList() {
     if (activeError) setToastDismissed(false);
   }, [activeError]);
 
-  const columns = buildColumns(companyId, navigate);
+  const showCompanyColumn = isAllSelected || isTrainer;
+  const columns = buildColumns(companyId, navigate, showCompanyColumn, isTrainer);
 
   return (
     <>
@@ -166,6 +212,7 @@ export default function BatchList() {
                 aria-label="Select company"
               >
                 {companies.length === 0 && <option value="">No companies found</option>}
+                {companies.length > 0 && <option value="">All Companies</option>}
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.company_name}
@@ -185,20 +232,37 @@ export default function BatchList() {
             sort={sort}
             onSortChange={setSort}
             sortOptions={SORT_OPTIONS}
-            onExportCsv={() => exportToCsv("batches.csv", batches.map(toCsvRow), CSV_COLUMNS)}
+            onExportCsv={() => exportToCsv("batches.csv", batches.map(toCsvRow), showCompanyColumn ? CSV_COLUMNS_WITH_COMPANY : CSV_COLUMNS)}
             onExportPdf={() => window.print()}
-            addLabel="Add New Batch"
-            onAdd={companyId ? () => navigate(ROUTES.BATCHES_ADD, { state: { companyId } }) : undefined}
+            addLabel={canManageBatches ? "Add New Batch" : undefined}
+            // Super Admin gets no location.state.companyId — BatchForm's
+            // showCompanyDropdown only renders its Company picker when that
+            // state is absent, letting the Super Admin choose the target
+            // company there instead of always inheriting whichever company
+            // happens to be selected on this list page.
+            onAdd={
+              canManageBatches && (companyId || isAllSelected)
+                ? () => navigate(ROUTES.BATCHES_ADD, isSuperAdmin ? undefined : { state: { companyId } })
+                : undefined
+            }
           />
 
           <DataTable
             columns={columns}
             rows={batches}
             isLoading={isLoading || companiesLoading}
-            emptyMessage={companyId ? "No batches found for this company." : "Select a company to view its batches."}
+            emptyMessage={
+              isTrainer
+                ? "You have no assigned batches."
+                : isAllSelected
+                ? "No batches found."
+                : companyId
+                ? "No batches found for this company."
+                : "Select a company to view its batches."
+            }
           />
 
-          {!isLoading && companyId && (
+          {!isLoading && (companyId || isAllSelected || isTrainer) && (
             <div className="cl-footer">
               <p>
                 Showing {pagination.from ?? 0}–{pagination.to ?? 0} of {pagination.total} batch{pagination.total === 1 ? "" : "es"}
